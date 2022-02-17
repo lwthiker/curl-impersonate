@@ -1,8 +1,10 @@
 A special compilation of curl that makes it impersonate Firefox. This curl binary is able to send the EXACT same TLS handshake as Firefox.
 
 ## Why?
+When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The "Client Hello" message that curl produces differs drastically from the one of the real browser. Compare the below. Left is a regular curl, right is Firefox.
+![curl-ff-before](https://user-images.githubusercontent.com/99899249/154530138-1cba5a23-53d7-4f1a-adc4-7c087e61deb5.png)
 
-[ PLACEHOLDER ]
+Web servers can use this to fingerprint your HTTP client. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the "Client Hello" message looks *exactly* the same.
 
 Read the full description in the blog post.
 
@@ -37,12 +39,12 @@ curl_ff95 -sL https://www.google.com
 
 ## Details
 This repository contains the following files:
-* Dockerfile - Used to build `curl-nss` with all dependencies.
-* curl_ff95 - Wrapper script that launches `curl-nss` with the correct flags.
-* curl-lib-nss.patch - The main patch that makes curl use the same TLS extensions as Firefox.
-* libnghttp2-pc.patch - Patch to make libnghttp2 compile statically.
-* curl-configure.patch - Patch to make curl compile with a static libnghttp2.
-* curl-static-libnss.patch - Patch to make curl compile with a static libnss.
+* [Dockerfile](Dockerfile) - Used to build `curl-nss` with all dependencies.
+* [curl_ff95](curl_ff95) - Wrapper script that launches `curl-nss` with the correct flags.
+* [curl-lib-nss.patch](curl-lib-nss.patch) - The main patch that makes curl use the same TLS extensions as Firefox.
+* [libnghttp2-pc.patch](libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
+* [curl-configure.patch](curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
+* [curl-static-libnss.patch](curl-static-libnss.patch) - Patch to make curl compile with a static libnss.
 
 ## What's next?
 This was done in a very hacky way, but I hope the findings below could be turned into real project. Imagine that you could run:
