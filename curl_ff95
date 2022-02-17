@@ -3,8 +3,10 @@
 # Find the directory of this script
 dir=`echo "$0" | sed 's%/[^/]*$%%'`
 
-rm pipe && mkfifo pipe
-exec 5<>pipe 3>pipe 4<pipe 5>&-
+PIPE=/tmp/curl-pipe
+
+rm -f "$PIPE" && mkfifo "$PIPE"
+exec 5<>"$PIPE" 3>"$PIPE" 4<"$PIPE" 5>&-
 
 # The list of ciphers can be obtained by looking at the Client Hello message in
 # Wireshark, then converting it using the cipherlist array at
