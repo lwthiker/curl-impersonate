@@ -15,13 +15,12 @@ ARG NSS_VERSION=nss-3.74
 # This tarball is already bundled with nspr, a dependency of libnss.
 ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_74_RTM/src/nss-3.74-with-nspr-4.32.tar.gz
 
-# Download the nss library and compile.
+# Download the nss library.
 RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
 RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
     ./build.sh -o --disable-tests --static
 
-# Download nghttp2 for HTTP/2.0 support.
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
 
@@ -29,6 +28,7 @@ ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/ngh
 # both for libnghttp2 and curl.
 RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
+# Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
 RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 
@@ -38,11 +38,12 @@ RUN cd ${NGHTTP2_VERSION} && \
     for p in $(ls libnghttp2-*.patch); do patch -p1 < $p; done && \
     autoreconf -i && automake && autoconf
 
+# Compile nghttp2
 RUN cd ${NGHTTP2_VERSION} && \
     ./configure && \
     make && make install
 
-# Download curl and compile it with nss
+# Download curl.
 ARG CURL_VERSION=curl-7.81.0
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
 RUN tar xf ${CURL_VERSION}.tar.xz
