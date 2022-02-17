@@ -17,8 +17,7 @@ The resulting curl looks, from a network perspective, identical to Firefox (Fire
 
 ![curl-ff-after](https://user-images.githubusercontent.com/99899249/154556768-81bb9dbe-5c3d-4a1c-a0ab-f10a3cd69d9a.png)
 
-
-Read the full description in the blog post.
+Read the full description in the [blog post](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html).
 
 ## Installation
 This repository contains a Dockerfile that will build curl with all the necessary modifications. Build it like any Docker image:
