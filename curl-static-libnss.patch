@@ -1,0 +1,13 @@
+diff -u1 -Nar curl-7.81.0-original/m4/curl-nss.m4 curl-7.81.0/m4/curl-nss.m4
+--- curl-7.81.0-original/m4/curl-nss.m4	2021-12-10 09:40:37.000000000 +0200
++++ curl-7.81.0/m4/curl-nss.m4	2022-02-16 09:15:11.162546224 +0200
+@@ -76,3 +76,3 @@
+       addld="-L$OPT_NSS/lib"
+-      addlib="-lssl3 -lsmime3 -lnss3 -lplds4 -lplc4 -lnspr4"
++      addlib="-Wl,-Bstatic -Wl,--start-group -lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lsmime -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lsha-x86_c_lib -lgcm-aes-x86_c_lib -lhw-acc-crypto-avx -lhw-acc-crypto-avx2  -lnssutil -lnssb -lcryptohi -l:libplc4.a -l:libplds4.a -l:libnspr4.a -lsqlite -Wl,--end-group -Wl,-Bdynamic -pthread -ldl"
+       addcflags="-I$OPT_NSS/include"
+@@ -93,3 +93,3 @@
+     dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
+-    AC_CHECK_LIB(nss3, SSL_VersionRangeSet,
++    AC_CHECK_LIB(nss_static, SSL_VersionRangeSet,
+      [
