@@ -42,11 +42,6 @@ RUN cd ${NGHTTP2_VERSION} && \
     ./configure && \
     make && make install
 
-# curl tries to load the CA certificates for libnss.
-# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
-# which is supplied by libnss3 on Debian/Ubuntu
-RUN apt-get install -y libnss3
-
 # Download curl and compile it with nss
 ARG CURL_VERSION=curl-7.81.0
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
@@ -65,10 +60,18 @@ RUN cd ${CURL_VERSION} && \
     ./configure --with-nss=/build/${NSS_VERSION}/dist/Release --enable-static --disable-shared CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" --with-nghttp2=/usr/local && \
     make
 
+# curl tries to load the CA certificates for libnss.
+# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
+# which is supplied by libnss3 on Debian/Ubuntu
+RUN apt-get install -y libnss3
+
+# 'xxd' is needed for the wrapper curl_ff95 script
+RUN apt-get install -y xxd
+
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-nss
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate
 
 # Wrapper script
-COPY curl_ff97 out/
+COPY curl_ff95 out/
 
 RUN chmod +x out/*
