@@ -4,7 +4,7 @@ A special compilation of [curl](https://github.com/curl/curl) that makes it impe
 When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The Client Hello message that curl produces differs drastically from that of a real browser. Compare the following Wireshark capture. Left is a regular curl, right is Firefox.
 ![curl-ff-before](https://user-images.githubusercontent.com/99899249/154530138-1cba5a23-53d7-4f1a-adc4-7c087e61deb5.png)
 
-Some web services therefore use the TLS handshake to fingerprint which HTTP client is accessing them. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the Client Hello message looks *exactly* like Firefox's. This tricks client-side TLS fingerprinting to think it is Firefox that is accessing them.
+Some web services therefore use the TLS handshake to fingerprint which HTTP client is accessing them. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the Client Hello message looks *exactly* like Firefox's. This tricks TLS fingerprinters to think that it is Firefox that is accessing them.
 
 ## How?
 
