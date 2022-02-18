@@ -6,7 +6,7 @@ WORKDIR /build
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
 RUN apt-get update && \
-    apt-get install -y mercurial git ninja-build python3-pip curl zlib1g-dev
+    apt-get install -y mercurial git ninja-build python3-pip curl zlib1g-dev libbrotli-dev
 
 # Also needed for building libnss
 RUN pip install gyp-next
