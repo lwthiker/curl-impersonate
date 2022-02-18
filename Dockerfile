@@ -73,6 +73,6 @@ RUN mkdir out && \
     cp ${CURL_VERSION}/src/curl out/curl-impersonate
 
 # Wrapper script
-COPY curl_ff95 out/
+COPY curl_* out/
 
 RUN chmod +x out/*

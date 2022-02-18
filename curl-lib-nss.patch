@@ -1,6 +1,10 @@
 --- curl-7.81.0-original/lib/vtls/nss.c	2022-01-03 18:36:46.000000000 +0200
-+++ curl-7.81.0/lib/vtls/nss.c	2022-02-17 10:33:28.567798277 +0200
-@@ -380,2 +380,91 @@
++++ curl-7.81.0/lib/vtls/nss.c	2022-02-18 07:47:17.612205091 +0200
+@@ -145,2 +145,3 @@
+   {"dhe_dss_des_sha",            SSL_DHE_DSS_WITH_DES_CBC_SHA},
++  {"rsa_3des_ede_cbc_sha",       TLS_RSA_WITH_3DES_EDE_CBC_SHA},
+   /* TLS 1.0: Exportable 56-bit Cipher Suites. */
+@@ -380,2 +381,91 @@
  
 +/* See nsSSLIOLayerSetOptions@nsNSSIOLayer.cpp, Firefox source code */
 +const SSLNamedGroup named_groups[] = {
@@ -92,7 +96,7 @@
 +}
 +
  /*
-@@ -1322,2 +1411,20 @@
+@@ -1322,2 +1412,20 @@
      SECMOD_DestroyModule(module);
 +
 +  /* Patch for Ubuntu - add a "nss/" suffix to the library name */
@@ -113,7 +117,7 @@
 +    SECMOD_DestroyModule(module);
 +
    return CURLE_FAILED_INIT;
-@@ -1923,2 +2030,8 @@
+@@ -1923,2 +2031,8 @@
  
 +  if(SSL_SET_OPTION(primary.sessionid)) {
 +    if(SSL_OptionSet(model, SSL_ENABLE_SESSION_TICKETS,
@@ -122,7 +126,7 @@
 +  }
 +
    /* enable/disable the requested SSL version(s) */
-@@ -1962,2 +2075,10 @@
+@@ -1962,2 +2076,10 @@
  
 +  if (set_named_groups(model) != SECSuccess ||
 +      set_additional_key_shares(model) != SECSuccess ||
@@ -133,14 +137,14 @@
 +  }
 +
    if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
-@@ -2115,2 +2236,6 @@
+@@ -2115,2 +2237,6 @@
  
 +    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
 +    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);
 +    cur += ALPN_HTTP_1_1_LENGTH;
 +
  #ifdef USE_HTTP2
-@@ -2126,5 +2251,2 @@
+@@ -2126,5 +2252,2 @@
  #endif
 -    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
 -    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);

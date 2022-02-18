@@ -27,23 +27,24 @@ docker build -t curl-impersonate .
 
 The resulting image contains:
 * `/build/out/curl-impersonate` - The curl binary that can impersonate Firefox. It is compiled statically against libcurl, nss, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
-* `/build/out/curl_ff95` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Firefox 95.
+* `/build/out/curl_ff91esr` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Firefox 91 ESR (Extended Support Release).
+* `/build/out/curl_ff95` - Same but with Firefox 95.
 
 Copy them from the docker image using `docker cp` or use them in a multi-stage docker build.
 
 In addition install libnss3: `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
 ## Usage
-It is recommended to use the wrapper script `curl_ff95` that adds all the correct headers and flags. For example:
+It is recommended to use the wrapper script `curl_ff91esr` that adds all the correct headers and flags. For example:
 ```
-curl_ff95 https://www.google.com
+curl_ff91esr https://www.google.com
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
 ## Contents
 This repository contains the following files:
 * [Dockerfile](Dockerfile) - Used to build `curl-impersonate` with all dependencies.
-* [curl_ff95](curl_ff95) - Wrapper script that launches `curl-impersonate` with the correct flags.
+* [curl_ff91esr](curl_ff91esr), [curl_ff95](curl_ff95) - Wrapper scripts that launch `curl-impersonate` with the correct flags.
 * [curl-lib-nss.patch](curl-lib-nss.patch) - The main patch that makes curl use the same TLS extensions as Firefox.
 * [libnghttp2-pc.patch](libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
 * [curl-configure.patch](curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
