@@ -1,0 +1,60 @@
+--- curl-7.81.0-original/lib/vtls/openssl.c	2022-01-03 18:36:46.000000000 +0200
++++ curl-7.81.0/lib/vtls/openssl.c	2022-02-18 17:05:57.253198793 +0200
+@@ -78,2 +78,4 @@
+ 
++#include <brotli/decode.h>
++
+ #ifdef USE_AMISSL
+@@ -2631,2 +2633,27 @@
+ 
++/* Taken from Chromium and adapted to C,
++ * see net/ssl/cert_compression.cc
++ */
++int DecompressBrotliCert(SSL* ssl,
++                         CRYPTO_BUFFER** out,
++                         size_t uncompressed_len,
++                         const uint8_t* in,
++                         size_t in_len) {
++  uint8_t* data;
++  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
++  if (!decompressed) {
++    return 0;
++  }
++
++  size_t output_size = uncompressed_len;
++  if (BrotliDecoderDecompress(in_len, in, &output_size, data) !=
++          BROTLI_DECODER_RESULT_SUCCESS ||
++      output_size != uncompressed_len) {
++    return 0;
++  }
++
++  *out = decompressed;
++  return 1;
++}
++
+ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+@@ -2769,2 +2796,5 @@
+ #ifdef SSL_OP_NO_TICKET
++  /* curl-impersonate patch.
++   * Don't turn on SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
++   * to be sent. */
+   ctx_options |= SSL_OP_NO_TICKET;
+@@ -2939,2 +2969,18 @@
+ 
++  /* curl-impersonate
++   * Configure BoringSSL to behave like Chrome. 
++   * See Constructor of SSLContext at net/socket/ssl_client_socket_impl.cc
++   * and SSLClientSocketImpl::Init()
++   * in the Chromium's source code. */
++
++  /* Enable TLS GREASE. */
++  SSL_CTX_set_grease_enabled(backend->ctx, 1);
++
++  /* Add support for TLS extension 27 - compress_certificate.
++   * Add Brotli decompression. See Chromium net/ssl/cert_compression.cc */
++  SSL_CTX_add_cert_compression_alg(backend->ctx, TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
++
++  /* Enable TLS extensions 5 - status_request and 18 - signed_certificate_timestamp. */
++  SSL_CTX_enable_ocsp_stapling(backend->ctx);
++  SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+ 
