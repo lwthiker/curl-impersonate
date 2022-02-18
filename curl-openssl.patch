@@ -1,5 +1,5 @@
 --- curl-7.81.0-original/lib/vtls/openssl.c	2022-01-03 18:36:46.000000000 +0200
-+++ curl-7.81.0/lib/vtls/openssl.c	2022-02-18 17:05:57.253198793 +0200
++++ curl-7.81.0/lib/vtls/openssl.c	2022-02-18 18:07:04.220805893 +0200
 @@ -78,2 +78,4 @@
  
 +#include <brotli/decode.h>
@@ -33,15 +33,25 @@
 +}
 +
  static CURLcode ossl_connect_step1(struct Curl_easy *data,
-@@ -2769,2 +2796,5 @@
+@@ -2769,3 +2796,6 @@
  #ifdef SSL_OP_NO_TICKET
+-  ctx_options |= SSL_OP_NO_TICKET;
 +  /* curl-impersonate patch.
-+   * Don't turn on SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
++   * Turn off SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
 +   * to be sent. */
-   ctx_options |= SSL_OP_NO_TICKET;
-@@ -2939,2 +2969,18 @@
++  ctx_options &= ~SSL_OP_NO_TICKET;
+ #endif
+@@ -2823,4 +2853,7 @@
+ #ifdef HAS_NPN
++  /* curl-impersonate: Do not enable the NPN extension. */
++  /*
+   if(conn->bits.tls_enable_npn)
+     SSL_CTX_set_next_proto_select_cb(backend->ctx, select_next_proto_cb, data);
++  */
+ #endif
+@@ -2939,2 +2972,19 @@
  
-+  /* curl-impersonate
++  /* curl-impersonate:
 +   * Configure BoringSSL to behave like Chrome. 
 +   * See Constructor of SSLContext at net/socket/ssl_client_socket_impl.cc
 +   * and SSLClientSocketImpl::Init()
@@ -52,9 +62,35 @@
 +
 +  /* Add support for TLS extension 27 - compress_certificate.
 +   * Add Brotli decompression. See Chromium net/ssl/cert_compression.cc */
-+  SSL_CTX_add_cert_compression_alg(backend->ctx, TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
++  SSL_CTX_add_cert_compression_alg(backend->ctx,
++          TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
 +
 +  /* Enable TLS extensions 5 - status_request and 18 - signed_certificate_timestamp. */
 +  SSL_CTX_enable_ocsp_stapling(backend->ctx);
 +  SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
  
+@@ -3238,2 +3288,24 @@
+ 
++#ifdef USE_HTTP2
++  /* curl-impersonate: This adds the ALPS extension (17513).
++   * Chromium calls this function as well in SSLClientSocketImpl::Init().
++   * The 4th parameter is called "settings", and I don't know what it
++   * should contain. For now, use an empty string. */
++  SSL_add_application_settings(backend->handle, "h2", 2, "", 0);
++#endif
++
++  /* curl-impersonate: Set the signature algorithms.
++   * (TLS extension 13).
++   * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
++  static const uint16_t kVerifyPrefs[] = {
++    SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
++    SSL_SIGN_RSA_PKCS1_SHA256,       SSL_SIGN_ECDSA_SECP384R1_SHA384,
++    SSL_SIGN_RSA_PSS_RSAE_SHA384,    SSL_SIGN_RSA_PKCS1_SHA384,
++    SSL_SIGN_RSA_PSS_RSAE_SHA512,    SSL_SIGN_RSA_PKCS1_SHA512,
++  };
++  if (!SSL_set_verify_algorithm_prefs(backend->handle, kVerifyPrefs,
++              sizeof(kVerifyPrefs) / sizeof(kVerifyPrefs[0]))) {
++    return CURLE_SSL_CIPHER;
++  }
++
+   backend->server_cert = 0x0;
