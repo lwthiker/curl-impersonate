@@ -1,5 +1,5 @@
 --- curl-7.81.0-original/lib/vtls/openssl.c	2022-01-03 18:36:46.000000000 +0200
-+++ curl-7.81.0/lib/vtls/openssl.c	2022-02-18 18:07:04.220805893 +0200
++++ curl-7.81.0/lib/vtls/openssl.c	2022-02-18 20:02:23.559231773 +0200
 @@ -78,2 +78,4 @@
  
 +#include <brotli/decode.h>
@@ -49,7 +49,7 @@
      SSL_CTX_set_next_proto_select_cb(backend->ctx, select_next_proto_cb, data);
 +  */
  #endif
-@@ -2939,2 +2972,19 @@
+@@ -2939,2 +2972,15 @@
  
 +  /* curl-impersonate:
 +   * Configure BoringSSL to behave like Chrome. 
@@ -64,20 +64,29 @@
 +   * Add Brotli decompression. See Chromium net/ssl/cert_compression.cc */
 +  SSL_CTX_add_cert_compression_alg(backend->ctx,
 +          TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
-+
-+  /* Enable TLS extensions 5 - status_request and 18 - signed_certificate_timestamp. */
-+  SSL_CTX_enable_ocsp_stapling(backend->ctx);
-+  SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
  
-@@ -3238,2 +3288,24 @@
+@@ -3238,2 +3284,37 @@
  
 +#ifdef USE_HTTP2
 +  /* curl-impersonate: This adds the ALPS extension (17513).
 +   * Chromium calls this function as well in SSLClientSocketImpl::Init().
 +   * The 4th parameter is called "settings", and I don't know what it
 +   * should contain. For now, use an empty string. */
-+  SSL_add_application_settings(backend->handle, "h2", 2, "", 0);
++  SSL_add_application_settings(backend->handle, "h2", 2, NULL, 0);
 +#endif
++
++  SSL_set_options(backend->handle,
++      SSL_OP_LEGACY_SERVER_CONNECT);
++  SSL_set_mode(backend->handle,
++      SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
++
++  /* curl-impersonate: Enable TLS extensions 5 - status_request and
++   * 18 - signed_certificate_timestamp. */
++  SSL_enable_signed_cert_timestamps(backend->handle);
++  SSL_enable_ocsp_stapling(backend->handle);
++
++  /* curl-impersonate: Some SSL settings copied over from Chrome. */
++  SSL_set_shed_handshake_config(backend->handle, 1);
 +
 +  /* curl-impersonate: Set the signature algorithms.
 +   * (TLS extension 13).

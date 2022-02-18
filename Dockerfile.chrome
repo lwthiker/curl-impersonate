@@ -61,9 +61,10 @@ RUN cd ${CURL_VERSION} && \
     for p in $(ls curl-*.patch); do patch -p1 < $p; done && \
     autoreconf -fi
 
-# Compile curl with BoringSSL
+# Compile curl with BoringSSL & nghttp2.
+# Enable keylogfile for debugging of TLS traffic.
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-openssl=/build/boringssl/build --enable-static --disable-shared --with-nghttp2=/usr/local LIBS="-pthread" CFLAGS="-I/build/boringssl/build" && \
+    ./configure --with-openssl=/build/boringssl/build --enable-static --disable-shared --with-nghttp2=/usr/local LIBS="-pthread" CFLAGS="-I/build/boringssl/build" USE_CURL_SSLKEYLOGFILE=true && \
     make
 
 # 'xxd' is needed for the wrapper script
