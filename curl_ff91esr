@@ -3,11 +3,6 @@
 # Find the directory of this script
 dir=`echo "$0" | sed 's%/[^/]*$%%'`
 
-PIPE=/tmp/curl-pipe
-
-rm -f "$PIPE" && mkfifo "$PIPE"
-exec 5<>"$PIPE" 3>"$PIPE" 4<"$PIPE" 5>&-
-
 # The list of ciphers can be obtained by looking at the Client Hello message in
 # Wireshark, then converting it using the cipherlist array at
 # https://github.com/curl/curl/blob/master/lib/vtls/nss.c
@@ -23,16 +18,5 @@ exec 5<>"$PIPE" 3>"$PIPE" 4<"$PIPE" 5>&-
     -H 'Sec-Fetch-Mode: navigate' \
     -H 'Sec-Fetch-Site: none' \
     -H 'Sec-Fetch-User: ?1' \
-    --http2 --false-start \
-    $@ >&3
-
-exec 3>&-
-
-IFS= read -d '' -r -n 2 -u 4 header
-
-# Due to the "Accept-Encoding: gzip" header, we may receive a gzipped file.
-if [ "$(echo -n $header | xxd -l 2 -p)" == "1f8b" ]; then
-    (printf "%s" "$header"; cat <&4) | gzip -cd;
-else
-    printf "%s" "$header"; cat <&4;
-fi
+    --http2 --false-start --compressed \
+    $@
