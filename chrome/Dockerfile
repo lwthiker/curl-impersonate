@@ -40,7 +40,7 @@ RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
 RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 
 # Patch nghttp2 pkg config file to support static builds.
-COPY libnghttp2-*.patch ${NGHTTP2_VERSION}/
+COPY patches/libnghttp2-*.patch ${NGHTTP2_VERSION}/
 RUN cd ${NGHTTP2_VERSION} && \
     for p in $(ls libnghttp2-*.patch); do patch -p1 < $p; done && \
     autoreconf -i && automake && autoconf
@@ -56,7 +56,7 @@ RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.
 RUN tar xf ${CURL_VERSION}.tar.xz
 
 # Patch curl and re-generate the configure script
-COPY curl-*.patch ${CURL_VERSION}/
+COPY patches/curl-*.patch ${CURL_VERSION}/
 RUN cd ${CURL_VERSION} && \
     for p in $(ls curl-*.patch); do patch -p1 < $p; done && \
     autoreconf -fi
