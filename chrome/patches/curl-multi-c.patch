@@ -1,0 +1,8 @@
+--- curl-7.81.0-original/lib/multi.c	2022-01-03 18:36:46.000000000 +0200
++++ curl-7.81.0/lib/multi.c	2022-02-18 22:43:54.939227658 +0200
+@@ -395,3 +395,4 @@
+   multi->maxconnects = -1;
+-  multi->max_concurrent_streams = 100;
++  /* curl-impersonate: Use 1000 concurrent streams like Chrome. */
++  multi->max_concurrent_streams = 1000;
+   multi->ipv6_works = Curl_ipv6works(NULL);
