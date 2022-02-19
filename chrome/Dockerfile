@@ -71,7 +71,7 @@ RUN cd ${CURL_VERSION} && \
 RUN apt-get install -y xxd
 
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate-ch
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate
 
 # Wrapper script
 COPY curl_chrome* out/
