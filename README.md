@@ -30,9 +30,11 @@ The resulting image contains:
 * `/build/out/curl_ff91esr` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Firefox 91 ESR (Extended Support Release).
 * `/build/out/curl_ff95` - Same but with Firefox 95.
 
-Copy them from the docker image using `docker cp` or use them in a multi-stage docker build.
+You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build.
 
-In addition install libnss3: `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
+If you use it outside this container:
+* Install dependencies: `sudo apt install libbrotli1`
+* Install libnss3: `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
 ## Usage
 It is recommended to use the wrapper script `curl_ff91esr` that adds all the correct headers and flags. For example:
