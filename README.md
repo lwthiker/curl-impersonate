@@ -1,56 +1,73 @@
-A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate Firefox. This curl binary is able to perform a TLS handshake that is identical to Firefox.
+A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate real browsers. Currently supports Chrome & Firefox. This curl binary is able to perform a TLS handshake that is identical to that of a real browser.
 
 ## Why?
 When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The Client Hello message that curl produces differs drastically from that of a real browser. Compare the following Wireshark capture. Left is a regular curl, right is Firefox.
 ![curl-ff-before](https://user-images.githubusercontent.com/99899249/154530138-1cba5a23-53d7-4f1a-adc4-7c087e61deb5.png)
 
-Some web services therefore use the TLS handshake to fingerprint which HTTP client is accessing them. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the Client Hello message looks *exactly* like Firefox's. This tricks TLS fingerprinters to think that it is Firefox that is accessing them, and is able to bypass some well-known bot protections.
+Some web services therefore use the TLS handshake to fingerprint which HTTP client is accessing them. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the Client Hello message looks *exactly* like Chrome's or Firefox's. This tricks TLS fingerprinters to think that it is a real browser that is accessing them.
 
 ## How?
 
 The modifications that were needed to make this work:
-* Compiling curl with nss, the TLS library that Firefox uses, instead of OpenSSL.
+* Compiling curl with nss, the TLS library that Firefox uses, instead of OpenSSL. For the Chrome version, compiling with BoringSSL.
 * Modifying the way curl configures various TLS extensions and SSL options.
 * Running curl with some non-default flags, specifically `--http2`, `--ciphers`, and some `-H` headers.
 
-The resulting curl looks, from a network perspective, identical to Firefox (Firefox 95, Windows, non-incognito mode). Compare: (left is `curl-impersonate`, right is Firefox):
+The resulting curl looks, from a network perspective, identical to various browser verisons. Compare: (left is `curl-impersonate`, right is Firefox):
 
 ![curl-ff-after](https://user-images.githubusercontent.com/99899249/154556768-81bb9dbe-5c3d-4a1c-a0ab-f10a3cd69d9a.png)
 
 Read the full description in the [blog post](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html).
 
 ## Installation
-This repository contains a Dockerfile that will build curl with all the necessary modifications. Build it like any Docker image:
-```
-docker build -t curl-impersonate .
-```
+This repository maintains two separate build system, one for the Chrome version and one for the Firefox version.
 
+### Chrome version
+`chrome/Dockerfile` is a Dockerfile that will build curl with all the necessary modifications for impersonating Chrome. Build it like the following:
+```
+docker build -t curl-impersonate-chrome chrome/
+```
 The resulting image contains:
-* `/build/out/curl-impersonate` - The curl binary that can impersonate Firefox. It is compiled statically against libcurl, nss, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
+* `/build/out/curl-impersonate` - The curl binary after the necessary modifications. It is compiled statically against libcurl, boringssl, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
+* `/build/out/curl_chrome98` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Chrome 98.
+
+You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build. If you use it outside this container:
+* Install dependencies: `sudo apt install libbrotli1`
+
+
+### Firefox version
+Build with:
+```
+docker build -t curl-impersonate-ff firefox/
+```
+The resulting image contains:
 * `/build/out/curl_ff91esr` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Firefox 91 ESR (Extended Support Release).
 * `/build/out/curl_ff95` - Same but with Firefox 95.
-
-You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build.
 
 If you use it outside this container:
 * Install dependencies: `sudo apt install libbrotli1`
 * Install libnss3: `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
 ## Usage
-It is recommended to use the wrapper script `curl_ff91esr` that adds all the correct headers and flags. For example:
+It is recommended to use the wrapper scripts `curl_chrome98` or `curl_ff91esr`, as they add all the correct headers and flags. For example:
 ```
-curl_ff91esr https://www.google.com
+curl_chrome98 https://www.google.com
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
 ## Contents
-This repository contains the following files:
-* [Dockerfile](Dockerfile) - Used to build `curl-impersonate` with all dependencies.
-* [curl_ff91esr](curl_ff91esr), [curl_ff95](curl_ff95) - Wrapper scripts that launch `curl-impersonate` with the correct flags.
-* [curl-lib-nss.patch](curl-lib-nss.patch) - The main patch that makes curl use the same TLS extensions as Firefox.
-* [libnghttp2-pc.patch](libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
-* [curl-configure.patch](curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
-* [curl-static-libnss.patch](curl-static-libnss.patch) - Patch to make curl compile with a static libnss.
+
+This repository contains two main folders:
+* [chrome](chrome) - Scripts and patches for building the Chrome version of `curl-impersonate`.
+* [firefox](firefox) - Scripts and patches for building the Firefox version of `curl-impersonate`.
+
+The layout is similar for both. For example, the Firefox directory contains:
+* [Dockerfile](firefox/Dockerfile) - Used to build `curl-impersonate` with all dependencies.
+* [curl_ff91esr](firefox/curl_ff91esr), [curl_ff95](curl_ff95) - Wrapper scripts that launch `curl-impersonate` with the correct flags.
+* [curl-lib-nss.patch](firefox/patches/curl-lib-nss.patch) - The main patch that makes curl use the same TLS extensions as Firefox.
+* [libnghttp2-pc.patch](firefox/patches/libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
+* [curl-configure.patch](firefox/patches/curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
+* [curl-static-libnss.patch](firefox/patches/curl-static-libnss.patch) - Patch to make curl compile with a static libnss.
 
 ## What's next?
 This was done in a very hacky way, but I hope it could be turned into a real project. Imagine that you could run:
