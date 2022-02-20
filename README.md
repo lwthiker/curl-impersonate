@@ -17,7 +17,7 @@ The resulting curl looks, from a network perspective, identical to various brows
 
 ![curl-ff-after](https://user-images.githubusercontent.com/99899249/154556768-81bb9dbe-5c3d-4a1c-a0ab-f10a3cd69d9a.png)
 
-Read the full description in the [blog post](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html).
+Read the full description in the blog post: [part a](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html), [part b](https://lwthiker.com/reversing/2022/02/20/impersonating-chrome-too.html).
 
 ## Installation
 This repository maintains two separate build systems, one for the Chrome version and one for the Firefox version.
