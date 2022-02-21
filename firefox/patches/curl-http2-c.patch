@@ -1,0 +1,8 @@
+--- curl-7.81.0-original/lib/http2.c	2022-01-03 18:36:46.000000000 +0200
++++ curl-7.81.0/lib/http2.c	2022-02-19 20:21:06.381022445 +0200
+@@ -1820,3 +1820,4 @@
+    field list. */
+-#define AUTHORITY_DST_IDX 3
++/* curl-impersonate: Put the ":authority" header in the second place. */
++#define AUTHORITY_DST_IDX 2
+ 
