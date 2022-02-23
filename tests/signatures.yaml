@@ -1,0 +1,225 @@
+# Browser signatures database
+#
+# Each signature refers to the browser's behavior upon browsing to a site
+# not cached or visited before. Each signature contains the various parameters
+# in the TLS Client Hello message, and is designed to accomodate other
+# parameters as well (such as HTTP headers, HTTP/2 settings).
+---
+name: chrome_98.0.4758.102_win10
+browser:
+    name: chrome
+    version: 98.0.4758.102
+    os: win10
+    mode: regular
+signature:
+    tls_client_hello:
+        record_version: 'TLS_VERSION_1_0'
+        handshake_version: 'TLS_VERSION_1_2'
+        session_id_length: 32
+        ciphersuites: [
+            'GREASE',
+            0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
+            0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f,
+            0x0035
+        ]
+        comp_methods: [0x00]
+        extensions:
+            - type: GREASE
+              length: 0
+            - type: server_name
+            - type: extended_master_secret
+              length: 0
+            - type: renegotiation_info
+              length: 1
+            - type: supported_groups
+              length: 10
+              supported_groups: [
+                  'GREASE',
+                  0x001d, 0x0017, 0x0018
+              ]
+            - type: ec_point_formats
+              length: 2
+              ec_point_formats: [0]
+            - type: session_ticket
+              length: 0
+            - type: application_layer_protocol_negotiation
+              length: 14
+              alpn_list: ['h2', 'http/1.1']
+            - type: status_request
+              length: 5
+              status_request_type: 0x01
+            - type: signature_algorithms
+              length: 18
+              sig_hash_algs: [
+                  0x0403, 0x0804, 0x0401, 0x0503,
+                  0x0805, 0x0501, 0x0806, 0x0601
+              ]
+            - type: signed_certificate_timestamp
+              length: 0
+            - type: keyshare
+              length: 43
+              key_shares:
+                  - group: GREASE
+                    length: 1
+                  - group: 29
+                    length: 32
+            - type: psk_key_exchange_modes
+              length: 2
+              psk_ke_mode: 1
+            - type: supported_versions
+              length: 7
+              supported_versions: [
+                  'GREASE', 'TLS_VERSION_1_3', 'TLS_VERSION_1_2'
+              ]
+            - type: compress_certificate
+              length: 3
+              algorithms: [0x02]
+            - type: application_settings
+              length: 5
+              alps_alpn_list: ['h2']
+            - type: GREASE
+              length: 1
+              data: !!binary AA==
+            - type: padding
+---
+name: firefox_91.6.0esr_win10
+browser:
+    name: firefox
+    version: 91.6.0esr
+    os: win10
+    mode: regular
+signature:
+    tls_client_hello:
+        record_version: 'TLS_VERSION_1_0'
+        handshake_version: 'TLS_VERSION_1_2'
+        session_id_length: 32
+        ciphersuites: [
+            0x1301, 0x1303, 0x1302, 0xc02b, 0xc02f, 0xcca9, 0xcca8, 0xc02c,
+            0xc030, 0xc00a, 0xc009, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f,
+            0x0035, 0x000a
+        ]
+        comp_methods: [0x00]
+        extensions:
+            - type: server_name
+            - type: extended_master_secret
+              length: 0
+            - type: renegotiation_info
+              length: 1
+            - type: supported_groups
+              length: 14
+              supported_groups: [
+                  0x1d, 0x017, 0x18, 0x19, 0x0100, 0x0101
+              ]
+            - type: ec_point_formats
+              length: 2
+              ec_point_formats: [0]
+            - type: session_ticket
+              length: 0
+            - type: application_layer_protocol_negotiation
+              length: 14
+              alpn_list: ['h2', 'http/1.1']
+            - type: status_request
+              length: 5
+              status_request_type: 0x01
+            - type: delegated_credentials
+              length: 10
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0203
+              ]
+            - type: keyshare
+              length: 107
+              key_shares:
+                  - group: 29
+                    length: 32
+                  - group: 23
+                    length: 65
+            - type: supported_versions
+              length: 5
+              supported_versions: [
+                  'TLS_VERSION_1_3', 'TLS_VERSION_1_2'
+              ]
+            - type: signature_algorithms
+              length: 24
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0804,
+                  0x0805, 0x0806, 0x0401, 0x0501,
+                  0x0601, 0x0203, 0x0201
+              ]
+            - type: psk_key_exchange_modes
+              length: 2
+              psk_ke_mode: 1
+            - type: record_size_limit
+              length: 2
+              record_size_limit: 16385
+            - type: padding
+---
+name: firefox_95.0.2_win10
+browser:
+    name: firefox
+    version: 95.0.2
+    os: win10
+    mode: regular
+signature:
+    tls_client_hello:
+        record_version: 'TLS_VERSION_1_0'
+        handshake_version: 'TLS_VERSION_1_2'
+        session_id_length: 32
+        ciphersuites: [
+            0x1301, 0x1303, 0x1302, 0xc02b, 0xc02f, 0xcca9, 0xcca8, 0xc02c,
+            0xc030, 0xc00a, 0xc009, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f,
+            0x0035
+        ]
+        comp_methods: [0x00]
+        extensions:
+            - type: server_name
+            - type: extended_master_secret
+              length: 0
+            - type: renegotiation_info
+              length: 1
+            - type: supported_groups
+              length: 14
+              supported_groups: [
+                  0x1d, 0x017, 0x18, 0x19, 0x0100, 0x0101
+              ]
+            - type: ec_point_formats
+              length: 2
+              ec_point_formats: [0]
+            - type: session_ticket
+              length: 0
+            - type: application_layer_protocol_negotiation
+              length: 14
+              alpn_list: ['h2', 'http/1.1']
+            - type: status_request
+              length: 5
+              status_request_type: 0x01
+            - type: delegated_credentials
+              length: 10
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0203
+              ]
+            - type: keyshare
+              length: 107
+              key_shares:
+                  - group: 29
+                    length: 32
+                  - group: 23
+                    length: 65
+            - type: supported_versions
+              length: 5
+              supported_versions: [
+                  'TLS_VERSION_1_3', 'TLS_VERSION_1_2'
+              ]
+            - type: signature_algorithms
+              length: 24
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0804,
+                  0x0805, 0x0806, 0x0401, 0x0501,
+                  0x0601, 0x0203, 0x0201
+              ]
+            - type: psk_key_exchange_modes
+              length: 2
+              psk_ke_mode: 1
+            - type: record_size_limit
+              length: 2
+              record_size_limit: 16385
+            - type: padding

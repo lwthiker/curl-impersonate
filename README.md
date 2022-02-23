@@ -70,6 +70,9 @@ The layout is similar for both. For example, the Firefox directory contains:
 * [curl-configure.patch](firefox/patches/curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
 * [curl-static-libnss.patch](firefox/patches/curl-static-libnss.patch) - Patch to make curl compile with a static libnss.
 
+Other files of interest:
+* [tests/signatures.yaml](tests/signatures.yaml) - YAML database of known browser signatures that can be impersonated.
+
 ## What's next?
 This was done in a very hacky way, but I hope it could be turned into a real project. Imagine that you could run:
 ```
