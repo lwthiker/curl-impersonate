@@ -49,6 +49,10 @@ If you use it outside this container:
 * Install dependencies: `sudo apt install libbrotli1`
 * Install libnss3: `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
+### Distro packages
+
+AUR packages are available to Arch users: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
+
 ## Usage
 It is recommended to use the wrapper scripts `curl_chrome98` or `curl_ff91esr`, as they add all the correct headers and flags. For example:
 ```
