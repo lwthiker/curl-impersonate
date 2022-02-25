@@ -1,10 +1,55 @@
---- curl-7.81.0-original/lib/vtls/nss.c	2022-01-03 18:36:46.000000000 +0200
-+++ curl-7.81.0/lib/vtls/nss.c	2022-02-18 07:47:17.612205091 +0200
-@@ -145,2 +145,3 @@
+diff --git a/configure.ac b/configure.ac
+index 63e320236..deb054300 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2573,15 +2573,15 @@ if test X"$want_nghttp2" != Xno; then
+ 
+   if test "$PKGCONFIG" != "no" ; then
+     LIB_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
+-      $PKGCONFIG --libs-only-l libnghttp2`
++      $PKGCONFIG --static --libs-only-l libnghttp2`
+     AC_MSG_NOTICE([-l is $LIB_H2])
+ 
+     CPP_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path]) dnl
+-      $PKGCONFIG --cflags-only-I libnghttp2`
++      $PKGCONFIG --static --cflags-only-I libnghttp2`
+     AC_MSG_NOTICE([-I is $CPP_H2])
+ 
+     LD_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
+-      $PKGCONFIG --libs-only-L libnghttp2`
++      $PKGCONFIG --static --libs-only-L libnghttp2`
+     AC_MSG_NOTICE([-L is $LD_H2])
+ 
+     LDFLAGS="$LDFLAGS $LD_H2"
+diff --git a/lib/http2.c b/lib/http2.c
+index e74400a4c..1f4d496f3 100644
+--- a/lib/http2.c
++++ b/lib/http2.c
+@@ -1818,7 +1818,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+ 
+ /* Index where :authority header field will appear in request header
+    field list. */
+-#define AUTHORITY_DST_IDX 3
++/* curl-impersonate: Put the ":authority" header in the second place. */
++#define AUTHORITY_DST_IDX 2
+ 
+ /* USHRT_MAX is 65535 == 0xffff */
+ #define HEADER_OVERFLOW(x) \
+diff --git a/lib/vtls/nss.c b/lib/vtls/nss.c
+index 2b44f0512..4c60797c7 100644
+--- a/lib/vtls/nss.c
++++ b/lib/vtls/nss.c
+@@ -143,6 +143,7 @@ static const struct cipher_s cipherlist[] = {
+   {"dhe_dss_3des_sha",           SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA},
+   {"dhe_rsa_des_sha",            SSL_DHE_RSA_WITH_DES_CBC_SHA},
    {"dhe_dss_des_sha",            SSL_DHE_DSS_WITH_DES_CBC_SHA},
 +  {"rsa_3des_ede_cbc_sha",       TLS_RSA_WITH_3DES_EDE_CBC_SHA},
    /* TLS 1.0: Exportable 56-bit Cipher Suites. */
-@@ -380,2 +381,91 @@
+   {"rsa_des_56_sha",             TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA},
+   {"rsa_rc4_56_sha",             TLS_RSA_EXPORT1024_WITH_RC4_56_SHA},
+@@ -378,6 +379,95 @@ static SECStatus set_ciphers(struct Curl_easy *data, PRFileDesc *model,
+   return SECSuccess;
+ }
  
 +/* See nsSSLIOLayerSetOptions@nsNSSIOLayer.cpp, Firefox source code */
 +const SSLNamedGroup named_groups[] = {
@@ -96,7 +141,11 @@
 +}
 +
  /*
-@@ -1322,2 +1412,20 @@
+  * Return true if at least one cipher-suite is enabled. Used to determine
+  * if we need to call NSS_SetDomesticPolicy() to enable the default ciphers.
+@@ -1320,6 +1410,24 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
+ 
+   if(module)
      SECMOD_DestroyModule(module);
 +
 +  /* Patch for Ubuntu - add a "nss/" suffix to the library name */
@@ -117,7 +166,11 @@
 +    SECMOD_DestroyModule(module);
 +
    return CURLE_FAILED_INIT;
-@@ -1923,2 +2031,8 @@
+ }
+ 
+@@ -1921,6 +2029,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+   if(SSL_OptionSet(model, SSL_NO_CACHE, ssl_no_cache) != SECSuccess)
+     goto error;
  
 +  if(SSL_SET_OPTION(primary.sessionid)) {
 +    if(SSL_OptionSet(model, SSL_ENABLE_SESSION_TICKETS,
@@ -126,7 +179,11 @@
 +  }
 +
    /* enable/disable the requested SSL version(s) */
-@@ -1962,2 +2076,10 @@
+   if(nss_init_sslver(&sslver, data, conn) != CURLE_OK)
+     goto error;
+@@ -1960,6 +2074,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+     }
+   }
  
 +  if (set_named_groups(model) != SECSuccess ||
 +      set_additional_key_shares(model) != SECSuccess ||
@@ -137,16 +194,48 @@
 +  }
 +
    if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
-@@ -2115,2 +2237,6 @@
+     infof(data, "warning: ignoring value of ssl.verifyhost");
+ 
+@@ -2113,6 +2235,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+     int cur = 0;
+     unsigned char protocols[128];
  
 +    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
 +    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);
 +    cur += ALPN_HTTP_1_1_LENGTH;
 +
  #ifdef USE_HTTP2
-@@ -2126,5 +2252,2 @@
+     if(data->state.httpwant >= CURL_HTTP_VERSION_2
+ #ifndef CURL_DISABLE_PROXY
+@@ -2124,9 +2250,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+       cur += ALPN_H2_LENGTH;
+     }
  #endif
 -    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
 -    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);
 -    cur += ALPN_HTTP_1_1_LENGTH;
  
+     if(SSL_SetNextProtoNego(backend->handle, protocols, cur) != SECSuccess)
+       goto error;
+diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
+index 397ba71b1..abc09a91c 100644
+--- a/m4/curl-nss.m4
++++ b/m4/curl-nss.m4
+@@ -74,7 +74,7 @@ if test "x$OPT_NSS" != xno; then
+       # Without pkg-config, we'll kludge in some defaults
+       AC_MSG_WARN([Using hard-wired libraries and compilation flags for NSS.])
+       addld="-L$OPT_NSS/lib"
+-      addlib="-lssl3 -lsmime3 -lnss3 -lplds4 -lplc4 -lnspr4"
++      addlib="-Wl,-Bstatic -Wl,--start-group -lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lsmime -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lsha-x86_c_lib -lgcm-aes-x86_c_lib -lhw-acc-crypto-avx -lhw-acc-crypto-avx2  -lnssutil -lnssb -lcryptohi -l:libplc4.a -l:libplds4.a -l:libnspr4.a -lsqlite -Wl,--end-group -Wl,-Bdynamic -pthread -ldl"
+       addcflags="-I$OPT_NSS/include"
+       version="unknown"
+       nssprefix=$OPT_NSS
+@@ -91,7 +91,7 @@ if test "x$OPT_NSS" != xno; then
+     fi
+ 
+     dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
+-    AC_CHECK_LIB(nss3, SSL_VersionRangeSet,
++    AC_CHECK_LIB(nss_static, SSL_VersionRangeSet,
+      [
+      AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
+      AC_SUBST(USE_NSS, [1])

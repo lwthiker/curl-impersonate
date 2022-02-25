@@ -1,0 +1,293 @@
+diff --git a/configure.ac b/configure.ac
+index 63e320236..deb054300 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2573,15 +2573,15 @@ if test X"$want_nghttp2" != Xno; then
+ 
+   if test "$PKGCONFIG" != "no" ; then
+     LIB_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
+-      $PKGCONFIG --libs-only-l libnghttp2`
++      $PKGCONFIG --static --libs-only-l libnghttp2`
+     AC_MSG_NOTICE([-l is $LIB_H2])
+ 
+     CPP_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path]) dnl
+-      $PKGCONFIG --cflags-only-I libnghttp2`
++      $PKGCONFIG --static --cflags-only-I libnghttp2`
+     AC_MSG_NOTICE([-I is $CPP_H2])
+ 
+     LD_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
+-      $PKGCONFIG --libs-only-L libnghttp2`
++      $PKGCONFIG --static --libs-only-L libnghttp2`
+     AC_MSG_NOTICE([-L is $LD_H2])
+ 
+     LDFLAGS="$LDFLAGS $LD_H2"
+diff --git a/lib/http.h b/lib/http.h
+index b4aaba2a2..1cf65c4b1 100644
+--- a/lib/http.h
++++ b/lib/http.h
+@@ -278,7 +278,8 @@ struct http_conn {
+   struct h2settings settings;
+ 
+   /* list of settings that will be sent */
+-  nghttp2_settings_entry local_settings[3];
++  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
++  nghttp2_settings_entry local_settings[5];
+   size_t local_settings_num;
+ #else
+   int unused; /* prevent a compiler warning */
+diff --git a/lib/http2.c b/lib/http2.c
+index e74400a4c..33197df20 100644
+--- a/lib/http2.c
++++ b/lib/http2.c
+@@ -41,6 +41,7 @@
+ #include "curl_printf.h"
+ #include "curl_memory.h"
+ #include "memdebug.h"
++#include "rand.h"
+ 
+ #define H2_BUFSIZE 32768
+ 
+@@ -1193,16 +1194,27 @@ static void populate_settings(struct Curl_easy *data,
+ {
+   nghttp2_settings_entry *iv = httpc->local_settings;
+ 
+-  iv[0].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+-  iv[0].value = Curl_multi_max_concurrent_streams(data->multi);
++  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
++  iv[0].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
++  iv[0].value = 0x10000;
+ 
+-  iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
+-  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
++  iv[1].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
++  iv[1].value = Curl_multi_max_concurrent_streams(data->multi);
+ 
+-  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+-  iv[2].value = data->multi->push_cb != NULL;
++  iv[2].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
++  iv[2].value = 0x600000;
+ 
+-  httpc->local_settings_num = 3;
++  iv[3].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
++  iv[3].value = 0x40000;
++
++  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
++  // iv[2].value = data->multi->push_cb != NULL;
++  
++  // Looks like random setting set by Chrome, maybe similar to TLS GREASE. */
++  Curl_rand(data, (unsigned char *)&iv[4].settings_id, sizeof(iv[4].settings_id));
++  Curl_rand(data, (unsigned char *)&iv[4].value, sizeof(iv[4].value));
++
++  httpc->local_settings_num = 5;
+ }
+ 
+ void Curl_http2_done(struct Curl_easy *data, bool premature)
+@@ -1818,7 +1830,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+ 
+ /* Index where :authority header field will appear in request header
+    field list. */
+-#define AUTHORITY_DST_IDX 3
++/* curl-impersonate: Put the ":authority" header in the first place. */
++#define AUTHORITY_DST_IDX 1
+ 
+ /* USHRT_MAX is 65535 == 0xffff */
+ #define HEADER_OVERFLOW(x) \
+@@ -2032,25 +2045,26 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+   }
+   if(!end || end == hdbuf)
+     goto fail;
+-  nva[1].name = (unsigned char *)":path";
+-  nva[1].namelen = strlen((char *)nva[1].name);
+-  nva[1].value = (unsigned char *)hdbuf;
+-  nva[1].valuelen = (size_t)(end - hdbuf);
+-  nva[1].flags = NGHTTP2_NV_FLAG_NONE;
+-  if(HEADER_OVERFLOW(nva[1])) {
++  /* curl-impersonate: Switch the places of ":path" and ":scheme". */
++  nva[2].name = (unsigned char *)":path";
++  nva[2].namelen = strlen((char *)nva[2].name);
++  nva[2].value = (unsigned char *)hdbuf;
++  nva[2].valuelen = (size_t)(end - hdbuf);
++  nva[2].flags = NGHTTP2_NV_FLAG_NONE;
++  if(HEADER_OVERFLOW(nva[2])) {
+     failf(data, "Failed sending HTTP request: Header overflow");
+     goto fail;
+   }
+ 
+-  nva[2].name = (unsigned char *)":scheme";
+-  nva[2].namelen = strlen((char *)nva[2].name);
++  nva[1].name = (unsigned char *)":scheme";
++  nva[1].namelen = strlen((char *)nva[1].name);
+   if(conn->handler->flags & PROTOPT_SSL)
+-    nva[2].value = (unsigned char *)"https";
++    nva[1].value = (unsigned char *)"https";
+   else
+-    nva[2].value = (unsigned char *)"http";
+-  nva[2].valuelen = strlen((char *)nva[2].value);
+-  nva[2].flags = NGHTTP2_NV_FLAG_NONE;
+-  if(HEADER_OVERFLOW(nva[2])) {
++    nva[1].value = (unsigned char *)"http";
++  nva[1].valuelen = strlen((char *)nva[1].value);
++  nva[1].flags = NGHTTP2_NV_FLAG_NONE;
++  if(HEADER_OVERFLOW(nva[1])) {
+     failf(data, "Failed sending HTTP request: Header overflow");
+     goto fail;
+   }
+diff --git a/lib/http2.h b/lib/http2.h
+index d6986d97f..fa5c90e7f 100644
+--- a/lib/http2.h
++++ b/lib/http2.h
+@@ -29,7 +29,8 @@
+ 
+ /* value for MAX_CONCURRENT_STREAMS we use until we get an updated setting
+    from the peer */
+-#define DEFAULT_MAX_CONCURRENT_STREAMS 100
++/* curl-impersonate: Use 1000 concurrent streams like Chrome. */
++#define DEFAULT_MAX_CONCURRENT_STREAMS 1000
+ 
+ /*
+  * Store nghttp2 version info in this buffer.
+diff --git a/lib/multi.c b/lib/multi.c
+index f8dcc63b4..e6b728592 100644
+--- a/lib/multi.c
++++ b/lib/multi.c
+@@ -393,7 +393,8 @@ struct Curl_multi *Curl_multi_handle(int hashsize, /* socket hash */
+ 
+   /* -1 means it not set by user, use the default value */
+   multi->maxconnects = -1;
+-  multi->max_concurrent_streams = 100;
++  /* curl-impersonate: Use 1000 concurrent streams like Chrome. */
++  multi->max_concurrent_streams = 1000;
+   multi->ipv6_works = Curl_ipv6works(NULL);
+ 
+ #ifdef USE_WINSOCK
+diff --git a/lib/vtls/openssl.c b/lib/vtls/openssl.c
+index f836c63b0..5c562549f 100644
+--- a/lib/vtls/openssl.c
++++ b/lib/vtls/openssl.c
+@@ -76,6 +76,8 @@
+ #include <openssl/buffer.h>
+ #include <openssl/pkcs12.h>
+ 
++#include <brotli/decode.h>
++
+ #ifdef USE_AMISSL
+ #include "amigaos.h"
+ #endif
+@@ -2629,6 +2631,31 @@ static CURLcode load_cacert_from_memory(SSL_CTX *ctx,
+   return (count > 0 ? CURLE_OK : CURLE_SSL_CACERT_BADFILE);
+ }
+ 
++/* Taken from Chromium and adapted to C,
++ * see net/ssl/cert_compression.cc
++ */
++int DecompressBrotliCert(SSL* ssl,
++                         CRYPTO_BUFFER** out,
++                         size_t uncompressed_len,
++                         const uint8_t* in,
++                         size_t in_len) {
++  uint8_t* data;
++  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
++  if (!decompressed) {
++    return 0;
++  }
++
++  size_t output_size = uncompressed_len;
++  if (BrotliDecoderDecompress(in_len, in, &output_size, data) !=
++          BROTLI_DECODER_RESULT_SUCCESS ||
++      output_size != uncompressed_len) {
++    return 0;
++  }
++
++  *out = decompressed;
++  return 1;
++}
++
+ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+                                    struct connectdata *conn, int sockindex)
+ {
+@@ -2767,7 +2794,10 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+   ctx_options = SSL_OP_ALL;
+ 
+ #ifdef SSL_OP_NO_TICKET
+-  ctx_options |= SSL_OP_NO_TICKET;
++  /* curl-impersonate patch.
++   * Turn off SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
++   * to be sent. */
++  ctx_options &= ~SSL_OP_NO_TICKET;
+ #endif
+ 
+ #ifdef SSL_OP_NO_COMPRESSION
+@@ -2821,8 +2851,11 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+   SSL_CTX_set_options(backend->ctx, ctx_options);
+ 
+ #ifdef HAS_NPN
++  /* curl-impersonate: Do not enable the NPN extension. */
++  /*
+   if(conn->bits.tls_enable_npn)
+     SSL_CTX_set_next_proto_select_cb(backend->ctx, select_next_proto_cb, data);
++  */
+ #endif
+ 
+ #ifdef HAS_ALPN
+@@ -2937,6 +2970,19 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+   }
+ #endif
+ 
++  /* curl-impersonate:
++   * Configure BoringSSL to behave like Chrome. 
++   * See Constructor of SSLContext at net/socket/ssl_client_socket_impl.cc
++   * and SSLClientSocketImpl::Init()
++   * in the Chromium's source code. */
++
++  /* Enable TLS GREASE. */
++  SSL_CTX_set_grease_enabled(backend->ctx, 1);
++
++  /* Add support for TLS extension 27 - compress_certificate.
++   * Add Brotli decompression. See Chromium net/ssl/cert_compression.cc */
++  SSL_CTX_add_cert_compression_alg(backend->ctx,
++          TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
+ 
+ #if defined(USE_WIN32_CRYPTO)
+   /* Import certificates from the Windows root certificate store if requested.
+@@ -3236,6 +3282,41 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+ 
+   SSL_set_connect_state(backend->handle);
+ 
++#ifdef USE_HTTP2
++  /* curl-impersonate: This adds the ALPS extension (17513).
++   * Chromium calls this function as well in SSLClientSocketImpl::Init().
++   * The 4th parameter is called "settings", and I don't know what it
++   * should contain. For now, use an empty string. */
++  SSL_add_application_settings(backend->handle, "h2", 2, NULL, 0);
++#endif
++
++  SSL_set_options(backend->handle,
++      SSL_OP_LEGACY_SERVER_CONNECT);
++  SSL_set_mode(backend->handle,
++      SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
++
++  /* curl-impersonate: Enable TLS extensions 5 - status_request and
++   * 18 - signed_certificate_timestamp. */
++  SSL_enable_signed_cert_timestamps(backend->handle);
++  SSL_enable_ocsp_stapling(backend->handle);
++
++  /* curl-impersonate: Some SSL settings copied over from Chrome. */
++  SSL_set_shed_handshake_config(backend->handle, 1);
++
++  /* curl-impersonate: Set the signature algorithms.
++   * (TLS extension 13).
++   * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
++  static const uint16_t kVerifyPrefs[] = {
++    SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
++    SSL_SIGN_RSA_PKCS1_SHA256,       SSL_SIGN_ECDSA_SECP384R1_SHA384,
++    SSL_SIGN_RSA_PSS_RSAE_SHA384,    SSL_SIGN_RSA_PKCS1_SHA384,
++    SSL_SIGN_RSA_PSS_RSAE_SHA512,    SSL_SIGN_RSA_PKCS1_SHA512,
++  };
++  if (!SSL_set_verify_algorithm_prefs(backend->handle, kVerifyPrefs,
++              sizeof(kVerifyPrefs) / sizeof(kVerifyPrefs[0]))) {
++    return CURLE_SSL_CIPHER;
++  }
++
+   backend->server_cert = 0x0;
+ #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+   if((0 == Curl_inet_pton(AF_INET, hostname, &addr)) &&
