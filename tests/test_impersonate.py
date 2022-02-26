@@ -179,6 +179,7 @@ class TestImpersonation:
         "curl_binary, expected_signature",
         [
             ("chrome/curl_chrome98", "chrome_98.0.4758.102_win10"),
+            ("chrome/curl_edge98", "edge_98.0.1108.62_win10"),
             ("firefox/curl_ff91esr", "firefox_91.6.0esr_win10"),
             ("firefox/curl_ff95", "firefox_95.0.2_win10")
         ]

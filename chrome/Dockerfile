@@ -74,6 +74,6 @@ RUN mkdir out && \
     cp ${CURL_VERSION}/src/curl out/curl-impersonate
 
 # Wrapper script
-COPY curl_chrome* out/
+COPY curl_chrome* curl_edge* out/
 
 RUN chmod +x out/*

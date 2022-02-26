@@ -1,4 +1,4 @@
-A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate real browsers. Currently supports Chrome & Firefox. This curl binary is able to perform a TLS handshake that is identical to that of a real browser.
+A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate real browsers. Currently supports Chrome, Edge & Firefox. This curl binary is able to perform a TLS handshake that is identical to that of a real browser.
 
 ## Why?
 When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The Client Hello message that curl produces differs drastically from that of a real browser. Compare the following Wireshark capture. Left is a regular curl, right is Firefox.
@@ -30,6 +30,7 @@ docker build -t curl-impersonate-chrome chrome/
 The resulting image contains:
 * `/build/out/curl-impersonate` - The curl binary that can impersonate Chrome. It is compiled statically against libcurl, BoringSSL, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
 * `/build/out/curl_chrome98` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Chrome 98.
+* `/build/out/curl_edge98` - Same but with Edge 98 (which is based on Chromium).
 
 You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build. If you use it outside this container:
 * Install dependencies: `sudo apt install libbrotli1`
