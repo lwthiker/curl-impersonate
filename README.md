@@ -69,17 +69,13 @@ This repository contains two main folders:
 The layout is similar for both. For example, the Firefox directory contains:
 * [Dockerfile](firefox/Dockerfile) - Used to build `curl-impersonate` with all dependencies.
 * [curl_ff91esr](firefox/curl_ff91esr), [curl_ff95](curl_ff95) - Wrapper scripts that launch `curl-impersonate` with the correct flags.
-* [curl-lib-nss.patch](firefox/patches/curl-lib-nss.patch) - The main patch that makes curl use the same TLS extensions as Firefox.
+* [curl-impersonate.patch](firefox/patches/curl-impersonate.patch) - The main patch that makes curl use the same TLS extensions as Firefox. Also makes curl compile statically with libnghttp2 and libnss.
 * [libnghttp2-pc.patch](firefox/patches/libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
-* [curl-configure.patch](firefox/patches/curl-configure.patch) - Patch to make curl compile with a static libnghttp2.
-* [curl-static-libnss.patch](firefox/patches/curl-static-libnss.patch) - Patch to make curl compile with a static libnss.
 
 Other files of interest:
 * [tests/signatures.yaml](tests/signatures.yaml) - YAML database of known browser signatures that can be impersonated.
 
-## What's next?
-This was done in a very hacky way, but I hope it could be turned into a real project. Imagine that you could run:
-```
-curl --impersonate ff95
-```
-and it would behave exactly like Firefox 95. It could then be wrappped with a nice Python library.
+## Contributing
+If you'd like to help, please check out the [open issues](https://github.com/lwthiker/curl-impersonate/issues). You can open a pull request with your changes.
+
+This repository contains the build process for `curl-impersonate`. The actual patches to `curl` are maintained in a [separate repository](https://github.com/lwthiker/curl) forked from the upstream curl. The changes are maintained in the [impersonate-firefox](https://github.com/lwthiker/curl/tree/impersonate-firefox)  and [impersonate-chrome](https://github.com/lwthiker/curl/tree/impersonate-chrome) branches.
