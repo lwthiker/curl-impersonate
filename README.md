@@ -30,6 +30,7 @@ docker build -t curl-impersonate-chrome chrome/
 The resulting image contains:
 * `/build/out/curl-impersonate` - The curl binary that can impersonate Chrome. It is compiled statically against libcurl, BoringSSL, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
 * `/build/out/curl_chrome98` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Chrome 98.
+* `/build/out/libcurl-impersonate.so` - libcurl compiled with impersonation support. See [Usage](#usage) below for more details.
 
 You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build. If you use it outside this container:
 * Install dependencies: `sudo apt install libbrotli1`
@@ -59,6 +60,27 @@ It is recommended to use the wrapper scripts `curl_chrome98` or `curl_ff91esr`, 
 curl_chrome98 https://www.google.com
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
+
+### libcurl-impersonate
+`libcurl-impersonate.so` is libcurl compiled with the same changes as the command line `curl-impersonate`.
+It has an additional API function:
+```c
+CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target);
+```
+You can call it with the target names, e.g. `"chrome98"`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts. Specifically it sets:
+* `CURLOPT_HTTP_VERSION`
+* `CURLOPT_SSLVERSION`
+* `CURLOPT_SSL_CIPHER_LIST`
+* `CURLOPT_HTTPBASEHEADER` (non-standard option created for this project).
+Note that if you call `curl_easy_setopt()` later it may override the options set by `curl_easy_impersonate()`.
+
+### Using CURL_IMPERSONATE env var
+*Experimental*:
+If your application uses `libcurl` already, you can rename `libcurl-impersonate.so` and replace the existing library at runtime with `LD_LIBRARY_PATH`. You can then set the `CURL_IMPERSONATE` env var, e.g.
+```bash
+LD_LIBRARY_PATH=/path/to/libcurl-impersonate/ CURL_IMPERSONATE=chrome98 my_app
+```
+But note that doing so for `curl` itself will NOT WORK (it overrides the TLS options by default). Use the wrapper scripts instead.
 
 ## Contents
 
