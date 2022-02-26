@@ -1,8 +1,0 @@
---- curl-7.81.0-original/lib/http.h	2022-01-03 18:36:46.000000000 +0200
-+++ curl-7.81.0/lib/http.h	2022-02-19 00:44:48.347052308 +0200
-@@ -280,3 +280,4 @@
-   /* list of settings that will be sent */
--  nghttp2_settings_entry local_settings[3];
-+  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
-+  nghttp2_settings_entry local_settings[5];
-   size_t local_settings_num;

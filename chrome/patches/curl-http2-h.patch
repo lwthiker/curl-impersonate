@@ -1,8 +1,0 @@
---- curl-7.81.0-original/lib/http2.h	2021-12-10 09:40:37.000000000 +0200
-+++ curl-7.81.0/lib/http2.h	2022-02-19 00:45:53.440376589 +0200
-@@ -31,3 +31,4 @@
-    from the peer */
--#define DEFAULT_MAX_CONCURRENT_STREAMS 100
-+/* curl-impersonate: Use 1000 concurrent streams like Chrome. */
-+#define DEFAULT_MAX_CONCURRENT_STREAMS 1000
- 
