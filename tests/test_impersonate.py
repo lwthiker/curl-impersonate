@@ -195,6 +195,14 @@ class TestImpersonation:
                     "CURL_IMPERSONATE": "chrome98"
                 },
                 "chrome_98.0.4758.102_win10"
+            ),
+            (
+                "./minicurl",
+                {
+                    "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                    "CURL_IMPERSONATE": "edge98"
+                },
+                "edge_98.0.1108.62_win10"
             )
         ]
     )
