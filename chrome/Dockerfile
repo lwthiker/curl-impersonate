@@ -91,5 +91,5 @@ RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
     strip "out/libcurl-impersonate.so.$ver"
 
 # Wrapper scripts
-COPY curl_chrome* out/
+COPY curl_chrome* curl_edge* out/
 RUN chmod +x out/curl_*
