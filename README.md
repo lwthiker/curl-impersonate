@@ -73,15 +73,17 @@ You can call it with the target names, e.g. `"chrome98"`, and it will internally
 * `CURLOPT_SSLVERSION`
 * `CURLOPT_SSL_CIPHER_LIST`
 * `CURLOPT_HTTPBASEHEADER` (non-standard option created for this project).
-Note that if you call `curl_easy_setopt()` later it may override the options set by `curl_easy_impersonate()`.
+
+Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
 
 ### Using CURL_IMPERSONATE env var
-*Experimental*:
-If your application uses `libcurl` already, you can rename `libcurl-impersonate.so` and replace the existing library at runtime with `LD_LIBRARY_PATH`. You can then set the `CURL_IMPERSONATE` env var, e.g.
+*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD`. You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
-LD_LIBRARY_PATH=/path/to/libcurl-impersonate/ CURL_IMPERSONATE=chrome98 my_app
+LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome98 my_app
 ```
-But note that doing so for `curl` itself will NOT WORK (it overrides the TLS options by default). Use the wrapper scripts instead.
+The `CURL_IMPERSONATE` env var will cause `curl_easy_impersonate()` to be called automatically for any new curl handle created by `curl_easy_init()`.
+
+Note that the above will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
 
 ## Contents
 
