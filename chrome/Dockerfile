@@ -16,7 +16,9 @@ RUN curl -L https://github.com/google/boringssl/archive/${BORING_SSL_COMMIT}.zip
 
 # Compile BoringSSL.
 # See https://boringssl.googlesource.com/boringssl/+/HEAD/BUILDING.md
+COPY patches/boringssl-*.patch boringssl/
 RUN cd boringssl && \
+    for p in $(ls boringssl-*.patch); do patch -p1 < $p; done && \
     mkdir build && cd build && \
     cmake -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
     ninja
