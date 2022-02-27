@@ -1,3 +1,4 @@
+import os
 import io
 import logging
 import subprocess
@@ -176,16 +177,30 @@ class TestImpersonation:
         return None
 
     @pytest.mark.parametrize(
-        "curl_binary, expected_signature",
+        "curl_binary, env_vars, expected_signature",
         [
-            ("chrome/curl_chrome98", "chrome_98.0.4758.102_win10"),
-            ("firefox/curl_ff91esr", "firefox_91.6.0esr_win10"),
-            ("firefox/curl_ff95", "firefox_95.0.2_win10")
+            # Test wrapper scripts
+            ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
+            ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
+            ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
+
+            # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
+            # linked against the regular libcurl and setting the
+            # CURL_IMPERSONATE env var.
+            (
+                "./minicurl",
+                {
+                    "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                    "CURL_IMPERSONATE": "chrome98"
+                },
+                "chrome_98.0.4758.102_win10"
+            )
         ]
     )
     def test_impersonation(self,
                            tcpdump,
                            curl_binary,
+                           env_vars,
                            browser_signatures,
                            expected_signature):
         """
@@ -196,13 +211,21 @@ class TestImpersonation:
         extract the Client Hello packet from the capture and compares its
         signature with the expected one defined in the YAML database.
         """
+        env = os.environ.copy()
+        if env_vars:
+            env |= env_vars
+
         logging.debug(f"Launching '{curl_binary}' to {self.TEST_URL}")
+        if env_vars:
+            logging.debug("Environment variables: {}".format(
+                " ".join([f"{k}={v}" for k, v in env_vars.items()])))
+
         curl = subprocess.Popen([
             curl_binary,
             "-o", "/dev/null",
             "--local-port", f"{self.LOCAL_PORTS[0]}-{self.LOCAL_PORTS[1]}",
             self.TEST_URL
-        ])
+        ], env=env)
 
         ret = curl.wait(timeout=10)
         assert ret == 0
