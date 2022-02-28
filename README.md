@@ -46,6 +46,7 @@ The resulting image contains:
 * `/build/out/curl-impersonate` - The curl binary that can impersonate Firefox. It is compiled statically against libcurl, nss, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
 * `/build/out/curl_ff91esr` - A wrapper script that launches `curl-impersonate` with the needed headers and ciphers to impersonate Firefox 91 ESR (Extended Support Release).
 * `/build/out/curl_ff95` - Same but with Firefox 95.
+* `/build/out/libcurl-impersonate.so` - libcurl compiled with impersonation support. See [Usage](#usage) below for more details.
 
 If you use it outside this container:
 * Install dependencies: `sudo apt install libbrotli1`

@@ -40,7 +40,7 @@ RUN cd ${NGHTTP2_VERSION} && \
 
 # Compile nghttp2
 RUN cd ${NGHTTP2_VERSION} && \
-    ./configure && \
+    ./configure --with-pic && \
     make && make install
 
 # Download curl.
@@ -48,17 +48,15 @@ ARG CURL_VERSION=curl-7.81.0
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
 RUN tar xf ${CURL_VERSION}.tar.xz
 
-# Patch Curl.
+# Patch curl and re-generate the configure script
 COPY patches/curl-*.patch ${CURL_VERSION}/
-
-# Re-generate the configure script
 RUN cd ${CURL_VERSION} && \
     for p in $(ls curl-*.patch); do patch -p1 < $p; done && \
     autoreconf -fi
 
 # Compile curl with nss
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-nss=/build/${NSS_VERSION}/dist/Release --enable-static --disable-shared CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" --with-nghttp2=/usr/local && \
+    ./configure --with-nss=/build/${NSS_VERSION}/dist/Release --enable-static --disable-shared CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" --with-nghttp2=/usr/local USE_CURL_SSLKEYLOGFILE=true && \
     make
 
 # curl tries to load the CA certificates for libnss.
@@ -66,13 +64,28 @@ RUN cd ${CURL_VERSION} && \
 # which is supplied by libnss3 on Debian/Ubuntu
 RUN apt-get install -y libnss3
 
-# 'xxd' is needed for the wrapper curl_ff95 script
-RUN apt-get install -y xxd
-
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate && \
+    strip out/curl-impersonate
+
+# Re-compile libcurl dynamically
+RUN cd ${CURL_VERSION} && \
+    ./configure --with-nss=/build/${NSS_VERSION}/dist/Release \
+                --with-nghttp2=/usr/local \
+                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
+                USE_CURL_SSLKEYLOGFILE=true && \
+    make clean && make
+
+# Rename to 'libcurl-impersonate' to avoid confusion, and recreate the
+# symbolic links.
+RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
+    major=$(echo -n $ver | cut -d'.' -f1) && \
+    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate.so.$ver" && \
+    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so.$major" && \
+    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
+    strip "out/libcurl-impersonate.so.$ver"
+
 
 # Wrapper script
-COPY curl_* out/
-
-RUN chmod +x out/*
+COPY curl_ff* out/
+RUN chmod +x out/curl_*

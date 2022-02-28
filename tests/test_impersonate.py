@@ -203,6 +203,22 @@ class TestImpersonation:
                     "CURL_IMPERSONATE": "edge98"
                 },
                 "edge_98.0.1108.62_win10"
+            ),
+            (
+                "./minicurl",
+                {
+                    "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
+                    "CURL_IMPERSONATE": "ff91esr"
+                },
+                "firefox_91.6.0esr_win10"
+            ),
+            (
+                "./minicurl",
+                {
+                    "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
+                    "CURL_IMPERSONATE": "ff95"
+                },
+                "firefox_95.0.2_win10"
             )
         ]
     )

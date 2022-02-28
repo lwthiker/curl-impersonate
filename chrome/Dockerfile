@@ -73,8 +73,7 @@ RUN mkdir out && \
 
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
-    ./configure --enable-versioned-symbols \
-                --with-openssl=/build/boringssl/build \
+    ./configure --with-openssl=/build/boringssl/build \
                 --with-nghttp2=/usr/local \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
