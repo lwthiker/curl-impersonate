@@ -21,6 +21,433 @@ index 63e320236..deb054300 100644
      AC_MSG_NOTICE([-L is $LD_H2])
  
      LDFLAGS="$LDFLAGS $LD_H2"
+diff --git a/include/curl/curl.h b/include/curl/curl.h
+index 7b69ce2d6..fe4bb36b9 100644
+--- a/include/curl/curl.h
++++ b/include/curl/curl.h
+@@ -2135,6 +2135,10 @@ typedef enum {
+   /* Set MIME option flags. */
+   CURLOPT(CURLOPT_MIME_OPTIONS, CURLOPTTYPE_LONG, 315),
+ 
++  /* curl-impersonate: A list of headers used by the impersonated browser.
++   * If given, merged with CURLOPT_HTTPHEADER. */
++  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 316),
++
+   CURLOPT_LASTENTRY /* the last unused */
+ } CURLoption;
+ 
+diff --git a/include/curl/easy.h b/include/curl/easy.h
+index 2dbfb26b5..e0bf86169 100644
+--- a/include/curl/easy.h
++++ b/include/curl/easy.h
+@@ -41,6 +41,15 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
+ CURL_EXTERN CURLcode curl_easy_perform(CURL *curl);
+ CURL_EXTERN void curl_easy_cleanup(CURL *curl);
+ 
++/*
++ * curl-impersonate: Tell libcurl to impersonate a browser.
++ * This is a wrapper function that calls curl_easy_setopt()
++ * multiple times with all the parameters required. That's also why it was
++ * created as a separate API function and not just as another option to
++ * curl_easy_setopt().
++ */
++CURL_EXTERN CURLcode curl_easy_impersonate(CURL *curl, const char *target);
++
+ /*
+  * NAME curl_easy_getinfo()
+  *
+diff --git a/lib/easy.c b/lib/easy.c
+index 20293a710..ec16aee23 100644
+--- a/lib/easy.c
++++ b/lib/easy.c
+@@ -80,6 +80,7 @@
+ #include "dynbuf.h"
+ #include "altsvc.h"
+ #include "hsts.h"
++#include "strcase.h"
+ 
+ /* The last 3 #include files should be in this order */
+ #include "curl_printf.h"
+@@ -282,6 +283,161 @@ void curl_global_cleanup(void)
+   init_flags  = 0;
+ }
+ 
++/*
++ * curl-impersonate: Options to be set for each supported target browser.
++ * Note: this does not include the HTTP headers, which are handled separately
++ * in Curl_http().
++ */
++#define IMPERSONATE_MAX_HEADERS 32
++static const struct impersonate_opts {
++  const char *target;
++  int httpversion;
++  int ssl_version;
++  const char *ciphers;
++  const char *http_headers[IMPERSONATE_MAX_HEADERS];
++  /* Other TLS options will come here in the future once they are
++   * configurable through curl_easy_setopt() */
++} impersonations[] = {
++  {
++    .target = "chrome98",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++    .http_headers = {
++      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Google Chrome\";v=\"98\"",
++      "sec-ch-ua-mobile: ?0",
++      "sec-ch-ua-platform: \"Windows\"",
++      "Upgrade-Insecure-Requests: 1",
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-User: ?1",
++      "Sec-Fetch-Dest: document",
++      "Accept-Encoding: gzip, deflate, br",
++      "Accept-Language: en-US,en;q=0.9"
++    }
++  },
++  {
++    .target = "edge98",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++    .http_headers = {
++      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Microsoft Edge\";v=\"98\"",
++      "sec-ch-ua-mobile: ?0",
++      "sec-ch-ua-platform: \"Windows\"",
++      "Upgrade-Insecure-Requests: 1",
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36 Edg/98.0.1108.62",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-User: ?1",
++      "Sec-Fetch-Dest: document",
++      "Accept-Encoding: gzip, deflate, br",
++      "Accept-Language: en-US,en;q=0.9"
++    }
++  }
++};
++
++#define NUM_IMPERSONATIONS \
++  sizeof(impersonations) / sizeof(impersonations[0])
++
++/*
++ * curl-impersonate:
++ * Call curl_easy_setopt() with all the needed options as defined in the
++ * 'impersonations' array.
++ * */
++CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target)
++{
++  int i;
++  int ret;
++  const struct impersonate_opts *opts = NULL;
++  struct curl_slist *headers = NULL;
++
++  for(i = 0; i < NUM_IMPERSONATIONS; i++) {
++    if (Curl_strncasecompare(target,
++                             impersonations[i].target,
++                             strlen(impersonations[i].target))) {
++      opts = &impersonations[i];
++      break;
++    }
++  }
++
++  if(!opts) {
++    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
++                   target));
++    return CURLE_BAD_FUNCTION_ARGUMENT;
++  }
++
++  if(opts->httpversion != CURL_HTTP_VERSION_NONE) {
++    ret = curl_easy_setopt(data, CURLOPT_HTTP_VERSION, opts->httpversion);
++    if(ret)
++      return ret;
++  }
++
++  if (opts->ssl_version != CURL_SSLVERSION_DEFAULT) {
++    ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, opts->ssl_version);
++    if(ret)
++      return ret;
++  }
++
++  if(opts->ciphers) {
++    ret = curl_easy_setopt(data, CURLOPT_SSL_CIPHER_LIST, opts->ciphers);
++    if (ret)
++      return ret;
++  }
++
++  /* Build a linked list out of the static array of headers. */
++  for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
++    if(opts->http_headers[i]) {
++      headers = curl_slist_append(headers, opts->http_headers[i]);
++      if(!headers) {
++        return CURLE_OUT_OF_MEMORY;
++      }
++    }
++  }
++
++  if(headers) {
++    ret = curl_easy_setopt(data, CURLOPT_HTTPBASEHEADER, headers);
++    curl_slist_free_all(headers);
++    if(ret)
++      return ret;
++  }
++
++  return CURLE_OK;
++}
++
+ /*
+  * curl_easy_init() is the external interface to alloc, setup and init an
+  * easy handle that is returned. If anything goes wrong, NULL is returned.
+@@ -290,6 +446,7 @@ struct Curl_easy *curl_easy_init(void)
+ {
+   CURLcode result;
+   struct Curl_easy *data;
++  char *target;
+ 
+   /* Make sure we inited the global SSL stuff */
+   if(!initialized) {
+@@ -308,6 +465,22 @@ struct Curl_easy *curl_easy_init(void)
+     return NULL;
+   }
+ 
++  /*
++   * curl-impersonate: Hook into curl_easy_init() to set the required options
++   * from an environment variable.
++   * This is a bit hacky but allows seamless integration of libcurl-impersonate
++   * without code modifications to the app.
++   */
++  target = curl_getenv("CURL_IMPERSONATE");
++  if(target) {
++    result = curl_easy_impersonate(data, target);
++    free(target);
++    if(result) {
++      Curl_close(&data);
++      return NULL;
++    }
++  }
++
+   return data;
+ }
+ 
+@@ -878,6 +1051,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+     outcurl->state.referer_alloc = TRUE;
+   }
+ 
++  if(data->state.base_headers) {
++    outcurl->state.base_headers =
++      Curl_slist_duplicate(data->state.base_headers);
++    if(!outcurl->state.base_headers)
++      goto fail;
++  }
++
+   /* Reinitialize an SSL engine for the new handle
+    * note: the engine name has already been copied by dupset */
+   if(outcurl->set.str[STRING_SSL_ENGINE]) {
+diff --git a/lib/easyoptions.c b/lib/easyoptions.c
+index 04871ad1e..cd5998146 100644
+--- a/lib/easyoptions.c
++++ b/lib/easyoptions.c
+@@ -130,6 +130,7 @@ struct curl_easyoption Curl_easyopts[] = {
+   {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
+   {"HTTPAUTH", CURLOPT_HTTPAUTH, CURLOT_VALUES, 0},
+   {"HTTPGET", CURLOPT_HTTPGET, CURLOT_LONG, 0},
++  {"HTTPBASEHEADER", CURLOPT_HTTPBASEHEADER, CURLOT_SLIST, 0},
+   {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
+   {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
+   {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
+diff --git a/lib/http.c b/lib/http.c
+index f08a343e3..879151dd2 100644
+--- a/lib/http.c
++++ b/lib/http.c
+@@ -84,6 +84,7 @@
+ #include "altsvc.h"
+ #include "hsts.h"
+ #include "c-hyper.h"
++#include "slist.h"
+ 
+ /* The last 3 #include files should be in this order */
+ #include "curl_printf.h"
+@@ -1795,6 +1796,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+   int numlists = 1; /* by default */
+   int i;
+ 
++  /*
++   * curl-impersonate: Use the merged list of headers if it exists (i.e. when
++   * the CURLOPT_HTTPBASEHEADER option was set.
++   */
++  struct curl_slist *noproxyheaders =
++    (data->state.merged_headers ?
++     data->state.merged_headers :
++     data->set.headers);
++
+ #ifndef CURL_DISABLE_PROXY
+   enum proxy_use proxy;
+ 
+@@ -1806,10 +1816,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+ 
+   switch(proxy) {
+   case HEADER_SERVER:
+-    h[0] = data->set.headers;
++    h[0] = noproxyheaders;
+     break;
+   case HEADER_PROXY:
+-    h[0] = data->set.headers;
++    h[0] = noproxyheaders;
+     if(data->set.sep_headers) {
+       h[1] = data->set.proxyheaders;
+       numlists++;
+@@ -1819,12 +1829,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+     if(data->set.sep_headers)
+       h[0] = data->set.proxyheaders;
+     else
+-      h[0] = data->set.headers;
++      h[0] = noproxyheaders;
+     break;
+   }
+ #else
+   (void)is_connect;
+-  h[0] = data->set.headers;
++  h[0] = noproxyheaders;
+ #endif
+ 
+   /* loop through one or two lists */
+@@ -2059,6 +2069,92 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
+   *reqp = httpreq;
+ }
+ 
++/*
++ * curl-impersonate:
++ * Create a new linked list of headers.
++ * The new list is a merge between the "base" headers and the application given
++ * headers. The "base" headers contain curl-impersonate's list of headers
++ * used by default by the impersonated browser.
++ *
++ * The application given headers will override the "base" headers if supplied.
++ */
++CURLcode Curl_http_merge_headers(struct Curl_easy *data)
++{
++  int i;
++  int ret;
++  struct curl_slist *head;
++  struct curl_slist *dup = NULL;
++  struct curl_slist *new_list = NULL;
++
++  if (!data->state.base_headers)
++    return CURLE_OK;
++
++  /* Duplicate the list for temporary use. */
++  if (data->set.headers) {
++    dup = Curl_slist_duplicate(data->set.headers);
++    if(!dup)
++      return CURLE_OUT_OF_MEMORY;
++  }
++
++  for(head = data->state.base_headers; head; head = head->next) {
++    char *sep;
++    size_t prefix_len;
++    bool found = FALSE;
++    struct curl_slist *head2;
++
++    sep = strchr(head->data, ':');
++    if(!sep)
++      continue;
++
++    prefix_len = sep - head->data;
++
++    /* Check if this header was added by the application. */
++    for(head2 = dup; head2; head2 = head2->next) {
++      if(head2->data &&
++         strncasecompare(head2->data, head->data, prefix_len) &&
++         Curl_headersep(head2->data[prefix_len]) ) {
++        new_list = curl_slist_append(new_list, head2->data);
++        /* Free and set to NULL to mark that it's been added. */
++        Curl_safefree(head2->data);
++        found = TRUE;
++        break;
++      }
++    }
++
++    if (!found) {
++      new_list = curl_slist_append(new_list, head->data);
++    }
++
++    if (!new_list) {
++      ret = CURLE_OUT_OF_MEMORY;
++      goto fail;
++    }
++  }
++
++  /* Now go over any additional application-supplied headers. */
++  for(head = dup; head; head = head->next) {
++    if(head->data) {
++      new_list = curl_slist_append(new_list, head->data);
++      if(!new_list) {
++        ret = CURLE_OUT_OF_MEMORY;
++        goto fail;
++      }
++    }
++  }
++
++  curl_slist_free_all(dup);
++  /* Save the new, merged list separately, so it can be freed later. */
++  curl_slist_free_all(data->state.merged_headers);
++  data->state.merged_headers = new_list;
++
++  return CURLE_OK;
++
++fail:
++  Curl_safefree(dup);
++  curl_slist_free_all(new_list);
++  return ret;
++}
++
+ CURLcode Curl_http_useragent(struct Curl_easy *data)
+ {
+   /* The User-Agent string might have been allocated in url.c already, because
+@@ -3067,6 +3163,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+   if(result)
+     return result;
+ 
++  /* curl-impersonate: Add HTTP headers to impersonate real browsers. */
++  result = Curl_http_merge_headers(data);
++  if (result)
++    return result;
++
+   result = Curl_http_useragent(data);
+   if(result)
+     return result;
 diff --git a/lib/http.h b/lib/http.h
 index b4aaba2a2..1cf65c4b1 100644
 --- a/lib/http.h
@@ -160,6 +587,103 @@ index f8dcc63b4..e6b728592 100644
    multi->ipv6_works = Curl_ipv6works(NULL);
  
  #ifdef USE_WINSOCK
+diff --git a/lib/setopt.c b/lib/setopt.c
+index 599ed5d99..1baa48e70 100644
+--- a/lib/setopt.c
++++ b/lib/setopt.c
+@@ -48,6 +48,7 @@
+ #include "multiif.h"
+ #include "altsvc.h"
+ #include "hsts.h"
++#include "slist.h"
+ 
+ /* The last 3 #include files should be in this order */
+ #include "curl_printf.h"
+@@ -688,6 +689,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+                             va_arg(param, char *));
+     break;
+ 
++  case CURLOPT_HTTPBASEHEADER:
++    /*
++     * curl-impersonate:
++     * Set a list of "base" headers. These will be merged with any headers
++     * set by CURLOPT_HTTPHEADER. curl-impersonate uses this option in order
++     * to set a list of default browser headers.
++     *
++     * Unlike CURLOPT_HTTPHEADER,
++     * the list is copied and can be immediately freed by the user.
++     */
++    curl_slist_free_all(data->state.base_headers);
++    data->state.base_headers = \
++      Curl_slist_duplicate(va_arg(param, struct curl_slist *));
++    if (!data->state.base_headers)
++      result = CURLE_OUT_OF_MEMORY;
++    break;
++
+   case CURLOPT_HTTPHEADER:
+     /*
+      * Set a list with HTTP headers to use (or replace internals with)
+diff --git a/lib/transfer.c b/lib/transfer.c
+index 22704fa15..1e100140c 100644
+--- a/lib/transfer.c
++++ b/lib/transfer.c
+@@ -102,7 +102,15 @@ char *Curl_checkheaders(const struct Curl_easy *data,
+   DEBUGASSERT(thislen);
+   DEBUGASSERT(thisheader[thislen-1] != ':');
+ 
+-  for(head = data->set.headers; head; head = head->next) {
++  /*
++   * curl-impersonate:
++   * Check if we have overriden the user-supplied list of headers.
++   */
++  head = data->set.headers;
++  if (data->state.merged_headers)
++    head = data->state.merged_headers;
++
++  for(; head; head = head->next) {
+     if(strncasecompare(head->data, thisheader, thislen) &&
+        Curl_headersep(head->data[thislen]) )
+       return head->data;
+diff --git a/lib/url.c b/lib/url.c
+index 9f1013554..f0f266797 100644
+--- a/lib/url.c
++++ b/lib/url.c
+@@ -469,6 +469,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
+   Curl_safefree(data->state.aptr.proxyuser);
+   Curl_safefree(data->state.aptr.proxypasswd);
+ 
++  /* curl-impersonate: Free the list set by CURLOPT_HTTPBASEHEADER. */
++  curl_slist_free_all(data->state.base_headers);
++  /* curl-impersonate: Free the dynamic list of headers. */
++  curl_slist_free_all(data->state.merged_headers);
++
+ #ifndef CURL_DISABLE_DOH
+   if(data->req.doh) {
+     Curl_dyn_free(&data->req.doh->probe[0].serverdoh);
+diff --git a/lib/urldata.h b/lib/urldata.h
+index cc9c88870..a35a20e10 100644
+--- a/lib/urldata.h
++++ b/lib/urldata.h
+@@ -1421,6 +1421,19 @@ struct UrlState {
+   CURLcode hresult; /* used to pass return codes back from hyper callbacks */
+ #endif
+ 
++  /*
++   * curl-impersonate:
++   * List of "base" headers set by CURLOPT_HTTPBASEHEADER.
++   */
++  struct curl_slist *base_headers;
++  /*
++   * curl-impersonate:
++   * Dynamically-constructed list of HTTP headers.
++   * This list is a merge of the default HTTP headers needed to impersonate a
++   * browser, together with any user-supplied headers.
++   */
++  struct curl_slist *merged_headers;
++
+   /* Dynamically allocated strings, MUST be freed before this struct is
+      killed. */
+   struct dynamically_allocated_data {
 diff --git a/lib/vtls/openssl.c b/lib/vtls/openssl.c
 index f836c63b0..5c562549f 100644
 --- a/lib/vtls/openssl.c

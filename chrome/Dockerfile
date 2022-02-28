@@ -47,7 +47,7 @@ RUN cd ${NGHTTP2_VERSION} && \
 
 # Compile nghttp2
 RUN cd ${NGHTTP2_VERSION} && \
-    ./configure && \
+    ./configure --with-pic && \
     make && make install
 
 # Download curl.
@@ -67,13 +67,28 @@ RUN cd ${CURL_VERSION} && \
     ./configure --with-openssl=/build/boringssl/build --enable-static --disable-shared --with-nghttp2=/usr/local LIBS="-pthread" CFLAGS="-I/build/boringssl/build" USE_CURL_SSLKEYLOGFILE=true && \
     make
 
-# 'xxd' is needed for the wrapper script
-RUN apt-get install -y xxd
-
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate && \
+    strip out/curl-impersonate
 
-# Wrapper script
+# Re-compile libcurl dynamically
+RUN cd ${CURL_VERSION} && \
+    ./configure --with-openssl=/build/boringssl/build \
+                --with-nghttp2=/usr/local \
+                LIBS="-pthread" \
+                CFLAGS="-I/build/boringssl/build" \
+                USE_CURL_SSLKEYLOGFILE=true && \
+    make clean && make
+
+# Rename to 'libcurl-impersonate' to avoid confusion, and recreate the
+# symbolic links.
+RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
+    major=$(echo -n $ver | cut -d'.' -f1) && \
+    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate.so.$ver" && \
+    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so.$major" && \
+    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
+    strip "out/libcurl-impersonate.so.$ver"
+
+# Wrapper scripts
 COPY curl_chrome* curl_edge* out/
-
-RUN chmod +x out/*
+RUN chmod +x out/curl_*
