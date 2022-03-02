@@ -1,0 +1,154 @@
+diff -u1 -Nar --exclude build --exclude tags boringssl-3a667d10e94186fd503966f5638e134fe9fb4080/ssl/internal.h boringssl/ssl/internal.h
+--- boringssl-3a667d10e94186fd503966f5638e134fe9fb4080/ssl/internal.h	2021-11-22 19:06:04.000000000 +0200
++++ boringssl/ssl/internal.h	2022-02-27 12:20:25.308284303 +0200
+@@ -566,4 +566,10 @@
+ #define SSL_SHA1 0x00000001u
++// curl-impersonate:
++// SSL_SHA256 and SSL_SHA384 were removed in
++// https://boringssl-review.googlesource.com/c/boringssl/+/27944/
++// but restored to impersonate browsers with older ciphers.
++#define SSL_SHA256 0x00000002u
++#define SSL_SHA384 0x00000004u
+ // SSL_AEAD is set for all AEADs.
+-#define SSL_AEAD 0x00000002u
++#define SSL_AEAD 0x00000008u
+ 
+diff -u1 -Nar --exclude build --exclude tags boringssl-3a667d10e94186fd503966f5638e134fe9fb4080/ssl/ssl_cipher.cc boringssl/ssl/ssl_cipher.cc
+--- boringssl-3a667d10e94186fd503966f5638e134fe9fb4080/ssl/ssl_cipher.cc	2021-11-22 19:06:04.000000000 +0200
++++ boringssl/ssl/ssl_cipher.cc	2022-02-27 13:54:05.378053046 +0200
+@@ -210,2 +210,33 @@
+ 
++    // curl-impersonate: Ciphers 3C, 3D were removed in
++    // https://boringssl-review.googlesource.com/c/boringssl/+/27944/
++    // but restored here to impersonate browsers with older ciphers. They are
++    // not expected to actually work; but just to be included in the TLS
++    // Client Hello.
++
++    // TLS v1.2 ciphersuites
++
++    // Cipher 3C
++    {
++     TLS1_TXT_RSA_WITH_AES_128_SHA256,
++     "TLS_RSA_WITH_AES_128_CBC_SHA256",
++     TLS1_CK_RSA_WITH_AES_128_SHA256,
++     SSL_kRSA,
++     SSL_aRSA,
++     SSL_AES128,
++     SSL_SHA256,
++     SSL_HANDSHAKE_MAC_SHA256,
++    },
++    // Cipher 3D
++    {
++     TLS1_TXT_RSA_WITH_AES_256_SHA256,
++     "TLS_RSA_WITH_AES_256_CBC_SHA256",
++     TLS1_CK_RSA_WITH_AES_256_SHA256,
++     SSL_kRSA,
++     SSL_aRSA,
++     SSL_AES256,
++     SSL_SHA256,
++     SSL_HANDSHAKE_MAC_SHA256,
++    },
++
+     // PSK cipher suites.
+@@ -300,2 +331,19 @@
+ 
++    // curl-impersonate: Cipher C008 was missing from BoringSSL,
++    // probably because it is weak. Add it back from OpenSSL (ssl/s3_lib.c)
++    // where it is called ECDHE-ECDSA-DES-CBC3-SHA.
++    // It's not supposed to really work but just appear in the TLS client hello.
++
++    // Cipher C008
++    {
++     "ECDHE-ECDSA-DES-CBC3-SHA",
++     "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
++     0x0300C008,
++     SSL_kECDHE,
++     SSL_aECDSA,
++     SSL_3DES,
++     SSL_SHA1,
++     SSL_HANDSHAKE_MAC_DEFAULT,
++    },
++
+     // Cipher C009
+@@ -324,2 +372,17 @@
+ 
++    // curl-impersonate: Cipher C012 was missing from BoringSSL,
++    // probably because it is weak. Add it back from OpenSSL (ssl/s3_lib.c)
++    // where it is called ECDHE-RSA-DES-CBC3-SHA
++    // It's not supposed to really work but just appear in the TLS client hello.
++    {
++     "ECDHE-RSA-DES-CBC3-SHA",
++     "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
++     0x0300C012,
++     SSL_kECDHE,
++     SSL_aRSA,
++     SSL_3DES,
++     SSL_SHA1,
++     SSL_HANDSHAKE_MAC_DEFAULT,
++    },
++
+     // Cipher C013
+@@ -348,2 +411,55 @@
+ 
++    // curl-impersonate: Ciphers C023, C024, C027, C028 were removed in
++    // https://boringssl-review.googlesource.com/c/boringssl/+/27944/
++    // but restored here to impersonate browsers with older ciphers. They are
++    // not expected to actually work; but just to be included in the TLS
++    // Client Hello.
++
++    // HMAC based TLS v1.2 ciphersuites from RFC5289
++
++    // Cipher C023
++    {
++     TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_SHA256,
++     "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
++     TLS1_CK_ECDHE_ECDSA_WITH_AES_128_SHA256,
++     SSL_kECDHE,
++     SSL_aECDSA,
++     SSL_AES128,
++     SSL_SHA256,
++     SSL_HANDSHAKE_MAC_SHA256,
++    },
++    // Cipher C024
++    {
++     TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_SHA384,
++     "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
++     TLS1_CK_ECDHE_ECDSA_WITH_AES_256_SHA384,
++     SSL_kECDHE,
++     SSL_aECDSA,
++     SSL_AES256,
++     SSL_SHA384,
++     SSL_HANDSHAKE_MAC_SHA384,
++    },
++    // Cipher C027
++    {
++     TLS1_TXT_ECDHE_RSA_WITH_AES_128_SHA256,
++     "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
++     TLS1_CK_ECDHE_RSA_WITH_AES_128_SHA256,
++     SSL_kECDHE,
++     SSL_aRSA,
++     SSL_AES128,
++     SSL_SHA256,
++     SSL_HANDSHAKE_MAC_SHA256,
++    },
++    // Cipher C028
++    {
++     TLS1_TXT_ECDHE_RSA_WITH_AES_256_SHA384,
++     "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
++     TLS1_CK_ECDHE_RSA_WITH_AES_256_SHA384,
++     SSL_kECDHE,
++     SSL_aRSA,
++     SSL_AES256,
++     SSL_SHA384,
++     SSL_HANDSHAKE_MAC_SHA384,
++    },
++
+     // GCM based TLS v1.2 ciphersuites from RFC 5289
+@@ -539,2 +655,7 @@
+     {"SHA", ~0u, ~0u, ~0u, SSL_SHA1, 0},
++    // curl-impersonate:
++    // Removed in https://boringssl-review.googlesource.com/c/boringssl/+/27944/
++    // but restored to impersonate browsers with older ciphers.
++    {"SHA256", ~0u, ~0u, ~0u, SSL_SHA256, 0},
++    {"SHA384", ~0u, ~0u, ~0u, SSL_SHA384, 0},
+ 
