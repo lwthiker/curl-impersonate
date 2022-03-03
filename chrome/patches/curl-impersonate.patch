@@ -22,16 +22,35 @@ index 63e320236..deb054300 100644
  
      LDFLAGS="$LDFLAGS $LD_H2"
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index 7b69ce2d6..fe4bb36b9 100644
+index 7b69ce2d6..42b7604d1 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2135,6 +2135,10 @@ typedef enum {
+@@ -2135,6 +2135,29 @@ typedef enum {
    /* Set MIME option flags. */
    CURLOPT(CURLOPT_MIME_OPTIONS, CURLOPTTYPE_LONG, 315),
  
 +  /* curl-impersonate: A list of headers used by the impersonated browser.
 +   * If given, merged with CURLOPT_HTTPHEADER. */
 +  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 316),
++
++  /* curl-impersonate: A list of TLS signature hash algorithms.
++   * See https://datatracker.ietf.org/doc/html/rfc5246#section-7.4.1.4.1 */
++  CURLOPT(CURLOPT_SSL_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 317),
++
++  /* curl-impersonate: Whether to enable ALPS in TLS or not.
++   * See https://datatracker.ietf.org/doc/html/draft-vvv-tls-alps.
++   * Support for ALPS is minimal and is intended only for the TLS client
++   * hello to match. */
++  CURLOPT(CURLOPT_SSL_ENABLE_ALPS, CURLOPTTYPE_LONG, 318),
++
++  /* curl-impersonate: Comma-separated list of certificate compression
++   * algorithms to use. These are published in the client hello.
++   * Supported algorithms are "zlib" and "brotli".
++   * See https://datatracker.ietf.org/doc/html/rfc8879 */
++  CURLOPT(CURLOPT_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 319),
++
++  /* Enable/disable TLS session ticket extension (RFC5077) */
++  CURLOPT(CURLOPT_SSL_ENABLE_TICKET, CURLOPTTYPE_LONG, 320),
 +
    CURLOPT_LASTENTRY /* the last unused */
  } CURLoption;
@@ -57,7 +76,7 @@ index 2dbfb26b5..e0bf86169 100644
   * NAME curl_easy_getinfo()
   *
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..ec16aee23 100644
+index 20293a710..b9c5a80b2 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -68,7 +87,7 @@ index 20293a710..ec16aee23 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,161 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,207 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -83,6 +102,17 @@ index 20293a710..ec16aee23 100644
 +  int httpversion;
 +  int ssl_version;
 +  const char *ciphers;
++  /* Enable TLS NPN extension. */
++  bool npn;
++  /* Enable TLS ALPN extension. */
++  bool alpn;
++  /* Enable TLS ALPS extension. */
++  bool alps;
++  /* Enable TLS session ticket extension. */
++  bool tls_session_ticket;
++  /* TLS certificate compression algorithms.
++   * (TLS extension 27) */
++  const char *cert_compression;
 +  const char *http_headers[IMPERSONATE_MAX_HEADERS];
 +  /* Other TLS options will come here in the future once they are
 +   * configurable through curl_easy_setopt() */
@@ -107,6 +137,11 @@ index 20293a710..ec16aee23 100644
 +      "AES256-GCM-SHA384,"
 +      "AES128-SHA,"
 +      "AES256-SHA",
++    .npn = false,
++    .alpn = true,
++    .alps = true,
++    .tls_session_ticket = true,
++    .cert_compression = "brotli",
 +    .http_headers = {
 +      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Google Chrome\";v=\"98\"",
 +      "sec-ch-ua-mobile: ?0",
@@ -142,6 +177,11 @@ index 20293a710..ec16aee23 100644
 +      "AES256-GCM-SHA384,"
 +      "AES128-SHA,"
 +      "AES256-SHA",
++    .npn = false,
++    .alpn = true,
++    .alps = true,
++    .tls_session_ticket = true,
++    .cert_compression = "brotli",
 +    .http_headers = {
 +      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Microsoft Edge\";v=\"98\"",
 +      "sec-ch-ua-mobile: ?0",
@@ -207,6 +247,31 @@ index 20293a710..ec16aee23 100644
 +      return ret;
 +  }
 +
++  ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_NPN, opts->npn ? 1 : 0);
++  if(ret)
++    return ret;
++
++  ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_ALPN, opts->alpn ? 1 : 0);
++  if(ret)
++    return ret;
++
++  ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_ALPS, opts->alps ? 1 : 0);
++  if(ret)
++    return ret;
++
++  ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_TICKET,
++                         opts->tls_session_ticket ? 1 : 0);
++  if(ret)
++    return ret;
++
++  if(opts->cert_compression) {
++    ret = curl_easy_setopt(data,
++                           CURLOPT_SSL_CERT_COMPRESSION,
++                           opts->cert_compression);
++    if(ret)
++      return ret;
++  }
++
 +  /* Build a linked list out of the static array of headers. */
 +  for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
 +    if(opts->http_headers[i]) {
@@ -230,7 +295,7 @@ index 20293a710..ec16aee23 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +446,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +492,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -238,7 +303,7 @@ index 20293a710..ec16aee23 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +465,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +511,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -261,7 +326,7 @@ index 20293a710..ec16aee23 100644
    return data;
  }
  
-@@ -878,6 +1051,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1097,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -276,7 +341,7 @@ index 20293a710..ec16aee23 100644
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index 04871ad1e..cd5998146 100644
+index 04871ad1e..385eab2e6 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
 @@ -130,6 +130,7 @@ struct curl_easyoption Curl_easyopts[] = {
@@ -287,6 +352,27 @@ index 04871ad1e..cd5998146 100644
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
+@@ -297,8 +298,12 @@ struct curl_easyoption Curl_easyopts[] = {
+   {"SSL_CTX_DATA", CURLOPT_SSL_CTX_DATA, CURLOT_CBPTR, 0},
+   {"SSL_CTX_FUNCTION", CURLOPT_SSL_CTX_FUNCTION, CURLOT_FUNCTION, 0},
+   {"SSL_EC_CURVES", CURLOPT_SSL_EC_CURVES, CURLOT_STRING, 0},
++  {"SSL_SIG_HASH_ALGS", CURLOPT_SSL_SIG_HASH_ALGS, CURLOT_STRING, 0},
++  {"SSL_CERT_COMPRESSION", CURLOPT_SSL_CERT_COMPRESSION, CURLOT_STRING, 0},
+   {"SSL_ENABLE_ALPN", CURLOPT_SSL_ENABLE_ALPN, CURLOT_LONG, 0},
+   {"SSL_ENABLE_NPN", CURLOPT_SSL_ENABLE_NPN, CURLOT_LONG, 0},
++  {"SSL_ENABLE_ALPS", CURLOPT_SSL_ENABLE_ALPS, CURLOT_LONG, 0},
++  {"SSL_ENABLE_TICKET", CURLOPT_SSL_ENABLE_TICKET, CURLOT_LONG, 0},
+   {"SSL_FALSESTART", CURLOPT_SSL_FALSESTART, CURLOT_LONG, 0},
+   {"SSL_OPTIONS", CURLOPT_SSL_OPTIONS, CURLOT_VALUES, 0},
+   {"SSL_SESSIONID_CACHE", CURLOPT_SSL_SESSIONID_CACHE, CURLOT_LONG, 0},
+@@ -360,6 +365,6 @@ struct curl_easyoption Curl_easyopts[] = {
+  */
+ int Curl_easyopts_check(void)
+ {
+-  return ((CURLOPT_LASTENTRY%10000) != (315 + 1));
++  return ((CURLOPT_LASTENTRY%10000) != (320 + 1));
+ }
+ #endif
 diff --git a/lib/http.c b/lib/http.c
 index f08a343e3..879151dd2 100644
 --- a/lib/http.c
@@ -588,7 +674,7 @@ index f8dcc63b4..e6b728592 100644
  
  #ifdef USE_WINSOCK
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 599ed5d99..1baa48e70 100644
+index 599ed5d99..7a3880b0e 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -48,6 +48,7 @@
@@ -623,6 +709,47 @@ index 599ed5d99..1baa48e70 100644
    case CURLOPT_HTTPHEADER:
      /*
       * Set a list with HTTP headers to use (or replace internals with)
+@@ -2349,6 +2367,27 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+     result = Curl_setstropt(&data->set.str[STRING_SSL_EC_CURVES],
+                             va_arg(param, char *));
+     break;
++
++  case CURLOPT_SSL_SIG_HASH_ALGS:
++    /*
++     * Set the list of hash algorithms we want to use in the SSL connection.
++     * Specify comma-delimited list of algorithms to use.
++     */
++    result = Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS],
++                            va_arg(param, char *));
++    break;
++
++  case CURLOPT_SSL_CERT_COMPRESSION:
++    /*
++     * Set the list of ceritifcate compression algorithms we support in the TLS
++     * connection.
++     * Specify comma-delimited list of algorithms to use. Options are "zlib"
++     * and "brotli".
++     */
++    result = Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION],
++                            va_arg(param, char *));
++    break;
++
+ #endif
+   case CURLOPT_IPRESOLVE:
+     arg = va_arg(param, long);
+@@ -2871,6 +2910,12 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+   case CURLOPT_SSL_ENABLE_ALPN:
+     data->set.ssl_enable_alpn = (0 != va_arg(param, long)) ? TRUE : FALSE;
+     break;
++  case CURLOPT_SSL_ENABLE_ALPS:
++    data->set.ssl_enable_alps = (0 != va_arg(param, long)) ? TRUE : FALSE;
++    break;
++  case CURLOPT_SSL_ENABLE_TICKET:
++    data->set.ssl_enable_ticket = (0 != va_arg(param, long)) ? TRUE : FALSE;
++    break;
+ #ifdef USE_UNIX_SOCKETS
+   case CURLOPT_UNIX_SOCKET_PATH:
+     data->set.abstract_unix_socket = FALSE;
 diff --git a/lib/transfer.c b/lib/transfer.c
 index 22704fa15..1e100140c 100644
 --- a/lib/transfer.c
@@ -645,7 +772,7 @@ index 22704fa15..1e100140c 100644
         Curl_headersep(head->data[thislen]) )
        return head->data;
 diff --git a/lib/url.c b/lib/url.c
-index 9f1013554..f0f266797 100644
+index 9f1013554..0eff9c354 100644
 --- a/lib/url.c
 +++ b/lib/url.c
 @@ -469,6 +469,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
@@ -660,11 +787,65 @@ index 9f1013554..f0f266797 100644
  #ifndef CURL_DISABLE_DOH
    if(data->req.doh) {
      Curl_dyn_free(&data->req.doh->probe[0].serverdoh);
+@@ -622,6 +627,7 @@ CURLcode Curl_init_userdefined(struct Curl_easy *data)
+   set->tcp_nodelay = TRUE;
+   set->ssl_enable_npn = TRUE;
+   set->ssl_enable_alpn = TRUE;
++  set->ssl_enable_ticket = TRUE;
+   set->expect_100_timeout = 1000L; /* Wait for a second by default. */
+   set->sep_headers = TRUE; /* separated header lists by default */
+   set->buffer_size = READBUFFER_SIZE;
+@@ -3808,6 +3814,9 @@ static CURLcode create_conn(struct Curl_easy *data,
+   data->set.ssl.primary.cert_blob = data->set.blobs[BLOB_CERT];
+   data->set.ssl.primary.ca_info_blob = data->set.blobs[BLOB_CAINFO];
+   data->set.ssl.primary.curves = data->set.str[STRING_SSL_EC_CURVES];
++  data->set.ssl.primary.sig_hash_algs = data->set.str[STRING_SSL_SIG_HASH_ALGS];
++  data->set.ssl.primary.cert_compression =
++    data->set.str[STRING_SSL_CERT_COMPRESSION];
+ 
+ #ifndef CURL_DISABLE_PROXY
+   data->set.proxy_ssl.primary.CApath = data->set.str[STRING_SSL_CAPATH_PROXY];
+@@ -3925,8 +3934,17 @@ static CURLcode create_conn(struct Curl_easy *data,
+         conn->bits.tls_enable_alpn = TRUE;
+       if(data->set.ssl_enable_npn)
+         conn->bits.tls_enable_npn = TRUE;
++
++      /* curl-impersonate: Turn on ALPS if ALPN is enabled and the bit is
++       * enabled. */
++      if(data->set.ssl_enable_alps)
++        conn->bits.tls_enable_alps = TRUE;
+     }
+ 
++    /* curl-impersonate: Add the TLS session ticket extension. */
++    if(data->set.ssl_enable_ticket)
++        conn->bits.tls_enable_ticket = TRUE;
++
+     if(waitpipe)
+       /* There is a connection that *might* become usable for multiplexing
+          "soon", and we wait for that */
 diff --git a/lib/urldata.h b/lib/urldata.h
-index cc9c88870..a35a20e10 100644
+index cc9c88870..3f268bf14 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -1421,6 +1421,19 @@ struct UrlState {
+@@ -257,6 +257,8 @@ struct ssl_primary_config {
+   struct curl_blob *ca_info_blob;
+   struct curl_blob *issuercert_blob;
+   char *curves;          /* list of curves to use */
++  char *sig_hash_algs;   /* List of signature hash algorithms to use */
++  char *cert_compression;  /* List of certificate compression algorithms. */
+   BIT(verifypeer);       /* set TRUE if this is desired */
+   BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
+   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
+@@ -517,6 +519,8 @@ struct ConnectBits {
+   BIT(tcp_fastopen); /* use TCP Fast Open */
+   BIT(tls_enable_npn);  /* TLS NPN extension? */
+   BIT(tls_enable_alpn); /* TLS ALPN extension? */
++  BIT(tls_enable_alps); /* TLS ALPS extension? */
++  BIT(tls_enable_ticket); /* TLS session ticket extension? */
+   BIT(connect_only);
+ #ifndef CURL_DISABLE_DOH
+   BIT(doh);
+@@ -1421,6 +1425,19 @@ struct UrlState {
    CURLcode hresult; /* used to pass return codes back from hyper callbacks */
  #endif
  
@@ -684,23 +865,214 @@ index cc9c88870..a35a20e10 100644
    /* Dynamically allocated strings, MUST be freed before this struct is
       killed. */
    struct dynamically_allocated_data {
+@@ -1579,6 +1596,8 @@ enum dupstring {
+   STRING_DNS_LOCAL_IP4,
+   STRING_DNS_LOCAL_IP6,
+   STRING_SSL_EC_CURVES,
++  STRING_SSL_SIG_HASH_ALGS,
++  STRING_SSL_CERT_COMPRESSION,
+ 
+   /* -- end of null-terminated strings -- */
+ 
+@@ -1849,6 +1868,8 @@ struct UserDefined {
+   BIT(tcp_fastopen);   /* use TCP Fast Open */
+   BIT(ssl_enable_npn); /* TLS NPN extension? */
+   BIT(ssl_enable_alpn);/* TLS ALPN extension? */
++  BIT(ssl_enable_alps);/* TLS ALPS extension? */
++  BIT(ssl_enable_ticket); /* TLS session ticket extension */
+   BIT(path_as_is);     /* allow dotdots? */
+   BIT(pipewait);       /* wait for multiplex status before starting a new
+                           connection */
 diff --git a/lib/vtls/openssl.c b/lib/vtls/openssl.c
-index f836c63b0..5c562549f 100644
+index f836c63b0..c310f65ba 100644
 --- a/lib/vtls/openssl.c
 +++ b/lib/vtls/openssl.c
-@@ -76,6 +76,8 @@
+@@ -76,6 +76,13 @@
  #include <openssl/buffer.h>
  #include <openssl/pkcs12.h>
  
++#ifdef HAVE_ZLIB_H
++#include <zlib.h>
++#endif
++#ifdef HAVE_BROTLI
 +#include <brotli/decode.h>
++#endif
 +
  #ifdef USE_AMISSL
  #include "amigaos.h"
  #endif
-@@ -2629,6 +2631,31 @@ static CURLcode load_cacert_from_memory(SSL_CTX *ctx,
+@@ -209,6 +216,10 @@
+      !defined(OPENSSL_IS_BORINGSSL))
+ #define HAVE_SSL_CTX_SET_CIPHERSUITES
+ #define HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH
++#endif
++
++#if ((OPENSSL_VERSION_NUMBER >= 0x10101000L) && \
++     !defined(LIBRESSL_VERSION_NUMBER))
+ /* SET_EC_CURVES is available under the same preconditions: see
+  * https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set1_groups.html
+  */
+@@ -253,6 +264,113 @@
+ #define HAVE_OPENSSL_VERSION
+ #endif
+ 
++#if defined(OPENSSL_IS_BORINGSSL)
++#define HAVE_SSL_CTX_SET_VERIFY_ALGORITHM_PREFS
++
++/*
++ * kMaxSignatureAlgorithmNameLen and kSignatureAlgorithmNames
++ * Taken from BoringSSL, see ssl/ssl_privkey.cc
++ * */
++static const size_t kMaxSignatureAlgorithmNameLen = 23;
++
++static const struct {
++  uint16_t signature_algorithm;
++  const char *name;
++} kSignatureAlgorithmNames[] = {
++    {SSL_SIGN_RSA_PKCS1_MD5_SHA1, "rsa_pkcs1_md5_sha1"},
++    {SSL_SIGN_RSA_PKCS1_SHA1, "rsa_pkcs1_sha1"},
++    {SSL_SIGN_RSA_PKCS1_SHA256, "rsa_pkcs1_sha256"},
++    {SSL_SIGN_RSA_PKCS1_SHA384, "rsa_pkcs1_sha384"},
++    {SSL_SIGN_RSA_PKCS1_SHA512, "rsa_pkcs1_sha512"},
++    {SSL_SIGN_ECDSA_SHA1, "ecdsa_sha1"},
++    {SSL_SIGN_ECDSA_SECP256R1_SHA256, "ecdsa_secp256r1_sha256"},
++    {SSL_SIGN_ECDSA_SECP384R1_SHA384, "ecdsa_secp384r1_sha384"},
++    {SSL_SIGN_ECDSA_SECP521R1_SHA512, "ecdsa_secp521r1_sha512"},
++    {SSL_SIGN_RSA_PSS_RSAE_SHA256, "rsa_pss_rsae_sha256"},
++    {SSL_SIGN_RSA_PSS_RSAE_SHA384, "rsa_pss_rsae_sha384"},
++    {SSL_SIGN_RSA_PSS_RSAE_SHA512, "rsa_pss_rsae_sha512"},
++    {SSL_SIGN_ED25519, "ed25519"},
++};
++
++#define MAX_SIG_ALGS \
++  sizeof(kSignatureAlgorithmNames) / sizeof(kSignatureAlgorithmNames[0])
++
++/* Default signature hash algorithms taken from Chrome/Chromium.
++ * See kVerifyPeers @ net/socket/ssl_client_socket_impl.cc */
++static const uint16_t default_sig_algs[] = {
++  SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
++  SSL_SIGN_RSA_PKCS1_SHA256,       SSL_SIGN_ECDSA_SECP384R1_SHA384,
++  SSL_SIGN_RSA_PSS_RSAE_SHA384,    SSL_SIGN_RSA_PKCS1_SHA384,
++  SSL_SIGN_RSA_PSS_RSAE_SHA512,    SSL_SIGN_RSA_PKCS1_SHA512,
++};
++
++#define DEFAULT_SIG_ALGS_LENGTH  \
++  sizeof(default_sig_algs) / sizeof(default_sig_algs[0])
++
++static CURLcode parse_sig_algs(struct Curl_easy *data,
++                               const char *sigalgs,
++                               uint16_t *algs,
++                               size_t *nalgs)
++{
++  *nalgs = 0;
++  while (sigalgs && sigalgs[0]) {
++    int i;
++    bool found = FALSE;
++    const char *end;
++    size_t len;
++    char algname[kMaxSignatureAlgorithmNameLen + 1];
++
++    end = strpbrk(sigalgs, ":,");
++    if (end)
++      len = end - sigalgs;
++    else
++      len = strlen(sigalgs);
++
++    if (len > kMaxSignatureAlgorithmNameLen) {
++      failf(data, "Bad signature hash algorithm list");
++      return CURLE_BAD_FUNCTION_ARGUMENT;
++    }
++
++    if (!len) {
++      ++sigalgs;
++      continue;
++    }
++
++    if (*nalgs == MAX_SIG_ALGS) {
++      /* Reached the maximum number of possible algorithms, but more data
++       * available in the list. */
++      failf(data, "Bad signature hash algorithm list");
++      return CURLE_BAD_FUNCTION_ARGUMENT;
++    }
++
++    memcpy(algname, sigalgs, len);
++    algname[len] = 0;
++
++    for (i = 0; i < MAX_SIG_ALGS; i++) {
++      if (strcasecompare(algname, kSignatureAlgorithmNames[i].name)) {
++        algs[*nalgs] = kSignatureAlgorithmNames[i].signature_algorithm;
++        (*nalgs)++;
++        found = TRUE;
++        break;
++      }
++    }
++
++    if (!found) {
++      failf(data, "Unknown signature hash algorithm: '%s'", algname);
++      return CURLE_BAD_FUNCTION_ARGUMENT;
++    }
++
++    if (end)
++      sigalgs = ++end;
++    else
++      break;
++  }
++
++  return CURLE_OK;
++}
++
++#endif
++
+ struct ssl_backend_data {
+   struct Curl_easy *logger; /* transfer handle to pass trace logs to, only
+                                using sockindex 0 */
+@@ -2629,6 +2747,151 @@ static CURLcode load_cacert_from_memory(SSL_CTX *ctx,
    return (count > 0 ? CURLE_OK : CURLE_SSL_CACERT_BADFILE);
  }
  
++#ifdef HAVE_LIBZ
++int DecompressZlibCert(SSL *ssl,
++                       CRYPTO_BUFFER** out,
++                       size_t uncompressed_len,
++                       const uint8_t* in,
++                       size_t in_len)
++{
++  z_stream strm;
++  uint8_t* data;
++  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
++  if(!decompressed) {
++    return 0;
++  }
++
++  strm.zalloc = NULL;
++  strm.zfree = NULL;
++  strm.opaque = NULL;
++  strm.next_in = (Bytef *)in;
++  strm.avail_in = in_len;
++  strm.next_out = (Bytef *)data;
++  strm.avail_out = uncompressed_len;
++
++  if(inflateInit(&strm) != Z_OK) {
++    CRYPTO_BUFFER_free(decompressed);
++    return 0;
++  }
++
++  if(inflate(&strm, Z_FINISH) != Z_STREAM_END ||
++    strm.avail_in != 0 ||
++    strm.avail_out != 0) {
++    inflateEnd(&strm);
++    CRYPTO_BUFFER_free(decompressed);
++    return 0;
++  }
++
++  inflateEnd(&strm);
++  *out = decompressed;
++  return 1;
++}
++#endif
++
++#ifdef HAVE_BROTLI
++
 +/* Taken from Chromium and adapted to C,
 + * see net/ssl/cert_compression.cc
 + */
@@ -719,41 +1091,146 @@ index f836c63b0..5c562549f 100644
 +  if (BrotliDecoderDecompress(in_len, in, &output_size, data) !=
 +          BROTLI_DECODER_RESULT_SUCCESS ||
 +      output_size != uncompressed_len) {
++    CRYPTO_BUFFER_free(decompressed);
 +    return 0;
 +  }
 +
 +  *out = decompressed;
 +  return 1;
 +}
++#endif
++
++#if defined(HAVE_LIBZ) || defined(HAVE_BROTLI)
++static struct {
++  char *alg_name;
++  uint16_t alg_id;
++  ssl_cert_compression_func_t compress;
++  ssl_cert_decompression_func_t decompress;
++} cert_compress_algs[] = {
++#ifdef HAVE_LIBZ
++  {"zlib", TLSEXT_cert_compression_zlib, NULL, DecompressZlibCert},
++#endif
++#ifdef HAVE_BROTLI
++  {"brotli", TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert},
++#endif
++};
++
++#define NUM_CERT_COMPRESSION_ALGS \
++  sizeof(cert_compress_algs) / sizeof(cert_compress_algs[0])
++
++/*
++ * curl-impersonate:
++ * Add support for TLS extension 27 - compress_certificate.
++ * This calls the BoringSSL-specific API SSL_CTX_add_cert_compression_alg
++ * for each algorithm specified in cert_compression, which is a comma separated list.
++ */
++static CURLcode add_cert_compression(struct Curl_easy *data,
++                                     SSL_CTX *ctx,
++                                     const char *algorithms)
++{
++  int i;
++  const char *s = algorithms;
++  char *alg_name;
++  size_t alg_name_len;
++  bool found;
++
++  while (s && s[0]) {
++    found = FALSE;
++
++    for(i = 0; i < NUM_CERT_COMPRESSION_ALGS; i++) {
++      alg_name = cert_compress_algs[i].alg_name;
++      alg_name_len = strlen(alg_name);
++      if(strlen(s) >= alg_name_len &&
++         strncasecompare(s, alg_name, alg_name_len) &&
++         (s[alg_name_len] == ',' || s[alg_name_len] == 0)) {
++        if(!SSL_CTX_add_cert_compression_alg(ctx,
++                    cert_compress_algs[i].alg_id,
++                    cert_compress_algs[i].compress,
++                    cert_compress_algs[i].decompress)) {
++          failf(data, "Error adding certificate compression algorithm '%s'",
++                alg_name);
++          return CURLE_SSL_CIPHER;
++        }
++        s += alg_name_len;
++        if(*s == ',')
++          s += 1;
++        found = TRUE;
++        break;
++      }
++    }
++
++    if(!found) {
++      failf(data, "Invalid compression algorithm list");
++      return CURLE_BAD_FUNCTION_ARGUMENT;
++    }
++  }
++
++  return CURLE_OK;
++}
++#else
++static CURLcode add_cert_compression(SSL_CTX *ctx, const char *algorithms)
++{
++  /* No compression algorithms are available. */
++  return CURLE_BAD_FUNCTION_ARGUMENT;
++}
++#endif
 +
  static CURLcode ossl_connect_step1(struct Curl_easy *data,
                                     struct connectdata *conn, int sockindex)
  {
-@@ -2767,7 +2794,10 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+@@ -2767,7 +3030,14 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
    ctx_options = SSL_OP_ALL;
  
  #ifdef SSL_OP_NO_TICKET
 -  ctx_options |= SSL_OP_NO_TICKET;
-+  /* curl-impersonate patch.
++  if(conn->bits.tls_enable_ticket) {
++  /* curl-impersonate:
 +   * Turn off SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
-+   * to be sent. */
-+  ctx_options &= ~SSL_OP_NO_TICKET;
++   * to be present in the client hello. */
++    ctx_options &= ~SSL_OP_NO_TICKET;
++  } else {
++    ctx_options |= SSL_OP_NO_TICKET;
++  }
  #endif
  
  #ifdef SSL_OP_NO_COMPRESSION
-@@ -2821,8 +2851,11 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
-   SSL_CTX_set_options(backend->ctx, ctx_options);
- 
- #ifdef HAS_NPN
-+  /* curl-impersonate: Do not enable the NPN extension. */
-+  /*
-   if(conn->bits.tls_enable_npn)
-     SSL_CTX_set_next_proto_select_cb(backend->ctx, select_next_proto_cb, data);
-+  */
+@@ -2912,6 +3182,35 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+   }
  #endif
  
- #ifdef HAS_ALPN
-@@ -2937,6 +2970,19 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
++#ifdef HAVE_SSL_CTX_SET_VERIFY_ALGORITHM_PREFS
++  {
++    uint16_t algs[MAX_SIG_ALGS];
++    size_t nalgs;
++    /* curl-impersonate: Set the signature algorithms (TLS extension 13).
++     * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
++    char *sig_hash_algs = SSL_CONN_CONFIG(sig_hash_algs);
++    if (sig_hash_algs) {
++      CURLcode result = parse_sig_algs(data, sig_hash_algs, algs, &nalgs);
++      if (result)
++        return result;
++      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx, algs, nalgs)) {
++        failf(data, "failed setting signature hash algorithms list: '%s'",
++              sig_hash_algs);
++        return CURLE_SSL_CIPHER;
++      }
++    } else {
++      /* Use defaults from Chrome. */
++      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx,
++                                              default_sig_algs,
++                                              DEFAULT_SIG_ALGS_LENGTH)) {
++        failf(data, "failed setting signature hash algorithms list: '%s'",
++              sig_hash_algs);
++        return CURLE_SSL_CIPHER;
++      }
++    }
++  }
++#endif
++
+ #ifdef USE_OPENSSL_SRP
+   if(ssl_authtype == CURL_TLSAUTH_SRP) {
+     char * const ssl_username = SSL_SET_OPTION(username);
+@@ -2937,6 +3236,20 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
    }
  #endif
  
@@ -766,23 +1243,30 @@ index f836c63b0..5c562549f 100644
 +  /* Enable TLS GREASE. */
 +  SSL_CTX_set_grease_enabled(backend->ctx, 1);
 +
-+  /* Add support for TLS extension 27 - compress_certificate.
-+   * Add Brotli decompression. See Chromium net/ssl/cert_compression.cc */
-+  SSL_CTX_add_cert_compression_alg(backend->ctx,
-+          TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert);
++  if(SSL_CONN_CONFIG(cert_compression) &&
++     add_cert_compression(data,
++                          backend->ctx,
++                          SSL_CONN_CONFIG(cert_compression)))
++    return CURLE_SSL_CIPHER;
  
  #if defined(USE_WIN32_CRYPTO)
    /* Import certificates from the Windows root certificate store if requested.
-@@ -3236,6 +3282,41 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+@@ -3236,6 +3549,33 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
  
    SSL_set_connect_state(backend->handle);
  
-+#ifdef USE_HTTP2
-+  /* curl-impersonate: This adds the ALPS extension (17513).
-+   * Chromium calls this function as well in SSLClientSocketImpl::Init().
-+   * The 4th parameter is called "settings", and I don't know what it
-+   * should contain. For now, use an empty string. */
-+  SSL_add_application_settings(backend->handle, "h2", 2, NULL, 0);
++#if defined(HAS_ALPN) && defined(USE_HTTP2)
++  if(conn->bits.tls_enable_alpn &&
++     data->state.httpwant >= CURL_HTTP_VERSION_2 &&
++     conn->bits.tls_enable_alps) {
++    /* curl-impersonate: This adds the ALPS extension (17513).
++     * Chromium calls this function as well in SSLClientSocketImpl::Init().
++     * The 4th parameter is called "settings", and I don't know what it
++     * should contain. For now, use an empty string. */
++    SSL_add_application_settings(backend->handle, ALPN_H2, ALPN_H2_LENGTH,
++                                 NULL, 0);
++    infof(data, "ALPS, offering %s", ALPN_H2);
++  }
 +#endif
 +
 +  SSL_set_options(backend->handle,
@@ -798,20 +1282,178 @@ index f836c63b0..5c562549f 100644
 +  /* curl-impersonate: Some SSL settings copied over from Chrome. */
 +  SSL_set_shed_handshake_config(backend->handle, 1);
 +
-+  /* curl-impersonate: Set the signature algorithms.
-+   * (TLS extension 13).
-+   * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
-+  static const uint16_t kVerifyPrefs[] = {
-+    SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
-+    SSL_SIGN_RSA_PKCS1_SHA256,       SSL_SIGN_ECDSA_SECP384R1_SHA384,
-+    SSL_SIGN_RSA_PSS_RSAE_SHA384,    SSL_SIGN_RSA_PKCS1_SHA384,
-+    SSL_SIGN_RSA_PSS_RSAE_SHA512,    SSL_SIGN_RSA_PKCS1_SHA512,
-+  };
-+  if (!SSL_set_verify_algorithm_prefs(backend->handle, kVerifyPrefs,
-+              sizeof(kVerifyPrefs) / sizeof(kVerifyPrefs[0]))) {
-+    return CURLE_SSL_CIPHER;
-+  }
-+
    backend->server_cert = 0x0;
  #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
    if((0 == Curl_inet_pton(AF_INET, hostname, &addr)) &&
+diff --git a/lib/vtls/vtls.c b/lib/vtls/vtls.c
+index 6007bbba0..3c79e0d30 100644
+--- a/lib/vtls/vtls.c
++++ b/lib/vtls/vtls.c
+@@ -156,6 +156,9 @@ Curl_ssl_config_matches(struct ssl_primary_config *data,
+      Curl_safe_strcasecompare(data->cipher_list, needle->cipher_list) &&
+      Curl_safe_strcasecompare(data->cipher_list13, needle->cipher_list13) &&
+      Curl_safe_strcasecompare(data->curves, needle->curves) &&
++     Curl_safe_strcasecompare(data->sig_hash_algs, needle->sig_hash_algs) &&
++     Curl_safe_strcasecompare(data->cert_compression,
++                              needle->cert_compression) &&
+      Curl_safe_strcasecompare(data->pinned_key, needle->pinned_key))
+     return TRUE;
+ 
+@@ -186,6 +189,8 @@ Curl_clone_primary_ssl_config(struct ssl_primary_config *source,
+   CLONE_STRING(cipher_list13);
+   CLONE_STRING(pinned_key);
+   CLONE_STRING(curves);
++  CLONE_STRING(sig_hash_algs);
++  CLONE_STRING(cert_compression);
+ 
+   return TRUE;
+ }
+@@ -205,6 +210,8 @@ void Curl_free_primary_ssl_config(struct ssl_primary_config *sslc)
+   Curl_safefree(sslc->ca_info_blob);
+   Curl_safefree(sslc->issuercert_blob);
+   Curl_safefree(sslc->curves);
++  Curl_safefree(sslc->sig_hash_algs);
++  Curl_safefree(sslc->cert_compression);
+ }
+ 
+ #ifdef USE_SSL
+diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
+index 227b914e3..91ffa283b 100644
+--- a/src/tool_cfgable.h
++++ b/src/tool_cfgable.h
+@@ -165,6 +165,8 @@ struct OperationConfig {
+   bool crlf;
+   char *customrequest;
+   char *ssl_ec_curves;
++  char *ssl_sig_hash_algs;
++  char *ssl_cert_compression;
+   char *krblevel;
+   char *request_target;
+   long httpversion;
+@@ -274,6 +276,8 @@ struct OperationConfig {
+   char *oauth_bearer;             /* OAuth 2.0 bearer token */
+   bool nonpn;                     /* enable/disable TLS NPN extension */
+   bool noalpn;                    /* enable/disable TLS ALPN extension */
++  bool alps;                      /* enable/disable TLS ALPS extension */
++  bool noticket;                  /* enable/disable TLS session ticket */
+   char *unix_socket_path;         /* path to Unix domain socket */
+   bool abstract_unix_socket;      /* path to an abstract Unix domain socket */
+   bool falsestart;
+diff --git a/src/tool_getparam.c b/src/tool_getparam.c
+index 7abbcc639..e6165dc18 100644
+--- a/src/tool_getparam.c
++++ b/src/tool_getparam.c
+@@ -279,6 +279,10 @@ static const struct LongShort aliases[]= {
+   {"EC", "etag-save",                ARG_FILENAME},
+   {"ED", "etag-compare",             ARG_FILENAME},
+   {"EE", "curves",                   ARG_STRING},
++  {"EG", "signature-hashes",         ARG_STRING},
++  {"EH", "alps",                     ARG_BOOL},
++  {"EI", "cert-compression",         ARG_STRING},
++  {"EJ", "tls-session-ticket",       ARG_BOOL},
+   {"f",  "fail",                     ARG_BOOL},
+   {"fa", "fail-early",               ARG_BOOL},
+   {"fb", "styled-output",            ARG_BOOL},
+@@ -1794,6 +1798,26 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
+         GetStr(&config->ssl_ec_curves, nextarg);
+         break;
+ 
++      case 'G':
++        /* --signature-hashes */
++        GetStr(&config->ssl_sig_hash_algs, nextarg);
++        break;
++
++      case 'H':
++        /* --alps */
++        config->alps = toggle;
++        break;
++
++      case 'I':
++        /* --cert-compression */
++        GetStr(&config->ssl_cert_compression, nextarg);
++        break;
++
++      case 'J':
++        /* --tls-session-ticket */
++        config->noticket = (!toggle)?TRUE:FALSE;
++        break;
++
+       default: /* unknown flag */
+         return PARAM_OPTION_UNKNOWN;
+       }
+diff --git a/src/tool_listhelp.c b/src/tool_listhelp.c
+index 448fc7cb3..43201c639 100644
+--- a/src/tool_listhelp.c
++++ b/src/tool_listhelp.c
+@@ -106,6 +106,15 @@ const struct helptxt helptext[] = {
+   {"    --curves <algorithm list>",
+    "(EC) TLS key exchange algorithm(s) to request",
+    CURLHELP_TLS},
++  {"    --signature-hashes <algorithm list>",
++   "TLS signature hash algorithm(s) to use",
++   CURLHELP_TLS},
++  {"    --cert-compression <algorithm list>",
++   "TLS cert compressions algorithm(s) to use",
++   CURLHELP_TLS},
++  {"    --no-tls-session-ticket",
++   "Disable the TLS session ticket extension",
++   CURLHELP_TLS},
+   {"-d, --data <data>",
+    "HTTP POST data",
+    CURLHELP_IMPORTANT | CURLHELP_HTTP | CURLHELP_POST | CURLHELP_UPLOAD},
+@@ -379,6 +388,9 @@ const struct helptxt helptext[] = {
+   {"    --no-alpn",
+    "Disable the ALPN TLS extension",
+    CURLHELP_TLS | CURLHELP_HTTP},
++  {"    --alps",
++   "Enable the ALPS TLS extension",
++   CURLHELP_TLS | CURLHELP_HTTP},
+   {"-N, --no-buffer",
+    "Disable buffering of the output stream",
+    CURLHELP_CURL},
+diff --git a/src/tool_operate.c b/src/tool_operate.c
+index fe2c43b55..c829515dd 100644
+--- a/src/tool_operate.c
++++ b/src/tool_operate.c
+@@ -1520,6 +1520,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+         if(config->ssl_ec_curves)
+           my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
+ 
++        if(config->ssl_sig_hash_algs)
++          my_setopt_str(curl, CURLOPT_SSL_SIG_HASH_ALGS,
++                        config->ssl_sig_hash_algs);
++
++        if(config->ssl_cert_compression)
++          my_setopt_str(curl, CURLOPT_SSL_CERT_COMPRESSION,
++                        config->ssl_cert_compression);
++
+         if(curlinfo->features & CURL_VERSION_SSL) {
+           /* Check if config->cert is a PKCS#11 URI and set the
+            * config->cert_type if necessary */
+@@ -2061,6 +2069,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+           my_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0L);
+         }
+ 
++        if(config->alps) {
++          my_setopt(curl, CURLOPT_SSL_ENABLE_ALPS, 1L);
++        }
++
++        if (config->noticket) {
++          my_setopt(curl, CURLOPT_SSL_ENABLE_TICKET, 0L);
++        }
++
+         /* new in 7.40.0, abstract support added in 7.53.0 */
+         if(config->unix_socket_path) {
+           if(config->abstract_unix_socket) {
+diff --git a/src/tool_setopt.c b/src/tool_setopt.c
+index 4c86eb321..eef8b187f 100644
+--- a/src/tool_setopt.c
++++ b/src/tool_setopt.c
+@@ -179,6 +179,7 @@ static const struct NameValue setopt_nv_CURLNONZERODEFAULTS[] = {
+   NV1(CURLOPT_SSL_VERIFYHOST, 1),
+   NV1(CURLOPT_SSL_ENABLE_NPN, 1),
+   NV1(CURLOPT_SSL_ENABLE_ALPN, 1),
++  NV1(CURLOPT_SSL_ENABLE_TICKET, 1),
+   NV1(CURLOPT_TCP_NODELAY, 1),
+   NV1(CURLOPT_PROXY_SSL_VERIFYPEER, 1),
+   NV1(CURLOPT_PROXY_SSL_VERIFYHOST, 1),

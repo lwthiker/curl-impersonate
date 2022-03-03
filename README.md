@@ -71,9 +71,9 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target);
 ```
 You can call it with the target names, e.g. `"chrome98"`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts. Specifically it sets:
 * `CURLOPT_HTTP_VERSION`
-* `CURLOPT_SSLVERSION`
-* `CURLOPT_SSL_CIPHER_LIST`
-* `CURLOPT_HTTPBASEHEADER` (non-standard option created for this project).
+* `CURLOPT_SSLVERSION`, `CURLOPT_SSL_CIPHER_LIST`, `CURLOPT_SSL_EC_CURVES`, `CURLOPT_SSL_ENABLE_NPN`, `CURLOPT_SSL_ENABLE_ALPN`
+* `CURLOPT_HTTPBASEHEADER` (non-standard HTTP option created for this project).
+* `CURLOPT_SSL_ENABLE_ALPS`, `CURLOPT_SSL_SIG_HASH_ALGS`, `CURLOPT_SSL_CERT_COMPRESSION`, `CURLOPT_SSL_ENABLE_TICKET` (non-standard TLS options created for this project).
 
 Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
 
