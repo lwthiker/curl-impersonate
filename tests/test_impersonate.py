@@ -152,6 +152,14 @@ class TestImpersonation:
         (
             "./minicurl",
             {
+                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "safari15_3"
+            },
+            "safari_15.3_macos11.6.4"
+        ),
+        (
+            "./minicurl",
+            {
                 "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "ff91esr"
             },

@@ -85,7 +85,7 @@ index 2dbfb26b5..e0bf86169 100644
   * NAME curl_easy_getinfo()
   *
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..1646a8064 100644
+index 20293a710..58941c5a6 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -96,7 +96,7 @@ index 20293a710..1646a8064 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,214 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,291 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -111,6 +111,12 @@ index 20293a710..1646a8064 100644
 +  int httpversion;
 +  int ssl_version;
 +  const char *ciphers;
++  /* Elliptic curves (TLS extension 10).
++   * Passed to CURLOPT_SSL_EC_CURVES */
++  const char *curves;
++  /* Signature hash algorithms (TLS extension 13).
++   * Passed to CURLOPT_SSL_SIG_HASH_ALGS */
++  const char *sig_hash_algs;
 +  /* Enable TLS NPN extension. */
 +  bool npn;
 +  /* Enable TLS ALPN extension. */
@@ -206,6 +212,62 @@ index 20293a710..1646a8064 100644
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
 +    }
++  },
++  {
++    .target = "safari15_3",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_0 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++        "TLS_AES_128_GCM_SHA256,"
++        "TLS_AES_256_GCM_SHA384,"
++        "TLS_CHACHA20_POLY1305_SHA256,"
++        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
++        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
++        "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
++        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
++        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
++        "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
++        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,"
++        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,"
++        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
++        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
++        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,"
++        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,"
++        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
++        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
++        "TLS_RSA_WITH_AES_256_GCM_SHA384,"
++        "TLS_RSA_WITH_AES_128_GCM_SHA256,"
++        "TLS_RSA_WITH_AES_256_CBC_SHA256,"
++        "TLS_RSA_WITH_AES_128_CBC_SHA256,"
++        "TLS_RSA_WITH_AES_256_CBC_SHA,"
++        "TLS_RSA_WITH_AES_128_CBC_SHA,"
++        "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,"
++        "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,"
++        "TLS_RSA_WITH_3DES_EDE_CBC_SHA,",
++    .curves = "X25519:P-256:P-384:P-521",
++    .sig_hash_algs =
++        "ecdsa_secp256r1_sha256,"
++        "rsa_pss_rsae_sha256,"
++        "rsa_pkcs1_sha256,"
++        "ecdsa_secp384r1_sha384,"
++        "ecdsa_sha1,"
++        "rsa_pss_rsae_sha384,"
++        "rsa_pss_rsae_sha384,"
++        "rsa_pkcs1_sha384,"
++        "rsa_pss_rsae_sha512,"
++        "rsa_pkcs1_sha512,"
++        "rsa_pkcs1_sha1",
++    .npn = false,
++    .alpn = true,
++    .alps = false,
++    .tls_session_ticket = false,
++    .http_headers = {
++        "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
++        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
++        "Accept-Language: en-us",
++        "Accept-Encoding: gzip, deflate, br"
++    },
++    .http2_pseudo_headers_order = "mspa"
 +  }
 +};
 +
@@ -257,6 +319,19 @@ index 20293a710..1646a8064 100644
 +      return ret;
 +  }
 +
++  if(opts->curves) {
++    ret = curl_easy_setopt(data, CURLOPT_SSL_EC_CURVES, opts->curves);
++    if(ret)
++      return ret;
++  }
++
++  if(opts->sig_hash_algs) {
++    ret = curl_easy_setopt(data, CURLOPT_SSL_SIG_HASH_ALGS,
++                           opts->sig_hash_algs);
++    if(ret)
++      return ret;
++  }
++
 +  ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_NPN, opts->npn ? 1 : 0);
 +  if(ret)
 +    return ret;
@@ -300,7 +375,9 @@ index 20293a710..1646a8064 100644
 +  }
 +
 +  if(opts->http2_pseudo_headers_order) {
-+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, headers);
++    ret = curl_easy_setopt(data,
++                           CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
++                           opts->http2_pseudo_headers_order);
 +    if(ret)
 +      return ret;
 +  }
@@ -311,7 +388,7 @@ index 20293a710..1646a8064 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +499,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +576,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -319,7 +396,7 @@ index 20293a710..1646a8064 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +518,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +595,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -342,7 +419,7 @@ index 20293a710..1646a8064 100644
    return data;
  }
  
-@@ -878,6 +1104,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1181,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
