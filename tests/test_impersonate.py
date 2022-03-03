@@ -121,6 +121,51 @@ class TestImpersonation:
 
     TEST_URL = "https://www.wikipedia.org"
 
+    # List of binaries and their expected signatures
+    CURL_BINARIES_AND_SIGNATURES = [
+        # Test wrapper scripts
+        ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
+        ("chrome/curl_edge98", None, "edge_98.0.1108.62_win10"),
+        ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
+        ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
+
+        # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
+        # linked against the regular libcurl and setting the
+        # CURL_IMPERSONATE env var.
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "chrome98"
+            },
+            "chrome_98.0.4758.102_win10"
+        ),
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "edge98"
+            },
+            "edge_98.0.1108.62_win10"
+        ),
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "ff91esr"
+            },
+            "firefox_91.6.0esr_win10"
+        ),
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "ff95"
+            },
+            "firefox_95.0.2_win10"
+        )
+    ]
+
     @pytest.fixture
     def tcpdump(self):
         """Initialize a sniffer to capture curl's traffic."""
@@ -144,6 +189,25 @@ class TestImpersonation:
 
         p.terminate()
         p.wait(timeout=10)
+
+    def _run_curl(self, curl_binary, env_vars, url):
+        env = os.environ.copy()
+        if env_vars:
+            env |= env_vars
+
+        logging.debug(f"Launching '{curl_binary}' to {url}")
+        if env_vars:
+            logging.debug("Environment variables: {}".format(
+                " ".join([f"{k}={v}" for k, v in env_vars.items()])))
+
+        curl = subprocess.Popen([
+            curl_binary,
+            "-o", "/dev/null",
+            "--local-port", f"{self.LOCAL_PORTS[0]}-{self.LOCAL_PORTS[1]}",
+            url
+        ], env=env)
+
+        return curl.wait(timeout=10)
 
     def _extract_client_hello(self, pcap: bytes) -> bytes:
         """Find and return the Client Hello TLS record from a pcap.
@@ -178,81 +242,23 @@ class TestImpersonation:
 
     @pytest.mark.parametrize(
         "curl_binary, env_vars, expected_signature",
-        [
-            # Test wrapper scripts
-            ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
-            ("chrome/curl_edge98", None, "edge_98.0.1108.62_win10"),
-            ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
-            ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
-
-            # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
-            # linked against the regular libcurl and setting the
-            # CURL_IMPERSONATE env var.
-            (
-                "./minicurl",
-                {
-                    "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
-                    "CURL_IMPERSONATE": "chrome98"
-                },
-                "chrome_98.0.4758.102_win10"
-            ),
-            (
-                "./minicurl",
-                {
-                    "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
-                    "CURL_IMPERSONATE": "edge98"
-                },
-                "edge_98.0.1108.62_win10"
-            ),
-            (
-                "./minicurl",
-                {
-                    "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
-                    "CURL_IMPERSONATE": "ff91esr"
-                },
-                "firefox_91.6.0esr_win10"
-            ),
-            (
-                "./minicurl",
-                {
-                    "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
-                    "CURL_IMPERSONATE": "ff95"
-                },
-                "firefox_95.0.2_win10"
-            )
-        ]
+        CURL_BINARIES_AND_SIGNATURES
     )
-    def test_impersonation(self,
-                           tcpdump,
-                           curl_binary,
-                           env_vars,
-                           browser_signatures,
-                           expected_signature):
+    def test_tls_client_hello(self,
+                              tcpdump,
+                              curl_binary,
+                              env_vars,
+                              browser_signatures,
+                              expected_signature):
         """
-        Check that curl's network signature is identical to that of a
+        Check that curl's TLS signature is identical to that of a
         real browser.
 
         Launches curl while sniffing its TLS traffic with tcpdump. Then
-        extract the Client Hello packet from the capture and compares its
+        extracts the Client Hello packet from the capture and compares its
         signature with the expected one defined in the YAML database.
         """
-        env = os.environ.copy()
-        if env_vars:
-            env |= env_vars
-
-        logging.debug(f"Launching '{curl_binary}' to {self.TEST_URL}")
-        if env_vars:
-            logging.debug("Environment variables: {}".format(
-                " ".join([f"{k}={v}" for k, v in env_vars.items()])))
-
-        curl = subprocess.Popen([
-            curl_binary,
-            "-o", "/dev/null",
-            "--local-port", f"{self.LOCAL_PORTS[0]}-{self.LOCAL_PORTS[1]}",
-            self.TEST_URL
-        ], env=env)
-
-        ret = curl.wait(timeout=10)
+        ret = self._run_curl(curl_binary, env_vars, self.TEST_URL)
         assert ret == 0
 
         try:
@@ -276,13 +282,12 @@ class TestImpersonation:
         logging.debug(f"Found Client Hello, "
                       f"comparing to signature '{expected_signature}'")
 
-        sig = BrowserSignature(
-            tls_client_hello=TLSClientHelloSignature.from_bytes(client_hello)
+        sig = TLSClientHelloSignature.from_bytes(client_hello)
+        expected_sig = TLSClientHelloSignature.from_dict(
+            browser_signatures[expected_signature] \
+                              ["signature"] \
+                              ["tls_client_hello"]
         )
 
-        expected_sig = BrowserSignature.from_dict(
-            browser_signatures[expected_signature]["signature"]
-        )
-
-        equals, reason =  sig.equals(expected_sig, reason=True)
-        assert equals, reason
+        equals, msg =  sig.equals(expected_sig, reason=True)
+        assert equals, msg
