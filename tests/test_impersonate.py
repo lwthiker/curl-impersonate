@@ -126,6 +126,7 @@ class TestImpersonation:
         # Test wrapper scripts
         ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
         ("chrome/curl_edge98", None, "edge_98.0.1108.62_win10"),
+        ("chrome/curl_safari15_3", None, "safari_15.3_macos11.6.4"),
         ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
         ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
 
