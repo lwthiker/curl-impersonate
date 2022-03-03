@@ -22,10 +22,10 @@ index 63e320236..deb054300 100644
  
      LDFLAGS="$LDFLAGS $LD_H2"
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index 7b69ce2d6..42b7604d1 100644
+index 7b69ce2d6..a62c8a4a9 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2135,6 +2135,29 @@ typedef enum {
+@@ -2135,6 +2135,38 @@ typedef enum {
    /* Set MIME option flags. */
    CURLOPT(CURLOPT_MIME_OPTIONS, CURLOPTTYPE_LONG, 315),
  
@@ -52,6 +52,15 @@ index 7b69ce2d6..42b7604d1 100644
 +  /* Enable/disable TLS session ticket extension (RFC5077) */
 +  CURLOPT(CURLOPT_SSL_ENABLE_TICKET, CURLOPTTYPE_LONG, 320),
 +
++  /*
++   * curl-impersonate:
++   * Set the order of the HTTP/2 pseudo headers. The value must contain
++   * the letters 'm', 'a', 's', 'p' representing the pseudo-headers
++   * ":method", ":authority", ":scheme", ":path" in the desired order of
++   * appearance in the HTTP/2 HEADERS frame.
++   */
++  CURLOPT(CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 321),
++
    CURLOPT_LASTENTRY /* the last unused */
  } CURLoption;
  
@@ -76,7 +85,7 @@ index 2dbfb26b5..e0bf86169 100644
   * NAME curl_easy_getinfo()
   *
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..b9c5a80b2 100644
+index 20293a710..1646a8064 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -87,7 +96,7 @@ index 20293a710..b9c5a80b2 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,207 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,214 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -114,6 +123,7 @@ index 20293a710..b9c5a80b2 100644
 +   * (TLS extension 27) */
 +  const char *cert_compression;
 +  const char *http_headers[IMPERSONATE_MAX_HEADERS];
++  const char *http2_pseudo_headers_order;
 +  /* Other TLS options will come here in the future once they are
 +   * configurable through curl_easy_setopt() */
 +} impersonations[] = {
@@ -289,13 +299,19 @@ index 20293a710..b9c5a80b2 100644
 +      return ret;
 +  }
 +
++  if(opts->http2_pseudo_headers_order) {
++    ret = curl_easy_setopt(data, CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, headers);
++    if(ret)
++      return ret;
++  }
++
 +  return CURLE_OK;
 +}
 +
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +492,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +499,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -303,7 +319,7 @@ index 20293a710..b9c5a80b2 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +511,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +518,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -326,7 +342,7 @@ index 20293a710..b9c5a80b2 100644
    return data;
  }
  
-@@ -878,6 +1097,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1104,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -341,31 +357,42 @@ index 20293a710..b9c5a80b2 100644
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index 04871ad1e..385eab2e6 100644
+index 04871ad1e..ce280eaa3 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
-@@ -130,6 +130,7 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -128,8 +128,11 @@ struct curl_easyoption Curl_easyopts[] = {
+   {"HSTS_CTRL", CURLOPT_HSTS_CTRL, CURLOT_LONG, 0},
+   {"HTTP09_ALLOWED", CURLOPT_HTTP09_ALLOWED, CURLOT_LONG, 0},
    {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
++  {"HTTP2_PSEUDO_HEADERS_ORDER", CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
++      CURLOT_STRING, 0},
    {"HTTPAUTH", CURLOPT_HTTPAUTH, CURLOT_VALUES, 0},
    {"HTTPGET", CURLOPT_HTTPGET, CURLOT_LONG, 0},
 +  {"HTTPBASEHEADER", CURLOPT_HTTPBASEHEADER, CURLOT_SLIST, 0},
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
-@@ -297,8 +298,12 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -293,15 +296,19 @@ struct curl_easyoption Curl_easyopts[] = {
+   {"SSLKEYTYPE", CURLOPT_SSLKEYTYPE, CURLOT_STRING, 0},
+   {"SSLKEY_BLOB", CURLOPT_SSLKEY_BLOB, CURLOT_BLOB, 0},
+   {"SSLVERSION", CURLOPT_SSLVERSION, CURLOT_VALUES, 0},
++  {"SSL_CERT_COMPRESSION", CURLOPT_SSL_CERT_COMPRESSION, CURLOT_STRING, 0},
+   {"SSL_CIPHER_LIST", CURLOPT_SSL_CIPHER_LIST, CURLOT_STRING, 0},
    {"SSL_CTX_DATA", CURLOPT_SSL_CTX_DATA, CURLOT_CBPTR, 0},
    {"SSL_CTX_FUNCTION", CURLOPT_SSL_CTX_FUNCTION, CURLOT_FUNCTION, 0},
    {"SSL_EC_CURVES", CURLOPT_SSL_EC_CURVES, CURLOT_STRING, 0},
-+  {"SSL_SIG_HASH_ALGS", CURLOPT_SSL_SIG_HASH_ALGS, CURLOT_STRING, 0},
-+  {"SSL_CERT_COMPRESSION", CURLOPT_SSL_CERT_COMPRESSION, CURLOT_STRING, 0},
    {"SSL_ENABLE_ALPN", CURLOPT_SSL_ENABLE_ALPN, CURLOT_LONG, 0},
-   {"SSL_ENABLE_NPN", CURLOPT_SSL_ENABLE_NPN, CURLOT_LONG, 0},
 +  {"SSL_ENABLE_ALPS", CURLOPT_SSL_ENABLE_ALPS, CURLOT_LONG, 0},
+   {"SSL_ENABLE_NPN", CURLOPT_SSL_ENABLE_NPN, CURLOT_LONG, 0},
 +  {"SSL_ENABLE_TICKET", CURLOPT_SSL_ENABLE_TICKET, CURLOT_LONG, 0},
    {"SSL_FALSESTART", CURLOPT_SSL_FALSESTART, CURLOT_LONG, 0},
    {"SSL_OPTIONS", CURLOPT_SSL_OPTIONS, CURLOT_VALUES, 0},
    {"SSL_SESSIONID_CACHE", CURLOPT_SSL_SESSIONID_CACHE, CURLOT_LONG, 0},
-@@ -360,6 +365,6 @@ struct curl_easyoption Curl_easyopts[] = {
++  {"SSL_SIG_HASH_ALGS", CURLOPT_SSL_SIG_HASH_ALGS, CURLOT_STRING, 0},
+   {"SSL_VERIFYHOST", CURLOPT_SSL_VERIFYHOST, CURLOT_LONG, 0},
+   {"SSL_VERIFYPEER", CURLOPT_SSL_VERIFYPEER, CURLOT_LONG, 0},
+   {"SSL_VERIFYSTATUS", CURLOPT_SSL_VERIFYSTATUS, CURLOT_LONG, 0},
+@@ -360,6 +367,6 @@ struct curl_easyoption Curl_easyopts[] = {
   */
  int Curl_easyopts_check(void)
  {
@@ -549,7 +576,7 @@ index b4aaba2a2..1cf65c4b1 100644
  #else
    int unused; /* prevent a compiler warning */
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..33197df20 100644
+index e74400a4c..b22271d23 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -41,6 +41,7 @@
@@ -595,17 +622,108 @@ index e74400a4c..33197df20 100644
  }
  
  void Curl_http2_done(struct Curl_easy *data, bool premature)
-@@ -1818,7 +1830,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+@@ -1816,10 +1828,6 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+   return -1;
+ }
  
- /* Index where :authority header field will appear in request header
-    field list. */
+-/* Index where :authority header field will appear in request header
+-   field list. */
 -#define AUTHORITY_DST_IDX 3
-+/* curl-impersonate: Put the ":authority" header in the first place. */
-+#define AUTHORITY_DST_IDX 1
- 
+-
  /* USHRT_MAX is 65535 == 0xffff */
  #define HEADER_OVERFLOW(x) \
-@@ -2032,25 +2045,26 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+   (x.namelen > 0xffff || x.valuelen > 0xffff - x.namelen)
+@@ -1890,6 +1898,53 @@ static header_instruction inspect_header(const char *name, size_t namelen,
+   }
+ }
+ 
++/*
++ * curl-impersonate:
++ * Determine the position of HTTP/2 pseudo headers.
++ * The pseudo headers ":method", ":path", ":scheme", ":authority"
++ * are sent in different order by different browsers. An important part of the
++ * impersonation is ordering them like the browser does.
++ */
++static int http2_pseudo_header_index(struct Curl_easy *data,
++                                     const char *header,
++                                     size_t *index)
++{
++  char *off;
++  // Use the Chrome ordering by default:
++  // :method, :authority, :scheme, :path
++  char *order = "masp";
++  if(data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER])
++    order = data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER];
++
++  if(strlen(order) != 4)
++    return CURLE_BAD_FUNCTION_ARGUMENT;
++
++  // :method should always be first
++  if(order[0] != 'm')
++    return CURLE_BAD_FUNCTION_ARGUMENT;
++
++  // All pseudo-headers must be present
++  if(!strchr(order, 'm') ||
++     !strchr(order, 'a') ||
++     !strchr(order, 's') ||
++     !strchr(order, 'p'))
++    return CURLE_BAD_FUNCTION_ARGUMENT;
++
++  if(strcasecompare(header, ":method"))
++    off = strchr(order, 'm');
++  else if(strcasecompare(header, ":authority"))
++    off = strchr(order, 'a');
++  else if(strcasecompare(header, ":scheme"))
++    off = strchr(order, 's');
++  else if(strcasecompare(header, ":path"))
++    off = strchr(order, 'p');
++  else
++    return CURLE_BAD_FUNCTION_ARGUMENT;
++
++  *index = off - order;
++  return CURLE_OK;
++}
++
+ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+                           const void *mem, size_t len, CURLcode *err)
+ {
+@@ -1905,6 +1960,7 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+   nghttp2_nv *nva = NULL;
+   size_t nheader;
+   size_t i;
++  size_t header_idx;
+   size_t authority_idx;
+   char *hdbuf = (char *)mem;
+   char *end, *line_end;
+@@ -2010,12 +2066,21 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+   end = memchr(hdbuf, ' ', line_end - hdbuf);
+   if(!end || end == hdbuf)
+     goto fail;
+-  nva[0].name = (unsigned char *)":method";
+-  nva[0].namelen = strlen((char *)nva[0].name);
+-  nva[0].value = (unsigned char *)hdbuf;
+-  nva[0].valuelen = (size_t)(end - hdbuf);
+-  nva[0].flags = NGHTTP2_NV_FLAG_NONE;
+-  if(HEADER_OVERFLOW(nva[0])) {
++  /* curl-impersonate: Set the index of ":method" based on libcurl option */
++  if(http2_pseudo_header_index(data, ":authority", &authority_idx))
++    goto fail;
++  if(http2_pseudo_header_index(data, ":method", &header_idx))
++    goto fail;
++  /* This is needed to overcome the fact that curl will only move the authority
++   * header into its place after all other headers have been placed. */
++  if(header_idx > authority_idx)
++    header_idx--;
++  nva[header_idx].name = (unsigned char *)":method";
++  nva[header_idx].namelen = strlen((char *)nva[header_idx].name);
++  nva[header_idx].value = (unsigned char *)hdbuf;
++  nva[header_idx].valuelen = (size_t)(end - hdbuf);
++  nva[header_idx].flags = NGHTTP2_NV_FLAG_NONE;
++  if(HEADER_OVERFLOW(nva[header_idx])) {
+     failf(data, "Failed sending HTTP request: Header overflow");
+     goto fail;
+   }
+@@ -2032,25 +2097,35 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    }
    if(!end || end == hdbuf)
      goto fail;
@@ -615,36 +733,61 @@ index e74400a4c..33197df20 100644
 -  nva[1].valuelen = (size_t)(end - hdbuf);
 -  nva[1].flags = NGHTTP2_NV_FLAG_NONE;
 -  if(HEADER_OVERFLOW(nva[1])) {
-+  /* curl-impersonate: Switch the places of ":path" and ":scheme". */
-+  nva[2].name = (unsigned char *)":path";
-+  nva[2].namelen = strlen((char *)nva[2].name);
-+  nva[2].value = (unsigned char *)hdbuf;
-+  nva[2].valuelen = (size_t)(end - hdbuf);
-+  nva[2].flags = NGHTTP2_NV_FLAG_NONE;
-+  if(HEADER_OVERFLOW(nva[2])) {
++  /* curl-impersonate: Set the index of ":path" based on libcurl option */
++  if(http2_pseudo_header_index(data, ":path", &header_idx))
++    goto fail;
++  if(header_idx > authority_idx)
++    header_idx--;
++  nva[header_idx].name = (unsigned char *)":path";
++  nva[header_idx].namelen = strlen((char *)nva[header_idx].name);
++  nva[header_idx].value = (unsigned char *)hdbuf;
++  nva[header_idx].valuelen = (size_t)(end - hdbuf);
++  nva[header_idx].flags = NGHTTP2_NV_FLAG_NONE;
++  if(HEADER_OVERFLOW(nva[header_idx])) {
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
  
 -  nva[2].name = (unsigned char *)":scheme";
 -  nva[2].namelen = strlen((char *)nva[2].name);
-+  nva[1].name = (unsigned char *)":scheme";
-+  nva[1].namelen = strlen((char *)nva[1].name);
++  /* curl-impersonate: Set the index of ":scheme" based on libcurl option */
++  if(http2_pseudo_header_index(data, ":scheme", &header_idx))
++    goto fail;
++  if(header_idx > authority_idx)
++    header_idx--;
++  nva[header_idx].name = (unsigned char *)":scheme";
++  nva[header_idx].namelen = strlen((char *)nva[header_idx].name);
    if(conn->handler->flags & PROTOPT_SSL)
 -    nva[2].value = (unsigned char *)"https";
-+    nva[1].value = (unsigned char *)"https";
++    nva[header_idx].value = (unsigned char *)"https";
    else
 -    nva[2].value = (unsigned char *)"http";
 -  nva[2].valuelen = strlen((char *)nva[2].value);
 -  nva[2].flags = NGHTTP2_NV_FLAG_NONE;
 -  if(HEADER_OVERFLOW(nva[2])) {
-+    nva[1].value = (unsigned char *)"http";
-+  nva[1].valuelen = strlen((char *)nva[1].value);
-+  nva[1].flags = NGHTTP2_NV_FLAG_NONE;
-+  if(HEADER_OVERFLOW(nva[1])) {
++    nva[header_idx].value = (unsigned char *)"http";
++  nva[header_idx].valuelen = strlen((char *)nva[header_idx].value);
++  nva[header_idx].flags = NGHTTP2_NV_FLAG_NONE;
++  if(HEADER_OVERFLOW(nva[header_idx])) {
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
+@@ -2117,10 +2192,13 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+     ++i;
+   }
+ 
++  /* curl-impersonate: Set the index of ":authority" based on libcurl option */
++  if(http2_pseudo_header_index(data, ":authority", &header_idx))
++    goto fail;
+   /* :authority must come before non-pseudo header fields */
+-  if(authority_idx && authority_idx != AUTHORITY_DST_IDX) {
++  if(authority_idx && authority_idx != header_idx) {
+     nghttp2_nv authority = nva[authority_idx];
+-    for(i = authority_idx; i > AUTHORITY_DST_IDX; --i) {
++    for(i = authority_idx; i > header_idx; --i) {
+       nva[i] = nva[i - 1];
+     }
+     nva[i] = authority;
 diff --git a/lib/http2.h b/lib/http2.h
 index d6986d97f..fa5c90e7f 100644
 --- a/lib/http2.h
@@ -674,7 +817,7 @@ index f8dcc63b4..e6b728592 100644
  
  #ifdef USE_WINSOCK
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 599ed5d99..7a3880b0e 100644
+index 599ed5d99..3ac151feb 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -48,6 +48,7 @@
@@ -737,7 +880,7 @@ index 599ed5d99..7a3880b0e 100644
  #endif
    case CURLOPT_IPRESOLVE:
      arg = va_arg(param, long);
-@@ -2871,6 +2910,12 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -2871,6 +2910,16 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
    case CURLOPT_SSL_ENABLE_ALPN:
      data->set.ssl_enable_alpn = (0 != va_arg(param, long)) ? TRUE : FALSE;
      break;
@@ -746,6 +889,10 @@ index 599ed5d99..7a3880b0e 100644
 +    break;
 +  case CURLOPT_SSL_ENABLE_TICKET:
 +    data->set.ssl_enable_ticket = (0 != va_arg(param, long)) ? TRUE : FALSE;
++    break;
++  case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
++    result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
++                            va_arg(param, char *));
 +    break;
  #ifdef USE_UNIX_SOCKETS
    case CURLOPT_UNIX_SOCKET_PATH:
@@ -824,7 +971,7 @@ index 9f1013554..0eff9c354 100644
        /* There is a connection that *might* become usable for multiplexing
           "soon", and we wait for that */
 diff --git a/lib/urldata.h b/lib/urldata.h
-index cc9c88870..3f268bf14 100644
+index cc9c88870..636ae6770 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
 @@ -257,6 +257,8 @@ struct ssl_primary_config {
@@ -865,16 +1012,17 @@ index cc9c88870..3f268bf14 100644
    /* Dynamically allocated strings, MUST be freed before this struct is
       killed. */
    struct dynamically_allocated_data {
-@@ -1579,6 +1596,8 @@ enum dupstring {
+@@ -1579,6 +1596,9 @@ enum dupstring {
    STRING_DNS_LOCAL_IP4,
    STRING_DNS_LOCAL_IP6,
    STRING_SSL_EC_CURVES,
 +  STRING_SSL_SIG_HASH_ALGS,
 +  STRING_SSL_CERT_COMPRESSION,
++  STRING_HTTP2_PSEUDO_HEADERS_ORDER,
  
    /* -- end of null-terminated strings -- */
  
-@@ -1849,6 +1868,8 @@ struct UserDefined {
+@@ -1849,6 +1869,8 @@ struct UserDefined {
    BIT(tcp_fastopen);   /* use TCP Fast Open */
    BIT(ssl_enable_npn); /* TLS NPN extension? */
    BIT(ssl_enable_alpn);/* TLS ALPN extension? */
@@ -1318,10 +1466,10 @@ index 6007bbba0..3c79e0d30 100644
  
  #ifdef USE_SSL
 diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
-index 227b914e3..91ffa283b 100644
+index 227b914e3..9f0d0b18b 100644
 --- a/src/tool_cfgable.h
 +++ b/src/tool_cfgable.h
-@@ -165,6 +165,8 @@ struct OperationConfig {
+@@ -165,8 +165,11 @@ struct OperationConfig {
    bool crlf;
    char *customrequest;
    char *ssl_ec_curves;
@@ -1329,8 +1477,11 @@ index 227b914e3..91ffa283b 100644
 +  char *ssl_cert_compression;
    char *krblevel;
    char *request_target;
++  char *http2_pseudo_headers_order;
    long httpversion;
-@@ -274,6 +276,8 @@ struct OperationConfig {
+   bool http09_allowed;
+   bool nobuffer;
+@@ -274,6 +277,8 @@ struct OperationConfig {
    char *oauth_bearer;             /* OAuth 2.0 bearer token */
    bool nonpn;                     /* enable/disable TLS NPN extension */
    bool noalpn;                    /* enable/disable TLS ALPN extension */
@@ -1340,10 +1491,10 @@ index 227b914e3..91ffa283b 100644
    bool abstract_unix_socket;      /* path to an abstract Unix domain socket */
    bool falsestart;
 diff --git a/src/tool_getparam.c b/src/tool_getparam.c
-index 7abbcc639..e6165dc18 100644
+index 7abbcc639..d2455b74f 100644
 --- a/src/tool_getparam.c
 +++ b/src/tool_getparam.c
-@@ -279,6 +279,10 @@ static const struct LongShort aliases[]= {
+@@ -279,6 +279,11 @@ static const struct LongShort aliases[]= {
    {"EC", "etag-save",                ARG_FILENAME},
    {"ED", "etag-compare",             ARG_FILENAME},
    {"EE", "curves",                   ARG_STRING},
@@ -1351,10 +1502,11 @@ index 7abbcc639..e6165dc18 100644
 +  {"EH", "alps",                     ARG_BOOL},
 +  {"EI", "cert-compression",         ARG_STRING},
 +  {"EJ", "tls-session-ticket",       ARG_BOOL},
++  {"EK", "http2-pseudo-headers-order", ARG_STRING},
    {"f",  "fail",                     ARG_BOOL},
    {"fa", "fail-early",               ARG_BOOL},
    {"fb", "styled-output",            ARG_BOOL},
-@@ -1794,6 +1798,26 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
+@@ -1794,6 +1799,31 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
          GetStr(&config->ssl_ec_curves, nextarg);
          break;
  
@@ -1378,14 +1530,19 @@ index 7abbcc639..e6165dc18 100644
 +        config->noticket = (!toggle)?TRUE:FALSE;
 +        break;
 +
++      case 'K':
++        /* --http2-pseudo-headers-order */
++        GetStr(&config->http2_pseudo_headers_order, nextarg);
++        break;
++
        default: /* unknown flag */
          return PARAM_OPTION_UNKNOWN;
        }
 diff --git a/src/tool_listhelp.c b/src/tool_listhelp.c
-index 448fc7cb3..43201c639 100644
+index 448fc7cb3..aa0c6203b 100644
 --- a/src/tool_listhelp.c
 +++ b/src/tool_listhelp.c
-@@ -106,6 +106,15 @@ const struct helptxt helptext[] = {
+@@ -106,6 +106,18 @@ const struct helptxt helptext[] = {
    {"    --curves <algorithm list>",
     "(EC) TLS key exchange algorithm(s) to request",
     CURLHELP_TLS},
@@ -1398,10 +1555,13 @@ index 448fc7cb3..43201c639 100644
 +  {"    --no-tls-session-ticket",
 +   "Disable the TLS session ticket extension",
 +   CURLHELP_TLS},
++  {"    --http2-pseudo-headers-order",
++   "Change the order of the HTTP2 pseudo headers",
++   CURLHELP_HTTP},
    {"-d, --data <data>",
     "HTTP POST data",
     CURLHELP_IMPORTANT | CURLHELP_HTTP | CURLHELP_POST | CURLHELP_UPLOAD},
-@@ -379,6 +388,9 @@ const struct helptxt helptext[] = {
+@@ -379,6 +391,9 @@ const struct helptxt helptext[] = {
    {"    --no-alpn",
     "Disable the ALPN TLS extension",
     CURLHELP_TLS | CURLHELP_HTTP},
@@ -1412,10 +1572,22 @@ index 448fc7cb3..43201c639 100644
     "Disable buffering of the output stream",
     CURLHELP_CURL},
 diff --git a/src/tool_operate.c b/src/tool_operate.c
-index fe2c43b55..c829515dd 100644
+index fe2c43b55..7e487242e 100644
 --- a/src/tool_operate.c
 +++ b/src/tool_operate.c
-@@ -1520,6 +1520,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -1432,6 +1432,11 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+             return result;
+           }
+ 
++          if(config->http2_pseudo_headers_order)
++            my_setopt_str(curl,
++                          CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
++                          config->http2_pseudo_headers_order);
++
+         } /* (built_in_protos & CURLPROTO_HTTP) */
+ 
+         my_setopt_str(curl, CURLOPT_FTPPORT, config->ftpport);
+@@ -1520,6 +1525,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
          if(config->ssl_ec_curves)
            my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
  
@@ -1430,7 +1602,7 @@ index fe2c43b55..c829515dd 100644
          if(curlinfo->features & CURL_VERSION_SSL) {
            /* Check if config->cert is a PKCS#11 URI and set the
             * config->cert_type if necessary */
-@@ -2061,6 +2069,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -2061,6 +2074,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
            my_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0L);
          }
  
