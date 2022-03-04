@@ -29,3 +29,13 @@ jobs:
           push: false
           context: firefox/
           tags: curl-impersonate-firefox:latest
+
+      - name: Build the tests container
+        uses: docker/build-push-action@v2
+        with:
+          push: false
+          context: tests/
+          tags: curl-impersonate-tests:latest
+
+      - name: Run the tests
+        run: docker run --rm curl-impersonate-tests --log-cli-level DEBUG
