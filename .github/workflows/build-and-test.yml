@@ -20,6 +20,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
+          load: true
           context: chrome/
           tags: curl-impersonate-chrome:latest
 
@@ -27,6 +28,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
+          load: true
           context: firefox/
           tags: curl-impersonate-firefox:latest
 
@@ -34,6 +36,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
+          load: true
           context: tests/
           tags: curl-impersonate-tests:latest
 
