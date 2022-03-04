@@ -1,9 +1,11 @@
 # Browser signatures database
 #
 # Each signature refers to the browser's behavior upon browsing to a site
-# not cached or visited before. Each signature contains the various parameters
-# in the TLS Client Hello message, and is designed to accomodate other
-# parameters as well (such as HTTP headers, HTTP/2 settings).
+# not cached or visited before.
+# Each signature contains:
+#   * The parameters in the TLS client hello message.
+#   * The HTTP/2 HEADERS frame sent by the browser.
+#   * (planned) The HTTP/2 SETTINGS frame sent by the browser.
 ---
 name: chrome_98.0.4758.102_win10
 browser:
@@ -81,6 +83,25 @@ signature:
               length: 1
               data: !!binary AA==
             - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':authority'
+            - ':scheme'
+            - ':path'
+        headers:
+            - 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="98", "Google Chrome";v="98"'
+            - 'sec-ch-ua-mobile: ?0'
+            - 'sec-ch-ua-platform: "Windows"'
+            - 'upgrade-insecure-requests: 1'
+            - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
+            - 'sec-fetch-site: none'
+            - 'sec-fetch-mode: navigate'
+            - 'sec-fetch-user: ?1'
+            - 'sec-fetch-dest: document'
+            - 'accept-encoding: gzip, deflate, br'
+            - 'accept-language: en-US,en;q=0.9'
 ---
 name: edge_98.0.1108.62_win10
 browser:
@@ -158,6 +179,25 @@ signature:
               length: 1
               data: !!binary AA==
             - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':authority'
+            - ':scheme'
+            - ':path'
+        headers:
+            - 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="98", "Microsoft Edge";v="98"'
+            - 'sec-ch-ua-mobile: ?0'
+            - 'sec-ch-ua-platform: "Windows"'
+            - 'upgrade-insecure-requests: 1'
+            - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36 Edg/98.0.1108.62'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
+            - 'sec-fetch-site: none'
+            - 'sec-fetch-mode: navigate'
+            - 'sec-fetch-user: ?1'
+            - 'sec-fetch-dest: document'
+            - 'accept-encoding: gzip, deflate, br'
+            - 'accept-language: en-US,en;q=0.9'
 ---
 name: firefox_91.6.0esr_win10
 browser:
@@ -229,6 +269,23 @@ signature:
               length: 2
               record_size_limit: 16385
             - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':path'
+            - ':authority'
+            - ':scheme'
+        headers:
+            - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            - 'accept-language: en-US,en;q=0.5'
+            - 'accept-encoding: gzip, deflate, br'
+            - 'upgrade-insecure-requests: 1'
+            - 'sec-fetch-dest: document'
+            - 'sec-fetch-mode: navigate'
+            - 'sec-fetch-site: none'
+            - 'sec-fetch-user: ?1'
+            - 'te: trailers'
 ---
 name: firefox_95.0.2_win10
 browser:
@@ -300,6 +357,23 @@ signature:
               length: 2
               record_size_limit: 16385
             - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':path'
+            - ':authority'
+            - ':scheme'
+        headers:
+            - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+            - 'accept-language: en-US,en;q=0.5'
+            - 'accept-encoding: gzip, deflate, br'
+            - 'upgrade-insecure-requests: 1'
+            - 'sec-fetch-dest: document'
+            - 'sec-fetch-mode: navigate'
+            - 'sec-fetch-site: none'
+            - 'sec-fetch-user: ?1'
+            - 'te: trailers'
 ---
 name: safari_15.3_macos11.6.4
 browser:
@@ -372,3 +446,14 @@ signature:
               length: 1
               data: !!binary AA==
             - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':scheme'
+            - ':path'
+            - ':authority'
+        headers:
+            - 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            - 'accept-language: en-us'
+            - 'accept-encoding: gzip, deflate, br'

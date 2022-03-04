@@ -3,7 +3,7 @@ FROM python:3.10.1-slim-buster
 WORKDIR /tests
 
 RUN apt-get update && \
-    apt-get install -y tcpdump libbrotli1 libnss3 gcc libcurl4-openssl-dev
+    apt-get install -y tcpdump libbrotli1 libnss3 gcc libcurl4-openssl-dev nghttp2-server
 
 COPY requirements.txt requirements.txt
 

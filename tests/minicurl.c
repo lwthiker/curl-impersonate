@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
+#include <stdbool.h>
 
 #include <curl/curl.h>
 
@@ -20,6 +21,7 @@ struct opts {
     char *outfile;
     uint16_t local_port_start;
     uint16_t local_port_end;
+    bool insecure;
     char *url;
 };
 
@@ -61,13 +63,15 @@ int parse_opts(int argc, char **argv, struct opts *opts)
 
     memset(opts, 0, sizeof(*opts));
 
+    opts->insecure = false;
+
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {
             {"local-port", required_argument, NULL, 'l'}
         };
 
-        c = getopt_long(argc, argv, "o:", long_options, &option_index);
+        c = getopt_long(argc, argv, "o:k", long_options, &option_index);
         if (c == -1) {
             break;
         }
@@ -83,6 +87,9 @@ int parse_opts(int argc, char **argv, struct opts *opts)
             break;
         case 'o':
             opts->outfile = optarg;
+            break;
+        case 'k':
+            opts->insecure = true;
             break;
         }
     }
@@ -163,6 +170,19 @@ int main(int argc, char *argv[])
         if (c) {
             fprintf(stderr,
                     "curl_easy_setopt(CURLOPT_LOCALPORTRANGE) failed\n");
+            goto out;
+        }
+    }
+
+    if (opts.insecure) {
+        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYPEER) failed\n");
+            goto out;
+        }
+        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYHOST) failed\n");
             goto out;
         }
     }
