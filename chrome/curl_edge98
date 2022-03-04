@@ -23,4 +23,4 @@ dir=`echo "$0" | sed 's%/[^/]*$%%'`
     --http2 --false-start --compressed \
     --tlsv1.2 --no-npn --alps \
     --cert-compression brotli \
-    $@
+    "$@"
