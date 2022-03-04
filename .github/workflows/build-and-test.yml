@@ -10,6 +10,9 @@ jobs:
     name: Build curl-impersonate and run the tests
     runs-on: ubuntu-latest
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
