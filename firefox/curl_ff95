@@ -19,4 +19,4 @@ dir=`echo "$0" | sed 's%/[^/]*$%%'`
     -H 'Sec-Fetch-User: ?1' \
     -H 'TE: Trailers' \
     --http2 --false-start --compressed \
-    $@
+    "$@"
