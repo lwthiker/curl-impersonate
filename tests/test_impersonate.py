@@ -127,7 +127,9 @@ class TestImpersonation:
     CURL_BINARIES_AND_SIGNATURES = [
         # Test wrapper scripts
         ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
+        ("chrome/curl_chrome99", None, "chrome_99.0.4844.51_win10"),
         ("chrome/curl_edge98", None, "edge_98.0.1108.62_win10"),
+        ("chrome/curl_edge99", None, "edge_99.0.1150.30_win10"),
         ("chrome/curl_safari15_3", None, "safari_15.3_macos11.6.4"),
         ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
         ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
@@ -147,9 +149,25 @@ class TestImpersonation:
             "./minicurl",
             {
                 "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "chrome99"
+            },
+            "chrome_99.0.4844.51_win10"
+        ),
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "edge98"
             },
             "edge_98.0.1108.62_win10"
+        ),
+        (
+            "./minicurl",
+            {
+                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
+                "CURL_IMPERSONATE": "edge99"
+            },
+            "edge_99.0.1150.30_win10"
         ),
         (
             "./minicurl",
