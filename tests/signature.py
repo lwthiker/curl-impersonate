@@ -848,19 +848,129 @@ class TLSClientHelloSignature():
         )
 
 
-class BrowserSignature():
+class HTTP2Signature:
+    """
+    The HTTP/2 signature of a browser.
+
+    In HTTP/2 multiple parameters can be used to fingerprint the browser.
+    Currently this class contains the following parameters:
+    * The order of the HTTP/2 pseudo-headers.
+    * The "regular" HTTP headers sent by the browser upon first connection to a
+      website.
+    """
+    def __init__(self,
+                 pseudo_headers: List[str],
+                 headers: List[str]):
+        self.pseudo_headers = pseudo_headers
+        self.headers = headers
+
+    def _equals(self, other: 'HTTP2Signature', reason: bool = False):
+        if set(self.pseudo_headers) != set(other.pseudo_headers):
+            symdiff = list(set(self.pseudo_headers).symmetric_difference(
+                other.pseudo_headers
+            ))
+            msg = (f"HTTP/2 pseudo-headers differ: "
+                   f"Symmetric difference {symdiff}")
+            return False, msg
+
+        if self.pseudo_headers != other.pseudo_headers:
+            msg = (f"HTTP/2 pseudo-headers differ in order: "
+                   f"{self.pseudo_headers} != {other.pseudo_headers}")
+            return False, msg
+
+        if self.headers != other.headers:
+            msg = (f"HTTP/2 headers differ: "
+                   f"{self.headers} != {other.headers}")
+            return False, msg
+
+        return True, None
+
+    def equals(self, other: 'HTTP2Signature', reason: bool = False):
+        """Checks whether two browsers have the same HTTP/2 signature.
+
+        Parameters
+        ----------
+        other : HTTP2Signature
+            The signature of the other browser.
+        reason : bool
+            If True, returns an additional string describing the reason of the
+            difference in case of a difference, and None otherwise.
+        """
+        equal, msg = self._equals(other)
+        if reason:
+            return equal, msg
+        else:
+            return equal
+
+    def to_dict(self):
+        """Serialize to a dict object."""
+        return {
+            "pseudo_headers": self.pseudo_headers,
+            "headers": self.headers
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        """Unserialize a HTTP2Signature from a dict.
+
+        Parameters
+        ----------
+        d : dict
+            HTTP/2 signature encoded to a Python dict.
+
+        Returns
+        -------
+        sig : HTTP2Signature
+            Signature constructed based on the dict representation.
+        """
+        return HTTP2Signature(**d)
+
+
+class BrowserSignature:
     """
     Represents the network signature of a specific browser based on multiple
     network parameters.
 
-    Currently includes only the signature of the Client Hello message, but
-    designed to include other parameters (HTTP headers, HTTP2 settings, etc.)
+    Attributes
+    ----------
+    tls_client_hello : TLSClientHelloSignature
+        The signature of the browser's TLS Client Hello message.
+        Can be None, in which case it is ignored.
+    http2 : HTTP2Signature
+        The HTTP/2 signature of the browser.
+        Can be None, in which case it is ignored.
     """
 
-    def __init__(self, tls_client_hello: TLSClientHelloSignature):
+    def __init__(self,
+                 tls_client_hello: TLSClientHelloSignature = None,
+                 http2: HTTP2Signature = None):
         self.tls_client_hello = tls_client_hello
+        self.http2 = http2
 
-    def equals(self, other: 'BrowserSignature', reason=False):
+    def _equals(self, other: 'BrowserSignature'):
+        # If one is None, so must be the other
+        if (self.tls_client_hello is None) != (other.tls_client_hello is None):
+            return False, "TLS signature present in one but not the other"
+
+        if self.tls_client_hello is not None:
+            equal, msg = self.tls_client_hello.equals(
+                other.tls_client_hello, reason=True
+            )
+            if not equal:
+                return equal, msg
+
+        # If one is None, so must be the other
+        if (self.http2 is None) != (other.http2 is None):
+            return False, "HTTP2 signature present in one but not the other"
+
+        if self.http2 is not None:
+            equal, msg = self.http2.equals(other.http2, reason=True)
+            if not equal:
+                return equal, msg
+
+        return True, None
+
+    def equals(self, other: 'BrowserSignature', reason: bool = False):
         """Checks whether two browsers have the same network signatures.
 
         Parameters
@@ -871,21 +981,34 @@ class BrowserSignature():
             If True, returns an additional string describing the reason of the
             difference in case of a difference, and None otherwise.
         """
-        return self.tls_client_hello.equals(other.tls_client_hello, reason)
+        equal, msg = self._equals(other)
+        if reason:
+            return equal, msg
+        else:
+            return equal
 
     def to_dict(self):
         """Serialize to a dict object."""
-        return {
-            "tls_client_hello": self.tls_client_hello.to_dict()
-        }
+        d = {}
+        if self.tls_client_hello is not None:
+            d["tls_client_hello"] = self.tls_client_hello.to_dict()
+        if self.http2 is not None:
+            d["http2"] = self.http2.to_dict()
+        return d
 
     @classmethod
     def from_dict(cls, d):
         """Unserialize a BrowserSignature from a dict."""
-        tls_client_hello = None
         if d.get("tls_client_hello"):
             tls_client_hello=TLSClientHelloSignature.from_dict(
                 d["tls_client_hello"]
             )
+        else:
+            tls_client_hello = None
 
-        return BrowserSignature(tls_client_hello=tls_client_hello)
+        if d.get("http2"):
+            http2 = HTTP2Signature.from_dict(d["http2"])
+        else:
+            http2 = None
+
+        return BrowserSignature(tls_client_hello=tls_client_hello, http2=http2)
