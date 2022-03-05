@@ -1,3 +1,5 @@
+# curl-impersonate &middot; ![workflow](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test.yml/badge.svg)
+
 A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate real browsers. Currently supports Chrome, Edge & Firefox. This curl binary is able to perform a TLS handshake that is identical to that of a real browser.
 
 ## Why?
