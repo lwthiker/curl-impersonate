@@ -7,6 +7,10 @@ WORKDIR /build
 RUN apt-get update && \
     apt-get install -y git g++ cmake golang-go ninja-build curl unzip zlib1g-dev libbrotli-dev
 
+# The following are needed because we are going to change some autoconf scripts,
+# both for libnghttp2 and curl.
+RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
 ARG BORING_SSL_COMMIT=3a667d10e94186fd503966f5638e134fe9fb4080
@@ -32,10 +36,6 @@ RUN mkdir boringssl/build/lib && \
 
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
-
-# The following are needed because we are going to change some autoconf scripts,
-# both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
 # Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}

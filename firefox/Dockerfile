@@ -8,6 +8,15 @@ WORKDIR /build
 RUN apt-get update && \
     apt-get install -y mercurial git ninja-build python3-pip curl zlib1g-dev libbrotli-dev
 
+# The following are needed because we are going to change some autoconf scripts,
+# both for libnghttp2 and curl.
+RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
+# curl tries to load the CA certificates for libnss.
+# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
+# which is supplied by libnss3 on Debian/Ubuntu
+RUN apt-get install -y libnss3
+
 # Also needed for building libnss
 RUN pip install gyp-next
 
@@ -23,10 +32,6 @@ RUN tar xf ${NSS_VERSION}.tar.gz && \
 
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
-
-# The following are needed because we are going to change some autoconf scripts,
-# both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
 # Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
@@ -58,11 +63,6 @@ RUN cd ${CURL_VERSION} && \
 RUN cd ${CURL_VERSION} && \
     ./configure --with-nss=/build/${NSS_VERSION}/dist/Release --enable-static --disable-shared CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" --with-nghttp2=/usr/local USE_CURL_SSLKEYLOGFILE=true && \
     make
-
-# curl tries to load the CA certificates for libnss.
-# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
-# which is supplied by libnss3 on Debian/Ubuntu
-RUN apt-get install -y libnss3
 
 RUN mkdir out && \
     cp ${CURL_VERSION}/src/curl out/curl-impersonate && \
