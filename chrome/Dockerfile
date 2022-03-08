@@ -5,11 +5,20 @@ WORKDIR /build
 
 # Dependencies for downloading and building BoringSSL
 RUN apt-get update && \
-    apt-get install -y git g++ cmake golang-go ninja-build curl unzip zlib1g-dev libbrotli-dev
+    apt-get install -y git g++ cmake golang-go ninja-build curl unzip zlib1g-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
 RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
+# Download and compile libbrotli
+ARG BROTLI_VERSION=1.0.9
+RUN curl -L https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VERSION}.tar.gz -o brotli-${BROTLI_VERSION}.tar.gz && \
+    tar xf brotli-${BROTLI_VERSION}.tar.gz
+RUN cd brotli-${BROTLI_VERSION} && \
+    mkdir build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed .. && \
+    cmake --build . --config Release --target install
 
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
@@ -24,7 +33,7 @@ COPY patches/boringssl-*.patch boringssl/
 RUN cd boringssl && \
     for p in $(ls boringssl-*.patch); do patch -p1 < $p; done && \
     mkdir build && cd build && \
-    cmake -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
     ninja
 
 # Fix the directory structure so that curl can compile against it.
@@ -66,7 +75,14 @@ RUN cd ${CURL_VERSION} && \
 # Compile curl with BoringSSL & nghttp2.
 # Enable keylogfile for debugging of TLS traffic.
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-openssl=/build/boringssl/build --enable-static --disable-shared --with-nghttp2=/usr/local LIBS="-pthread" CFLAGS="-I/build/boringssl/build" USE_CURL_SSLKEYLOGFILE=true && \
+    ./configure --enable-static \
+                --disable-shared \
+                --with-openssl=/build/boringssl/build \
+                --with-nghttp2=/usr/local \
+                --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
+                LIBS="-pthread" \
+                CFLAGS="-I/build/boringssl/build" \
+                USE_CURL_SSLKEYLOGFILE=true && \
     make
 
 RUN mkdir out && \
@@ -77,6 +93,7 @@ RUN mkdir out && \
 RUN cd ${CURL_VERSION} && \
     ./configure --with-openssl=/build/boringssl/build \
                 --with-nghttp2=/usr/local \
+                --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
                 USE_CURL_SSLKEYLOGFILE=true && \

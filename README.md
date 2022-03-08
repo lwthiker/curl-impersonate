@@ -59,8 +59,6 @@ The resulting image contains:
 
 You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build.
 
-If you use them outside the container, install the following dependencies: `sudo apt install libbrotli1`
-
 ### Firefox build
 Build with:
 ```
@@ -71,8 +69,7 @@ The resulting image contains:
 * `/build/out/curl_ff91esr`, `/build/out/curl_ff95` - Wrapper scripts that launch `curl-impersonate` with all the needed flags.
 * `/build/out/libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](#libcurl-impersonate) below for more details.
 
-If you use it outside the container, install the following dependencies:
-* `sudo apt install libbrotli1`
+If you use it outside the container, install the following dependency:
 * `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
 ### Distro packages
