@@ -6,7 +6,7 @@ WORKDIR /build
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
 RUN apt-get update && \
-    apt-get install -y mercurial git ninja-build python3-pip curl zlib1g-dev libbrotli-dev
+    apt-get install -y mercurial git ninja-build cmake python3-pip curl zlib1g-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
@@ -17,7 +17,16 @@ RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 # which is supplied by libnss3 on Debian/Ubuntu
 RUN apt-get install -y libnss3
 
-# Also needed for building libnss
+# Download and compile libbrotli
+ARG BROTLI_VERSION=1.0.9
+RUN curl -L https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VERSION}.tar.gz -o brotli-${BROTLI_VERSION}.tar.gz && \
+    tar xf brotli-${BROTLI_VERSION}.tar.gz
+RUN cd brotli-${BROTLI_VERSION} && \
+    mkdir build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed .. && \
+    cmake --build . --config Release --target install
+
+# Needed for building libnss
 RUN pip install gyp-next
 
 ARG NSS_VERSION=nss-3.74
@@ -61,7 +70,13 @@ RUN cd ${CURL_VERSION} && \
 
 # Compile curl with nss
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-nss=/build/${NSS_VERSION}/dist/Release --enable-static --disable-shared CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" --with-nghttp2=/usr/local USE_CURL_SSLKEYLOGFILE=true && \
+    ./configure --enable-static \
+                --disable-shared \
+                --with-nss=/build/${NSS_VERSION}/dist/Release \
+                --with-nghttp2=/usr/local \
+                --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
+                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
+                USE_CURL_SSLKEYLOGFILE=true && \
     make
 
 RUN mkdir out && \
@@ -72,6 +87,7 @@ RUN mkdir out && \
 RUN cd ${CURL_VERSION} && \
     ./configure --with-nss=/build/${NSS_VERSION}/dist/Release \
                 --with-nghttp2=/usr/local \
+                --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make clean && make
