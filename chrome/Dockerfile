@@ -1,11 +1,23 @@
-# Use same base as the existing Dockerfile
+#
+# NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
+# "generate-dockerfiles.sh".
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+
+# Python is needed for building libnss.
+# Use it as a common base.
 FROM python:3.10.1-slim-buster
 
 WORKDIR /build
 
-# Dependencies for downloading and building BoringSSL
+# Common dependencies
 RUN apt-get update && \
-    apt-get install -y git g++ cmake golang-go ninja-build curl unzip zlib1g-dev
+    apt-get install -y git ninja-build cmake curl zlib1g-dev
+
+
+# Dependencies for downloading and building BoringSSL
+RUN apt-get install -y g++ golang-go unzip
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
@@ -19,6 +31,7 @@ RUN cd brotli-${BROTLI_VERSION} && \
     mkdir build && cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed .. && \
     cmake --build . --config Release --target install
+
 
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
@@ -72,14 +85,14 @@ RUN cd ${CURL_VERSION} && \
     for p in $(ls curl-*.patch); do patch -p1 < $p; done && \
     autoreconf -fi
 
-# Compile curl with BoringSSL & nghttp2.
+# Compile curl with nghttp2, libbrotli and nss (firefox) or boringssl (chrome).
 # Enable keylogfile for debugging of TLS traffic.
 RUN cd ${CURL_VERSION} && \
     ./configure --enable-static \
                 --disable-shared \
-                --with-openssl=/build/boringssl/build \
                 --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
+                --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
                 USE_CURL_SSLKEYLOGFILE=true && \
@@ -91,9 +104,9 @@ RUN mkdir out && \
 
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-openssl=/build/boringssl/build \
-                --with-nghttp2=/usr/local \
+    ./configure --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
+                --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
                 USE_CURL_SSLKEYLOGFILE=true && \
