@@ -5,35 +5,64 @@
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
+{{#debian}}
 # Python is needed for building libnss.
 # Use it as a common base.
 FROM python:3.10.1-slim-buster
+{{/debian}}
+{{#alpine}}
+FROM alpine:3.15.0 as builder
+{{/alpine}}
 
 WORKDIR /build
 
 # Common dependencies
+{{#debian}}
 RUN apt-get update && \
     apt-get install -y git ninja-build cmake curl zlib1g-dev
+{{/debian}}
+{{#alpine}}
+RUN apk add git build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
+{{/alpine}}
+
+# The following are needed because we are going to change some autoconf scripts,
+# both for libnghttp2 and curl.
+{{#debian}}
+RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+{{/debian}}
+{{#alpine}}
+RUN apk add autoconf automake pkgconfig libtool
+{{/alpine}}
 
 {{#firefox}}
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
+    {{#debian}}
 RUN apt-get install -y mercurial python3-pip
+    {{/debian}}
+    {{#alpine}}
+RUN apk add mercurial py3-pip clang-analyzer
+    {{/alpine}}
 
 # curl tries to load the CA certificates for libnss.
 # It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
 # which is supplied by libnss3 on Debian/Ubuntu
+    {{#debian}}
 RUN apt-get install -y libnss3
+    {{/debian}}
+    {{#alpine}}
+RUN apk add nss
+    {{/alpine}}
 {{/firefox}}
-
 {{#chrome}}
 # Dependencies for downloading and building BoringSSL
+    {{#debian}}
 RUN apt-get install -y g++ golang-go unzip
+    {{/debian}}
+    {{#alpine}}
+RUN apk add g++ go unzip
+    {{/alpine}}
 {{/chrome}}
-
-# The following are needed because we are going to change some autoconf scripts,
-# both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
 # Download and compile libbrotli
 ARG BROTLI_VERSION=1.0.9
@@ -56,9 +85,12 @@ ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_74_RTM/src/n
 RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
 RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
+{{#alpine}}
+    # Hack to make nss compile on alpine with python3
+    ln -sf python3 /usr/bin/python && \
+{{/alpine}}
     ./build.sh -o --disable-tests --static
 {{/firefox}}
-
 {{#chrome}}
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
@@ -168,4 +200,22 @@ COPY curl_ff* out/
 {{#chrome}}
 COPY curl_chrome* curl_edge* curl_safari* out/
 {{/chrome}}
+{{#alpine}}
+# Replace /bin/bash with /bin/ash
+RUN sed -i 's@/bin/bash@/bin/ash@' out/curl_*
+{{/alpine}}
 RUN chmod +x out/curl_*
+{{#alpine}}
+
+# When using alpine, create a final, minimal image with the compiled binaries
+# only.
+FROM alpine:3.15.0
+
+# Copy curl-impersonate from the builder image
+COPY --from=builder /build/out/curl-impersonate /usr/local/bin/
+# Wrapper scripts
+COPY --from=builder /build/out/curl_* /usr/local/bin/
+
+# Copy libcurl-impersonate from the builder image
+COPY --from=builder /build/out/libcurl-impersonate.so /usr/local/lib/
+{{/alpine}}

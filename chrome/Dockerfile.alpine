@@ -5,22 +5,19 @@
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
-# Python is needed for building libnss.
-# Use it as a common base.
-FROM python:3.10.1-slim-buster
+FROM alpine:3.15.0 as builder
 
 WORKDIR /build
 
 # Common dependencies
-RUN apt-get update && \
-    apt-get install -y git ninja-build cmake curl zlib1g-dev
+RUN apk add git build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+RUN apk add autoconf automake pkgconfig libtool
 
 # Dependencies for downloading and building BoringSSL
-RUN apt-get install -y g++ golang-go unzip
+RUN apk add g++ go unzip
 
 # Download and compile libbrotli
 ARG BROTLI_VERSION=1.0.9
@@ -121,4 +118,18 @@ RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
 
 # Wrapper scripts
 COPY curl_chrome* curl_edge* curl_safari* out/
+# Replace /bin/bash with /bin/ash
+RUN sed -i 's@/bin/bash@/bin/ash@' out/curl_*
 RUN chmod +x out/curl_*
+
+# When using alpine, create a final, minimal image with the compiled binaries
+# only.
+FROM alpine:3.15.0
+
+# Copy curl-impersonate from the builder image
+COPY --from=builder /build/out/curl-impersonate /usr/local/bin/
+# Wrapper scripts
+COPY --from=builder /build/out/curl_* /usr/local/bin/
+
+# Copy libcurl-impersonate from the builder image
+COPY --from=builder /build/out/libcurl-impersonate.so /usr/local/lib/

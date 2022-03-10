@@ -5,22 +5,25 @@
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
-# Python is needed for building libnss.
-# Use it as a common base.
-FROM python:3.10.1-slim-buster
+FROM alpine:3.15.0 as builder
 
 WORKDIR /build
 
 # Common dependencies
-RUN apt-get update && \
-    apt-get install -y git ninja-build cmake curl zlib1g-dev
+RUN apk add git build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+RUN apk add autoconf automake pkgconfig libtool
 
-# Dependencies for downloading and building BoringSSL
-RUN apt-get install -y g++ golang-go unzip
+# Dependencies for building libnss
+# See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
+RUN apk add mercurial py3-pip clang-analyzer
+
+# curl tries to load the CA certificates for libnss.
+# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
+# which is supplied by libnss3 on Debian/Ubuntu
+RUN apk add nss
 
 # Download and compile libbrotli
 ARG BROTLI_VERSION=1.0.9
@@ -31,28 +34,20 @@ RUN cd brotli-${BROTLI_VERSION} && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed .. && \
     cmake --build . --config Release --target install
 
-# BoringSSL doesn't have versions. Choose a commit that is used in a stable
-# Chromium version.
-ARG BORING_SSL_COMMIT=3a667d10e94186fd503966f5638e134fe9fb4080
-RUN curl -L https://github.com/google/boringssl/archive/${BORING_SSL_COMMIT}.zip -o boringssl.zip && \
-    unzip boringssl && \
-    mv boringssl-${BORING_SSL_COMMIT} boringssl
+# Needed for building libnss
+RUN pip install gyp-next
 
-# Compile BoringSSL.
-# See https://boringssl.googlesource.com/boringssl/+/HEAD/BUILDING.md
-COPY patches/boringssl-*.patch boringssl/
-RUN cd boringssl && \
-    for p in $(ls boringssl-*.patch); do patch -p1 < $p; done && \
-    mkdir build && cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
-    ninja
+ARG NSS_VERSION=nss-3.74
+# This tarball is already bundled with nspr, a dependency of libnss.
+ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_74_RTM/src/nss-3.74-with-nspr-4.32.tar.gz
 
-# Fix the directory structure so that curl can compile against it.
-# See https://everything.curl.dev/source/build/tls/boringssl
-RUN mkdir boringssl/build/lib && \
-    ln -s ../crypto/libcrypto.a boringssl/build/lib/libcrypto.a && \
-    ln -s ../ssl/libssl.a boringssl/build/lib/libssl.a && \
-    cp -R boringssl/include boringssl/build
+# Download and compile nss.
+RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
+RUN tar xf ${NSS_VERSION}.tar.gz && \
+    cd ${NSS_VERSION}/nss && \
+    # Hack to make nss compile on alpine with python3
+    ln -sf python3 /usr/bin/python && \
+    ./build.sh -o --disable-tests --static
 
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
@@ -90,9 +85,8 @@ RUN cd ${CURL_VERSION} && \
                 --disable-shared \
                 --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
-                --with-openssl=/build/boringssl/build \
-                LIBS="-pthread" \
-                CFLAGS="-I/build/boringssl/build" \
+                --with-nss=/build/${NSS_VERSION}/dist/Release \
+                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make
 
@@ -104,9 +98,8 @@ RUN mkdir out && \
 RUN cd ${CURL_VERSION} && \
     ./configure --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
-                --with-openssl=/build/boringssl/build \
-                LIBS="-pthread" \
-                CFLAGS="-I/build/boringssl/build" \
+                --with-nss=/build/${NSS_VERSION}/dist/Release \
+                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make clean && make
 
@@ -120,5 +113,19 @@ RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
     strip "out/libcurl-impersonate.so.$ver"
 
 # Wrapper scripts
-COPY curl_chrome* curl_edge* curl_safari* out/
+COPY curl_ff* out/
+# Replace /bin/bash with /bin/ash
+RUN sed -i 's@/bin/bash@/bin/ash@' out/curl_*
 RUN chmod +x out/curl_*
+
+# When using alpine, create a final, minimal image with the compiled binaries
+# only.
+FROM alpine:3.15.0
+
+# Copy curl-impersonate from the builder image
+COPY --from=builder /build/out/curl-impersonate /usr/local/bin/
+# Wrapper scripts
+COPY --from=builder /build/out/curl_* /usr/local/bin/
+
+# Copy libcurl-impersonate from the builder image
+COPY --from=builder /build/out/libcurl-impersonate.so /usr/local/lib/
