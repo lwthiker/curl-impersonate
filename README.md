@@ -45,10 +45,10 @@ You can add command line flags and they will be passed on to curl. However, some
 See [Advanced usage](#Advanced-usage) for more options.
 
 ## Installation
-There are two version of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
+There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
 ### Docker images
-Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/repository/docker/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
+Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
 # Firefox version
 docker pull lwthiker/curl-impersonate:0.3-ff
