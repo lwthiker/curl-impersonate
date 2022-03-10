@@ -2,7 +2,7 @@ The tests verify that `curl-impersonate` has the same network signature as that 
 
 ## Running the tests
 
-The tests assume that you've built both `curl-impersonate-chrome` and `curl-impersonate-ff` docker images before (see [Installation](https://github.com/lwthiker/curl-impersonate#installation)).
+The tests assume that you've built both `curl-impersonate-chrome` and `curl-impersonate-ff` docker images before (see [Building from source](https://github.com/lwthiker/curl-impersonate#building-from-source)).
 
 To run the tests, build with:
 ```
