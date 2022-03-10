@@ -44,15 +44,12 @@ RUN apt-get install -y mercurial python3-pip
 RUN apk add mercurial py3-pip clang-analyzer
     {{/alpine}}
 
+    {{#debian}}
 # curl tries to load the CA certificates for libnss.
 # It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
 # which is supplied by libnss3 on Debian/Ubuntu
-    {{#debian}}
 RUN apt-get install -y libnss3
     {{/debian}}
-    {{#alpine}}
-RUN apk add nss
-    {{/alpine}}
 {{/firefox}}
 {{#chrome}}
 # Dependencies for downloading and building BoringSSL
@@ -210,6 +207,12 @@ RUN chmod +x out/curl_*
 # When using alpine, create a final, minimal image with the compiled binaries
 # only.
 FROM alpine:3.15.0
+{{#firefox}}
+# curl tries to load the CA certificates for libnss.
+# It loads them from /usr/lib/libnssckbi.so,
+# which is supplied by 'nss' on alpine.
+RUN apk add --no-cache nss
+{{/firefox}}
 
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/out/curl-impersonate /usr/local/bin/
