@@ -15,6 +15,10 @@ WORKDIR /build
 RUN apt-get update && \
     apt-get install -y git ninja-build cmake curl zlib1g-dev
 
+# The following are needed because we are going to change some autoconf scripts,
+# both for libnghttp2 and curl.
+RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
 RUN apt-get install -y mercurial python3-pip
@@ -23,11 +27,6 @@ RUN apt-get install -y mercurial python3-pip
 # It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
 # which is supplied by libnss3 on Debian/Ubuntu
 RUN apt-get install -y libnss3
-
-
-# The following are needed because we are going to change some autoconf scripts,
-# both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
 # Download and compile libbrotli
 ARG BROTLI_VERSION=1.0.9
@@ -50,7 +49,6 @@ RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
 RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
     ./build.sh -o --disable-tests --static
-
 
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2

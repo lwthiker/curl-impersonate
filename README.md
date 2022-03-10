@@ -45,10 +45,29 @@ You can add command line flags and they will be passed on to curl. However, some
 See [Advanced usage](#Advanced-usage) for more options.
 
 ## Installation
-This repository maintains two separate build systems for technical reasons. The **chrome** build is used to impersonate Chrome, Edge and Safari. The **firefox** build is used to impersonate Firefox.
+There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
+
+### Docker images
+Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
+```bash
+# Firefox version
+docker pull lwthiker/curl-impersonate:0.3-ff
+docker run --rm lwthiker/curl-impersonate:0.3-ff curl_ff95 https://www.wikipedia.org
+
+# Chrome version
+docker pull lwthiker/curl-impersonate:0.3-chrome
+docker run --rm lwthiker/curl-impersonate:0.3-chrome curl_chrome99 https://www.wikipedia.org
+```
+
+### Distro packages
+
+AUR packages are available to Arch users: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
+
+## Building from source
+As mentioned there are two separate build systems. The **chrome** build is used to impersonate Chrome, Edge and Safari. The **firefox** build is used to impersonate Firefox.
 
 ### Chrome build
-[`chrome/Dockerfile`](chrome/Dockerfile) is a Dockerfile that will build curl with all the necessary modifications and patches. Build it like the following:
+[`chrome/Dockerfile`](chrome/Dockerfile) is a debian-based Dockerfile that will build curl with all the necessary modifications and patches. Build it like the following:
 ```
 docker build -t curl-impersonate-chrome chrome/
 ```
@@ -71,10 +90,6 @@ The resulting image contains:
 
 If you use it outside the container, install the following dependency:
 * `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
-
-### Distro packages
-
-AUR packages are available to Arch users: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
 
 ## Advanced usage
 ### libcurl-impersonate
