@@ -92,7 +92,8 @@ RUN cd ${CURL_VERSION} && \
     make
 
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate && \
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate-ff && \
+    ln -s curl-impersonate-ff out/curl-impersonate && \
     strip out/curl-impersonate
 
 # Re-compile libcurl dynamically
@@ -108,8 +109,10 @@ RUN cd ${CURL_VERSION} && \
 # symbolic links.
 RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
     major=$(echo -n $ver | cut -d'.' -f1) && \
-    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate.so.$ver" && \
-    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so.$major" && \
+    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate-ff.so.$ver" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so.$major" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate.so.$ver" && \
     ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
     strip "out/libcurl-impersonate.so.$ver"
 

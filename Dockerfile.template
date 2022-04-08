@@ -162,7 +162,14 @@ RUN cd ${CURL_VERSION} && \
     make
 
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate && \
+{{#firefox}}
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate-ff && \
+    ln -s curl-impersonate-ff out/curl-impersonate && \
+{{/firefox}}
+{{#chrome}}
+    cp ${CURL_VERSION}/src/curl out/curl-impersonate-chrome && \
+    ln -s curl-impersonate-chrome out/curl-impersonate && \
+{{/chrome}}
     strip out/curl-impersonate
 
 # Re-compile libcurl dynamically
@@ -185,8 +192,18 @@ RUN cd ${CURL_VERSION} && \
 # symbolic links.
 RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
     major=$(echo -n $ver | cut -d'.' -f1) && \
-    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate.so.$ver" && \
-    ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so.$major" && \
+{{#firefox}}
+    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate-ff.so.$ver" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so.$major" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so" && \
+    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate.so.$ver" && \
+{{/firefox}}
+{{#chrome}}
+    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate-chrome.so.$ver" && \
+    ln -s "libcurl-impersonate-chrome.so.$ver" "out/libcurl-impersonate-chrome.so.$major" && \
+    ln -s "libcurl-impersonate-chrome.so.$ver" "out/libcurl-impersonate-chrome.so" && \
+    ln -s "libcurl-impersonate-chrome.so.$ver" "out/libcurl-impersonate.so.$ver" && \
+{{/chrome}}
     ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
     strip "out/libcurl-impersonate.so.$ver"
 
@@ -215,7 +232,14 @@ RUN apk add --no-cache nss
 {{/firefox}}
 
 # Copy curl-impersonate from the builder image
-COPY --from=builder /build/out/curl-impersonate /usr/local/bin/
+{{#firefox}}
+COPY --from=builder /build/out/curl-impersonate-ff /usr/local/bin/
+RUN ln -s curl-impersonate-ff /usr/local/bin/curl-impersonate
+{{/firefox}}
+{{#chrome}}
+COPY --from=builder /build/out/curl-impersonate-chrome /usr/local/bin/
+RUN ln -s curl-impersonate-chrome /usr/local/bin/curl-impersonate
+{{/chrome}}
 # Wrapper scripts
 COPY --from=builder /build/out/curl_* /usr/local/bin/
 
