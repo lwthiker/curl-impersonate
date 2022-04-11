@@ -116,6 +116,7 @@ LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome98 my_app
 The `CURL_IMPERSONATE` env var has two effects:
 * `curl_easy_impersonate()` is called automatically for any new curl handle created by `curl_easy_init()`.
 * `curl_easy_impersonate()` is called automatically after any `curl_easy_reset()` call.
+
 This means that all the options needed for impersonation will be automatically set for any curl handle.
 
 Note that the above will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
