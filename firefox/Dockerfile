@@ -82,36 +82,38 @@ RUN cd ${CURL_VERSION} && \
 # Compile curl with nghttp2, libbrotli and nss (firefox) or boringssl (chrome).
 # Enable keylogfile for debugging of TLS traffic.
 RUN cd ${CURL_VERSION} && \
-    ./configure --enable-static \
+    ./configure --prefix=/build/install \
+                --enable-static \
                 --disable-shared \
                 --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
-    make
+    make && make install
 
 RUN mkdir out && \
-    cp ${CURL_VERSION}/src/curl out/curl-impersonate-ff && \
+    cp /build/install/bin/curl-impersonate-ff out/ && \
     ln -s curl-impersonate-ff out/curl-impersonate && \
     strip out/curl-impersonate
 
+RUN rm -Rf /build/install
+
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
-    ./configure --with-nghttp2=/usr/local \
+    ./configure --prefix=/build/install \
+                --with-nghttp2=/usr/local \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
-    make clean && make
+    make clean && make && make install
 
-# Rename to 'libcurl-impersonate' to avoid confusion, and recreate the
-# symbolic links.
-RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl.so | sed 's/.*so\.//') && \
+# Copy libcurl-impersonate and symbolic links
+RUN cp -d /build/install/lib/libcurl-impersonate* /build/out
+
+RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl-impersonate-ff.so | sed 's/.*so\.//') && \
     major=$(echo -n $ver | cut -d'.' -f1) && \
-    cp "${CURL_VERSION}/lib/.libs/libcurl.so.$ver" "out/libcurl-impersonate-ff.so.$ver" && \
-    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so.$major" && \
-    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate-ff.so" && \
     ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate.so.$ver" && \
     ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
     strip "out/libcurl-impersonate.so.$ver"
