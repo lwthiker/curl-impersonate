@@ -32,6 +32,10 @@ chrome_libs := $(brotli_static_libs) $(boringssl_static_libs) $(nghttp2_static_l
 
 basedir := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# To be set by the configure script
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
 # Auto-generate Makefile help.
 # Borrowed from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 help: ## Show this help message
@@ -39,19 +43,38 @@ help: ## Show this help message
 .PHONY: help
 .DEFAULT_GOAL := help
 
-firefox: curl-impersonate-ff ## Build the Firefox version of curl-impersonate
+firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-impersonate
+	cd $(CURL_VERSION)
+	# Don't pass this Makefile's MAKEFLAGS
+	make MAKEFLAGS=
 .PHONY: firefox
 
-chrome: curl-impersonate-chrome ## Build the Chrome version of curl-impersonate
+firefox-install: ## Install the Firefox version of curl-impersonate after build
+	cd $(CURL_VERSION)
+	make install MAKEFLAGS=
+	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
+	cp -f $(basedir)/firefox/curl_ff* @bindir@
+.PHONY: firefox-install
+
+chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
+	cd $(CURL_VERSION)
+	# Don't pass this Makefile's MAKEFLAGS
+	make MAKEFLAGS=
 .PHONY: chrome
 
-clean: ## Remove build artifacts
+chrome-install: ## Install the Chrome version of curl-impersonate after build
+	cd $(CURL_VERSION)
+	make install MAKEFLAGS=
+	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
+	cp -f $(basedir)/chrome/curl_chrome* $(basedir)/chrome/curl_edge* $(basedir)/chrome/curl_safari* @bindir@
+.PHONY: chrome-install
+
+clean: ## Remove all build artifacts
 	rm -Rf brotli-$(BROTLI_VERSION).tar.gz brotli-$(BROTLI_VERSION)
 	rm -Rf $(NSS_VERSION).tar.gz $(NSS_VERSION)
 	rm -Rf boringssl.zip boringssl
 	rm -Rf $(NGHTTP2_VERSION).tar.bz2 $(NGHTTP2_VERSION)
 	rm -Rf $(CURL_VERSION).tar.xz $(CURL_VERSION)
-	rm -Rf out
 
 brotli-$(BROTLI_VERSION).tar.gz:
 	curl -L "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VERSION}.tar.gz" \
@@ -148,9 +171,8 @@ $(CURL_VERSION)/.patched-chrome: $(basedir)/chrome/patches/curl-*.patch
 # This is a small hack that flags that curl was patched and configured in the "firefox" version
 $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)/.patched-ff
 	cd $(CURL_VERSION)
-	./configure --enable-static \
-				--disable-shared \
-				--with-zlib \
+	./configure @curl_configure_options@ \
+				--prefix=@prefix@ \
 				--with-nghttp2=$(nghttp2_install_dir) \
 				--with-brotli=$(brotli_install_dir) \
 				--with-nss=$(nss_install_dir) \
@@ -165,9 +187,8 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 # This is a small hack that flags that curl was patched and configured in the "chrome" version
 $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.patched-chrome
 	cd $(CURL_VERSION)
-	./configure --enable-static \
-				--disable-shared \
-				--with-zlib \
+	./configure @curl_configure_options@ \
+				--prefix=@prefix@ \
 				--with-nghttp2=$(nghttp2_install_dir) \
 				--with-brotli=$(brotli_install_dir) \
 				--with-openssl=$(boringssl_install_dir) \
@@ -179,37 +200,3 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 	touch .chrome
 	# Remove the Firefox flag if it exists
 	rm -f .firefox
-
-
-out/curl-impersonate-ff: $(CURL_VERSION)/.firefox
-	cd $(CURL_VERSION)
-	make MAKEFLAGS=
-	cd $(CURDIR)
-	mkdir -p $(@D)
-	cp -f $(CURL_VERSION)/src/curl $@
-	strip $@
-
-# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
-ff-wrappers:
-	cp -f $(basedir)/firefox/curl_ff* out/
-.PHONY: ff-wrappers
-
-curl-impersonate-ff: out/curl-impersonate-ff ff-wrappers
-.PHONY: curl-impersonate-ff
-
-
-out/curl-impersonate-chrome: $(CURL_VERSION)/.chrome
-	cd $(CURL_VERSION)
-	make MAKEFLAGS=
-	cd $(CURDIR)
-	mkdir -p $(@D)
-	cp -f $(CURL_VERSION)/src/curl $@
-	strip $@
-
-# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
-chrome-wrappers:
-	cp -f $(basedir)/chrome/curl_chrome* $(basedir)/chrome/curl_edge* $(basedir)/chrome/curl_safari* out/
-.PHONY: chrome-wrappers
-
-curl-impersonate-chrome: out/curl-impersonate-chrome chrome-wrappers
-.PHONY: curl-impersonate-chrome
