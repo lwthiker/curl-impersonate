@@ -59,4 +59,4 @@ jobs:
       - name: Run the tests
         run: |
           cd tests
-          pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
+          sudo pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
