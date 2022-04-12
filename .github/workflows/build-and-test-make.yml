@@ -33,7 +33,8 @@ jobs:
 
       - name: Install dependencies for the tests script
         run: |
-          pip install -r tests/requirements.txt
+          # Install globally so that we can run 'pytest' with 'sudo'
+          sudo pip install -r tests/requirements.txt
 
       - name: Run configure script
         run: |
@@ -59,4 +60,5 @@ jobs:
       - name: Run the tests
         run: |
           cd tests
+          # sudo is needed for capturing packets
           sudo pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
