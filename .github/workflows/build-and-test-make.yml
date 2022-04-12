@@ -1,0 +1,62 @@
+name: Build and test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build curl-impersonate and run the tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+    steps:
+      - name: Install Ubuntu dependencies
+        if: matrix.os == 'ubuntu-20.04'
+        run: |
+          sudo apt install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
+          # Firefox version dependencies
+          sudo apt install python3-pip python-is-python3
+          pip install gyp-next
+          # Chrome version dependencies
+          sudo apt install golang-go
+          # Needed to compile 'minicurl'
+          sudo apt install libcurl4-openssl-dev
+
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Install dependencies for the tests script
+        run: |
+          pip install -r tests/requirements.txt
+
+      - name: Run configure script
+        run: |
+          autoconf
+          mkdir ${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install
+
+      - name: Build the Chrome version of curl-impersonate
+        run: |
+          make chrome-build
+          make chrome-install
+
+      - name: Build the Firefox version of curl-impersonate
+        run: |
+          make firefox-build
+          make firefox-install
+    
+      - name: Prepare the tests
+        run: |
+          # Compile 'minicurl' which is used by the tests
+          gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
+
+      - name: Run the tests
+        run: |
+          cd tests
+          pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
