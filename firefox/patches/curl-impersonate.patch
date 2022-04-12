@@ -1,5 +1,25 @@
+diff --git a/Makefile.am b/Makefile.am
+index 3e55230ee..90b504b5c 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -192,13 +192,13 @@ CLEANFILES = $(VC6_LIBDSP) $(VC6_SRCDSP) $(VC7_LIBVCPROJ) $(VC7_SRCVCPROJ) \
+  $(VC11_LIBVCXPROJ) $(VC11_SRCVCXPROJ) $(VC12_LIBVCXPROJ) $(VC12_SRCVCXPROJ) \
+  $(VC14_LIBVCXPROJ) $(VC14_SRCVCXPROJ) $(VC15_LIBVCXPROJ) $(VC15_SRCVCXPROJ)
+ 
+-bin_SCRIPTS = curl-config
++bin_SCRIPTS = curl-impersonate-ff-config
+ 
+ SUBDIRS = lib src
+ DIST_SUBDIRS = $(SUBDIRS) tests packages scripts include docs
+ 
+ pkgconfigdir = $(libdir)/pkgconfig
+-pkgconfig_DATA = libcurl.pc
++pkgconfig_DATA = libcurl-impersonate-ff.pc
+ 
+ # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
+ include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index 63e320236..5870fa430 100644
+index 63e320236..238addfaa 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1331,7 +1331,8 @@ if test X"$OPT_BROTLI" != Xno; then
@@ -44,6 +64,42 @@ index 63e320236..5870fa430 100644
      AC_MSG_NOTICE([-L is $LD_H2])
  
      LDFLAGS="$LDFLAGS $LD_H2"
+@@ -4255,8 +4260,8 @@ AC_CONFIG_FILES([Makefile \
+            tests/unit/Makefile \
+            packages/Makefile \
+            packages/vms/Makefile \
+-           curl-config \
+-           libcurl.pc
++           curl-impersonate-ff-config:curl-config.in \
++           libcurl-impersonate-ff.pc:libcurl.pc.in
+ ])
+ AC_OUTPUT
+ 
+diff --git a/curl-config.in b/curl-config.in
+index 8b4a29a9a..2c8b888d8 100644
+--- a/curl-config.in
++++ b/curl-config.in
+@@ -161,9 +161,9 @@ while test $# -gt 0; do
+            CURLLIBDIR=""
+         fi
+         if test "X@ENABLE_SHARED@" = "Xno"; then
+-          echo ${CURLLIBDIR}-lcurl @LIBCURL_LIBS@
++          echo ${CURLLIBDIR}-lcurl-impersonate-ff @LIBCURL_LIBS@
+         else
+-          echo ${CURLLIBDIR}-lcurl
++          echo ${CURLLIBDIR}-lcurl-impersonate-ff
+         fi
+         ;;
+     --ssl-backends)
+@@ -172,7 +172,7 @@ while test $# -gt 0; do
+ 
+     --static-libs)
+         if test "X@ENABLE_STATIC@" != "Xno" ; then
+-          echo @libdir@/libcurl.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
++          echo @libdir@/libcurl-impersonate-ff.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
+         else
+           echo "curl was built with static libraries disabled" >&2
+           exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
 index 7b69ce2d6..fe4bb36b9 100644
 --- a/include/curl/curl.h
@@ -79,6 +135,86 @@ index 2dbfb26b5..e0bf86169 100644
  /*
   * NAME curl_easy_getinfo()
   *
+diff --git a/lib/Makefile.am b/lib/Makefile.am
+index 769363941..6e2f1b829 100644
+--- a/lib/Makefile.am
++++ b/lib/Makefile.am
+@@ -32,7 +32,7 @@ EXTRA_DIST = Makefile.m32 config-win32.h config-win32ce.h           \
+  firefox-db2pem.sh config-vxworks.h Makefile.vxworks checksrc.pl    \
+  setup-win32.h .checksrc
+ 
+-lib_LTLIBRARIES = libcurl.la
++lib_LTLIBRARIES = libcurl-impersonate-ff.la
+ 
+ if BUILD_UNITTESTS
+ noinst_LTLIBRARIES = libcurlu.la
+@@ -84,43 +84,43 @@ AM_CPPFLAGS += -DBUILDING_LIBCURL
+ AM_LDFLAGS =
+ AM_CFLAGS =
+ 
+-libcurl_la_CPPFLAGS_EXTRA =
+-libcurl_la_LDFLAGS_EXTRA =
+-libcurl_la_CFLAGS_EXTRA =
++libcurl_impersonate_ff_la_CPPFLAGS_EXTRA =
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA =
++libcurl_impersonate_ff_la_CFLAGS_EXTRA =
+ 
+ if CURL_LT_SHLIB_USE_VERSION_INFO
+-libcurl_la_LDFLAGS_EXTRA += $(VERSIONINFO)
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA += $(VERSIONINFO)
+ endif
+ 
+ if CURL_LT_SHLIB_USE_NO_UNDEFINED
+-libcurl_la_LDFLAGS_EXTRA += -no-undefined
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA += -no-undefined
+ endif
+ 
+ if CURL_LT_SHLIB_USE_MIMPURE_TEXT
+-libcurl_la_LDFLAGS_EXTRA += -mimpure-text
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA += -mimpure-text
+ endif
+ 
+ if CURL_LT_SHLIB_USE_VERSIONED_SYMBOLS
+-libcurl_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
+ else
+ # if symbol-hiding is enabled, hide them!
+ if DOING_CURL_SYMBOL_HIDING
+-libcurl_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
++libcurl_impersonate_ff_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
+ endif
+ endif
+ 
+ if USE_CPPFLAG_CURL_STATICLIB
+-libcurl_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
++libcurl_impersonate_ff_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
+ endif
+ 
+ if DOING_CURL_SYMBOL_HIDING
+-libcurl_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
+-libcurl_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
++libcurl_impersonate_ff_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
++libcurl_impersonate_ff_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
+ endif
+ 
+-libcurl_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_la_CPPFLAGS_EXTRA)
+-libcurl_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_la_LDFLAGS_EXTRA) $(LDFLAGS) $(LIBCURL_LIBS)
+-libcurl_la_CFLAGS = $(AM_CFLAGS) $(libcurl_la_CFLAGS_EXTRA)
++libcurl_impersonate_ff_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_impersonate_ff_la_CPPFLAGS_EXTRA)
++libcurl_impersonate_ff_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_impersonate_ff_la_LDFLAGS_EXTRA) $(LDFLAGS) $(LIBCURL_LIBS)
++libcurl_impersonate_ff_la_CFLAGS = $(AM_CFLAGS) $(libcurl_impersonate_ff_la_CFLAGS_EXTRA)
+ 
+ libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS
+ libcurlu_la_LDFLAGS = $(AM_LDFLAGS) -static $(LIBCURL_LIBS)
+@@ -129,7 +129,7 @@ libcurlu_la_CFLAGS = $(AM_CFLAGS)
+ # Makefile.inc provides the CSOURCES and HHEADERS defines
+ include Makefile.inc
+ 
+-libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
++libcurl_impersonate_ff_la_SOURCES = $(CSOURCES) $(HHEADERS)
+ libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
+ 
+ CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
 index 20293a710..b97ac204e 100644
 --- a/lib/easy.c
@@ -800,6 +936,18 @@ index 2b44f0512..4c60797c7 100644
  
      if(SSL_SetNextProtoNego(backend->handle, protocols, cur) != SECSuccess)
        goto error;
+diff --git a/libcurl.pc.in b/libcurl.pc.in
+index 8ac15d407..68d01b219 100644
+--- a/libcurl.pc.in
++++ b/libcurl.pc.in
+@@ -34,6 +34,6 @@ Name: libcurl
+ URL: https://curl.se/
+ Description: Library to transfer files with ftp, http, etc.
+ Version: @CURLVERSION@
+-Libs: -L${libdir} -lcurl @LIBCURL_NO_SHARED@
++Libs: -L${libdir} -lcurl-impersonate-ff @LIBCURL_NO_SHARED@
+ Libs.private: @LIBCURL_LIBS@
+ Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
 index 397ba71b1..abc09a91c 100644
 --- a/m4/curl-nss.m4
@@ -822,3 +970,37 @@ index 397ba71b1..abc09a91c 100644
       [
       AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
       AC_SUBST(USE_NSS, [1])
+diff --git a/src/Makefile.am b/src/Makefile.am
+index c8abc93b1..fcecb10d0 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -41,7 +41,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
+               -I$(top_srcdir)/lib            \
+               -I$(top_srcdir)/src
+ 
+-bin_PROGRAMS = curl
++bin_PROGRAMS = curl-impersonate-ff
+ 
+ SUBDIRS = ../docs
+ 
+@@ -52,7 +52,7 @@ endif
+ include Makefile.inc
+ 
+ # CURL_FILES comes from Makefile.inc
+-curl_SOURCES = $(CURL_FILES)
++curl_impersonate_ff_SOURCES = $(CURL_FILES)
+ 
+ # This might hold -Werror
+ CFLAGS += @CURL_CFLAG_EXTRAS@
+@@ -61,9 +61,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
+ LIBS = $(BLANK_AT_MAKETIME)
+ 
+ if USE_EXPLICIT_LIB_DEPS
+-curl_LDADD = $(top_builddir)/lib/libcurl.la @LIBCURL_LIBS@
++curl_impersonate_ff_LDADD = $(top_builddir)/lib/libcurl-impersonate-ff.la @LIBCURL_LIBS@
+ else
+-curl_LDADD = $(top_builddir)/lib/libcurl.la @NSS_LIBS@ @SSL_LIBS@ @ZLIB_LIBS@ @CURL_NETWORK_AND_TIME_LIBS@
++curl_impersonate_ff_LDADD = $(top_builddir)/lib/libcurl-impersonate-ff.la @NSS_LIBS@ @SSL_LIBS@ @ZLIB_LIBS@ @CURL_NETWORK_AND_TIME_LIBS@
+ endif
+ 
+ # if unit tests are enabled, build a static library to link them with
