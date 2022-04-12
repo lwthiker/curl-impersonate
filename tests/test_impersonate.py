@@ -214,15 +214,17 @@ class TestImpersonation:
     ]
 
     @pytest.fixture
-    def tcpdump(self):
+    def tcpdump(self, pytestconfig):
         """Initialize a sniffer to capture curl's traffic."""
+        interface = pytestconfig.getoption("capture_interface")
+
         logging.debug(
-            f"Running tcpdump on interface {self.TCPDUMP_CAPTURE_INTERFACE}"
+            f"Running tcpdump on interface {interface}"
         )
 
         p = subprocess.Popen([
             "tcpdump", "-n",
-            "-i", self.TCPDUMP_CAPTURE_INTERFACE,
+            "-i", interface,
             "-s", "0",
             "-w", "-",
             "-U", # Important, makes tcpdump unbuffered
@@ -282,7 +284,7 @@ class TestImpersonation:
         """
         for ts, buf in dpkt.pcap.Reader(io.BytesIO(pcap)):
             eth = dpkt.ethernet.Ethernet(buf)
-            if not isinstance(eth.data, dpkt.ip.IP):
+            if not isinstance(eth.data, dpkt.ip.IP) and not isinstance(eth.data, dpkt.ip6.IP6):
                 continue
             ip = eth.data
             if not isinstance(ip.data, dpkt.tcp.TCP):
