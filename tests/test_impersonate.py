@@ -257,7 +257,7 @@ class TestImpersonation:
     def _run_curl(self, curl_binary, env_vars, extra_args, url):
         env = os.environ.copy()
         if env_vars:
-            env |= env_vars
+            env.update(env_vars)
 
         logging.debug(f"Launching '{curl_binary}' to {url}")
         if env_vars:
