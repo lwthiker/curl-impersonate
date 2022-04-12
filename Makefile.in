@@ -46,7 +46,7 @@ firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-imp
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
 	make MAKEFLAGS=
-.PHONY: firefox
+.PHONY: firefox-build
 
 firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
@@ -65,7 +65,7 @@ chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impers
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
 	make MAKEFLAGS=
-.PHONY: chrome
+.PHONY: chrome-build
 
 chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
