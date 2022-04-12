@@ -126,103 +126,105 @@ class TestImpersonation:
     # List of binaries and their expected signatures
     CURL_BINARIES_AND_SIGNATURES = [
         # Test wrapper scripts
-        ("chrome/curl_chrome98", None, "chrome_98.0.4758.102_win10"),
-        ("chrome/curl_chrome99", None, "chrome_99.0.4844.51_win10"),
-        ("chrome/curl_chrome99_android", None, "chrome_99.0.4844.73_android12-pixel6"),
-        ("chrome/curl_edge98", None, "edge_98.0.1108.62_win10"),
-        ("chrome/curl_edge99", None, "edge_99.0.1150.30_win10"),
-        ("chrome/curl_safari15_3", None, "safari_15.3_macos11.6.4"),
-        ("firefox/curl_ff91esr", None, "firefox_91.6.0esr_win10"),
-        ("firefox/curl_ff95", None, "firefox_95.0.2_win10"),
-        ("firefox/curl_ff98", None, "firefox_98.0_win10"),
+        ("curl_chrome98", None, None, "chrome_98.0.4758.102_win10"),
+        ("curl_chrome99", None, None, "chrome_99.0.4844.51_win10"),
+        ("curl_chrome99_android", None, None, "chrome_99.0.4844.73_android12-pixel6"),
+        ("curl_edge98", None, None, "edge_98.0.1108.62_win10"),
+        ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
+        ("curl_safari15_3", None, None, "safari_15.3_macos11.6.4"),
+        ("curl_ff91esr", None, None, "firefox_91.6.0esr_win10"),
+        ("curl_ff95", None, None, "firefox_95.0.2_win10"),
+        ("curl_ff98", None, None, "firefox_98.0_win10"),
 
         # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
         # linked against the regular libcurl and setting the
         # CURL_IMPERSONATE env var.
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "chrome98"
             },
+            "libcurl-impersonate-chrome.so",
             "chrome_98.0.4758.102_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "chrome99"
             },
+            "libcurl-impersonate-chrome.so",
             "chrome_99.0.4844.51_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "chrome99_android"
             },
+            "libcurl-impersonate-chrome.so",
             "chrome_99.0.4844.73_android12-pixel6"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "edge98"
             },
+            "libcurl-impersonate-chrome.so",
             "edge_98.0.1108.62_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "edge99"
             },
+            "libcurl-impersonate-chrome.so",
             "edge_99.0.1150.30_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./chrome/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "safari15_3"
             },
+            "libcurl-impersonate-chrome.so",
             "safari_15.3_macos11.6.4"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "ff91esr"
             },
+            "libcurl-impersonate-ff.so",
             "firefox_91.6.0esr_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "ff95"
             },
+            "libcurl-impersonate-ff.so",
             "firefox_95.0.2_win10"
         ),
         (
-            "./minicurl",
+            "minicurl",
             {
-                "LD_PRELOAD": "./firefox/libcurl-impersonate.so",
                 "CURL_IMPERSONATE": "ff98"
             },
+            "libcurl-impersonate-ff.so",
             "firefox_98.0_win10"
         )
     ]
 
     @pytest.fixture
-    def tcpdump(self):
+    def tcpdump(self, pytestconfig):
         """Initialize a sniffer to capture curl's traffic."""
+        interface = pytestconfig.getoption("capture_interface")
+
         logging.debug(
-            f"Running tcpdump on interface {self.TCPDUMP_CAPTURE_INTERFACE}"
+            f"Running tcpdump on interface {interface}"
         )
 
         p = subprocess.Popen([
             "tcpdump", "-n",
-            "-i", self.TCPDUMP_CAPTURE_INTERFACE,
+            "-i", interface,
             "-s", "0",
             "-w", "-",
             "-U", # Important, makes tcpdump unbuffered
@@ -255,7 +257,7 @@ class TestImpersonation:
     def _run_curl(self, curl_binary, env_vars, extra_args, url):
         env = os.environ.copy()
         if env_vars:
-            env |= env_vars
+            env.update(env_vars)
 
         logging.debug(f"Launching '{curl_binary}' to {url}")
         if env_vars:
@@ -282,7 +284,7 @@ class TestImpersonation:
         """
         for ts, buf in dpkt.pcap.Reader(io.BytesIO(pcap)):
             eth = dpkt.ethernet.Ethernet(buf)
-            if not isinstance(eth.data, dpkt.ip.IP):
+            if not isinstance(eth.data, dpkt.ip.IP) and not isinstance(eth.data, dpkt.ip6.IP6):
                 continue
             ip = eth.data
             if not isinstance(ip.data, dpkt.tcp.TCP):
@@ -341,13 +343,15 @@ class TestImpersonation:
         return pseudo_headers, headers
 
     @pytest.mark.parametrize(
-        "curl_binary, env_vars, expected_signature",
+        "curl_binary, env_vars, ld_preload, expected_signature",
         CURL_BINARIES_AND_SIGNATURES
     )
     def test_tls_client_hello(self,
+                              pytestconfig,
                               tcpdump,
                               curl_binary,
                               env_vars,
+                              ld_preload,
                               browser_signatures,
                               expected_signature):
         """
@@ -358,6 +362,14 @@ class TestImpersonation:
         extracts the Client Hello packet from the capture and compares its
         signature with the expected one defined in the YAML database.
         """
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+        if ld_preload:
+            env_vars["LD_PRELOAD"] = os.path.join(
+                pytestconfig.getoption("install_dir"), "lib", ld_preload
+            )
+
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=None,
@@ -396,15 +408,24 @@ class TestImpersonation:
         assert equals, msg
 
     @pytest.mark.parametrize(
-        "curl_binary, env_vars, expected_signature",
+        "curl_binary, env_vars, ld_preload, expected_signature",
         CURL_BINARIES_AND_SIGNATURES
     )
     def test_http2_headers(self,
+                           pytestconfig,
                            nghttpd,
                            curl_binary,
                            env_vars,
+                           ld_preload,
                            browser_signatures,
                            expected_signature):
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+        if ld_preload:
+            env_vars["LD_PRELOAD"] = os.path.join(
+                pytestconfig.getoption("install_dir"), "lib", ld_preload
+            )
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=["-k"],

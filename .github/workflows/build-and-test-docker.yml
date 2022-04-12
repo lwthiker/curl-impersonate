@@ -1,4 +1,4 @@
-name: Build and test
+name: Docker images
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build curl-impersonate and run the tests
+    name: Build curl-impersonate Docker images and run the tests
     runs-on: ubuntu-latest
     services:
       # A local registry is needed to push the build images to because we use
