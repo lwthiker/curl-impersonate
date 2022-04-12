@@ -50,7 +50,7 @@ firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-imp
 
 firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
-	make install MAKEFLAGS=
+	make install-exec MAKEFLAGS=
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
 	cp -f $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install
@@ -63,7 +63,7 @@ chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impers
 
 chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
-	make install MAKEFLAGS=
+	make install-exec MAKEFLAGS=
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
 	cp -f $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install
