@@ -27,6 +27,8 @@ jobs:
           sudo apt install golang-go
           # Needed to compile 'minicurl'
           sudo apt install libcurl4-openssl-dev
+          # More dependencies for the tests
+          sudo apt install tcpdump nghttp2-server libnss3
 
       - name: Check out the repo
         uses: actions/checkout@v2
