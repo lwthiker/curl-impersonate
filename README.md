@@ -49,6 +49,9 @@ See [Advanced usage](#Advanced-usage) for more options.
 ## Installation
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
+### Building from source
+See [INSTALL.md](INSTALL.md).
+
 ### Docker images
 Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
@@ -64,34 +67,6 @@ docker run --rm lwthiker/curl-impersonate:0.3-chrome curl_chrome99 https://www.w
 ### Distro packages
 
 AUR packages are available to Arch users: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
-
-## Building from source
-As mentioned there are two separate build systems. The **chrome** build is used to impersonate Chrome, Edge and Safari. The **firefox** build is used to impersonate Firefox.
-
-### Chrome build
-[`chrome/Dockerfile`](chrome/Dockerfile) is a debian-based Dockerfile that will build curl with all the necessary modifications and patches. Build it like the following:
-```
-docker build -t curl-impersonate-chrome chrome/
-```
-The resulting image contains a `/build/out` directory with the following:
-* `curl-impersonate-chrome`, `curl-impersonate` - The curl binary that can impersonate Chrome/Edge/Safari. It is compiled statically against libcurl, BoringSSL, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
-* `curl_chrome98`, `curl_chrome99`, `...` - Wrapper scripts that launch `curl-impersonate` with all the needed flags.
-* `libcurl-impersonate-chrome.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](#libcurl-impersonate) below for more details.
-
-You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build.
-
-### Firefox build
-Build with:
-```
-docker build -t curl-impersonate-ff firefox/
-```
-The resulting image contains a `/build/out` directory with the following:
-* `curl-impersonate-ff`, `curl-impersonate` - The curl binary that can impersonate Firefox. It is compiled statically against libcurl, nss, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
-* `curl_ff91esr`, `curl_ff95`, `...` - Wrapper scripts that launch `curl-impersonate` with all the needed flags.
-* `libcurl-impersonate-ff.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](#libcurl-impersonate) below for more details.
-
-If you use it outside the container, install the following dependency:
-* `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
 
 ## Advanced usage
 ### libcurl-impersonate
