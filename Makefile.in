@@ -30,11 +30,10 @@ firefox_libs := $(brotli_static_libs) $(nss_static_libs) $(nghttp2_static_libs)
 # Dependencies needed to compile the Chrome version
 chrome_libs := $(brotli_static_libs) $(boringssl_static_libs) $(nghttp2_static_libs)
 
-basedir := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-
 # To be set by the configure script
 prefix = @prefix@
 exec_prefix = @exec_prefix@
+srcdir = @abs_srcdir@
 
 # Auto-generate Makefile help.
 # Borrowed from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -53,7 +52,7 @@ firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	make install MAKEFLAGS=
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
-	cp -f $(basedir)/firefox/curl_ff* @bindir@
+	cp -f $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install
 
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
@@ -66,7 +65,7 @@ chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	make install MAKEFLAGS=
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
-	cp -f $(basedir)/chrome/curl_chrome* $(basedir)/chrome/curl_edge* $(basedir)/chrome/curl_safari* @bindir@
+	cp -f $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install
 
 clean: ## Remove all build artifacts
@@ -103,7 +102,7 @@ boringssl.zip:
 		-o boringssl.zip
 
 # Patch boringssl and use a dummy '.patched' file to mark it patched
-boringssl/.patched: $(basedir)/chrome/patches/boringssl-*.patch
+boringssl/.patched: $(srcdir)/chrome/patches/boringssl-*.patch
 	unzip -o boringssl.zip
 	mv boringssl-$(BORING_SSL_COMMIT) boringssl
 	cd boringssl/
@@ -127,7 +126,7 @@ $(NGHTTP2_VERSION).tar.bz2:
 	curl -L $(NGHTTP2_URL) -o $(NGHTTP2_VERSION).tar.bz2
 
 # Patch nghttp2 and use a dummy '.patched' file to mark it patched
-$(NGHTTP2_VERSION)/.patched: $(basedir)/firefox/patches/libnghttp2-*.patch
+$(NGHTTP2_VERSION)/.patched: $(srcdir)/firefox/patches/libnghttp2-*.patch
 	rm -Rf $(NGHTTP2_VERSION)
 	tar -xf $(NGHTTP2_VERSION).tar.bz2
 	cd $(NGHTTP2_VERSION)
@@ -147,7 +146,7 @@ $(CURL_VERSION).tar.xz:
 		-o "$(CURL_VERSION).tar.xz"
 
 # Apply the "Firefox version" patches and mark using a dummy file
-$(CURL_VERSION)/.patched-ff: $(basedir)/firefox/patches/curl-*.patch
+$(CURL_VERSION)/.patched-ff: $(srcdir)/firefox/patches/curl-*.patch
 	rm -Rf $(CURL_VERSION)
 	tar -xf $(CURL_VERSION).tar.xz
 	cd $(CURL_VERSION)
@@ -158,7 +157,7 @@ $(CURL_VERSION)/.patched-ff: $(basedir)/firefox/patches/curl-*.patch
 	rm -f .patched-chrome
 
 # Apply the "Chorme version" patches and mark using a dummy file
-$(CURL_VERSION)/.patched-chrome: $(basedir)/chrome/patches/curl-*.patch
+$(CURL_VERSION)/.patched-chrome: $(srcdir)/chrome/patches/curl-*.patch
 	rm -Rf $(CURL_VERSION)
 	tar -xf $(CURL_VERSION).tar.xz
 	cd $(CURL_VERSION)
