@@ -17,6 +17,7 @@ sudo apt install build-essential pkg-config cmake ninja-build curl autoconf auto
 # For the Firefox version only
 sudo apt install python3-pip python-is-python3
 pip install gyp-next
+export PATH="$PATH:~/.local/bin" # Add gyp to PATH
 # For the Chrome vesion only
 sudo apt install golang-go
 ```
@@ -38,10 +39,10 @@ mkdir build && cd build
 ../configure
 # Build and install the Firefox version
 make firefox-build
-make firefox-install
+sudo make firefox-install
 # Build and install the Chrome version
 make chrome-build
-make chrome-install
+sudo make chrome-install
 # Optionally remove all the build files
 cd ../ && rm -Rf build
 ```
