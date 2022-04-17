@@ -244,7 +244,7 @@ index 769363941..cd59ad4b2 100644
  
  CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..0cea8af50 100644
+index 20293a710..23141fe16 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -255,7 +255,7 @@ index 20293a710..0cea8af50 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,409 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,414 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -659,13 +659,18 @@ index 20293a710..0cea8af50 100644
 +      return ret;
 +  }
 +
++  /* Always enable all supported compressions. */
++  ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
++  if(ret)
++    return ret;
++
 +  return CURLE_OK;
 +}
 +
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +694,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +699,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -673,7 +678,7 @@ index 20293a710..0cea8af50 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +713,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +718,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -696,7 +701,7 @@ index 20293a710..0cea8af50 100644
    return data;
  }
  
-@@ -878,6 +1299,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1304,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  

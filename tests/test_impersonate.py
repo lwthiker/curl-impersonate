@@ -3,6 +3,7 @@ import io
 import re
 import logging
 import subprocess
+import tempfile
 
 import yaml
 import dpkt
@@ -254,7 +255,8 @@ class TestImpersonation:
         p.terminate()
         p.wait(timeout=10)
 
-    def _run_curl(self, curl_binary, env_vars, extra_args, url):
+    def _run_curl(self, curl_binary, env_vars, extra_args, url,
+                  output="/dev/null"):
         env = os.environ.copy()
         if env_vars:
             env.update(env_vars)
@@ -266,7 +268,7 @@ class TestImpersonation:
 
         args = [
             curl_binary,
-            "-o", "/dev/null",
+            "-o", output,
             "--local-port", f"{self.LOCAL_PORTS[0]}-{self.LOCAL_PORTS[1]}"
         ]
         if extra_args:
@@ -460,3 +462,36 @@ class TestImpersonation:
 
         equals, msg = sig.equals(expected_sig, reason=True)
         assert equals, msg
+
+    @pytest.mark.parametrize(
+        "curl_binary, env_vars, ld_preload, expected_signature",
+        CURL_BINARIES_AND_SIGNATURES
+    )
+    def test_content_encoding(self,
+                              pytestconfig,
+                              curl_binary,
+                              env_vars,
+                              ld_preload,
+                              expected_signature):
+        """
+        Ensure the output of curl-impersonate is correct, i.e. that compressed
+        responses are decoded correctly.
+        """
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+        if ld_preload:
+            env_vars["LD_PRELOAD"] = os.path.join(
+                pytestconfig.getoption("install_dir"), "lib", ld_preload
+            )
+
+        output = tempfile.mkstemp()[1]
+        ret = self._run_curl(curl_binary,
+                             env_vars=env_vars,
+                             extra_args=None,
+                             url=self.TEST_URL,
+                             output=output)
+        assert ret == 0
+
+        with open(output, "r") as f:
+            assert "<!DOCTYPE html>" in f.read()
