@@ -96,6 +96,15 @@ RUN mkdir out && \
     ln -s curl-impersonate-chrome out/curl-impersonate && \
     strip out/curl-impersonate
 
+# Verify that the resulting 'curl' has all the necessary features.
+RUN ./out/curl-impersonate -V | grep -q zlib && \
+    ./out/curl-impersonate -V | grep -q brotli && \
+    ./out/curl-impersonate -V | grep -q nghttp2 && \
+    ./out/curl-impersonate -V | grep -q -e NSS -e BoringSSL
+
+# Verify that the resulting 'curl' is really statically compiled
+RUN ! (ldd ./out/curl-impersonate | grep -q -e libcurl -e nghttp2 -e brotli -e ssl -e crypto)
+
 RUN rm -Rf /build/install
 
 # Re-compile libcurl dynamically
@@ -117,6 +126,10 @@ RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl-impersonate-chrome.so | sed 
     ln -s "libcurl-impersonate-chrome.so.$ver" "out/libcurl-impersonate.so.$ver" && \
     ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
     strip "out/libcurl-impersonate.so.$ver"
+
+# Verify that the resulting 'libcurl' is really statically compiled against its
+# dependencies.
+RUN ! (ldd ./out/curl-impersonate | grep -q -e nghttp2 -e brotli -e ssl -e crypto)
 
 # Wrapper scripts
 COPY curl_chrome* curl_edge* curl_safari* out/
