@@ -19,7 +19,7 @@ index 3e55230ee..e3ea22b96 100644
  # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
  include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index 63e320236..8c41e8501 100644
+index 63e320236..86ab654c7 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1331,7 +1331,8 @@ if test X"$OPT_BROTLI" != Xno; then
@@ -28,7 +28,7 @@ index 63e320236..8c41e8501 100644
    if test -n "$PREFIX_BROTLI"; then
 -    LIB_BROTLI="-lbrotlidec"
 +    # curl-impersonate: Use static libbrotli
-+    LIB_BROTLI="-Wl,-Bstatic -lbrotlidec-static -lbrotlicommon-static -Wl,-Bdynamic"
++    LIB_BROTLI="-lbrotlidec-static -lbrotlicommon-static"
      LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
      CPP_BROTLI=-I${PREFIX_BROTLI}/include
      DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
