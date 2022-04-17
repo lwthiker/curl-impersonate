@@ -61,15 +61,9 @@ ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/ngh
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
 RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 
-# Patch nghttp2 pkg config file to support static builds.
-COPY patches/libnghttp2-*.patch ${NGHTTP2_VERSION}/
-RUN cd ${NGHTTP2_VERSION} && \
-    for p in $(ls libnghttp2-*.patch); do patch -p1 < $p; done && \
-    autoreconf -i && automake && autoconf
-
 # Compile nghttp2
 RUN cd ${NGHTTP2_VERSION} && \
-    ./configure --with-pic && \
+    ./configure --prefix=/build/${NGHTTP2_VERSION}/installed --with-pic --disable-shared && \
     make && make install
 
 # Download curl.
@@ -89,7 +83,7 @@ RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
                 --enable-static \
                 --disable-shared \
-                --with-nghttp2=/usr/local \
+                --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \
@@ -107,7 +101,7 @@ RUN rm -Rf /build/install
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
-                --with-nghttp2=/usr/local \
+                --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \

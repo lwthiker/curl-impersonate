@@ -137,19 +137,10 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 $(NGHTTP2_VERSION).tar.bz2:
 	curl -L $(NGHTTP2_URL) -o $(NGHTTP2_VERSION).tar.bz2
 
-# Patch nghttp2 and use a dummy '.patched' file to mark it patched
-$(NGHTTP2_VERSION)/.patched: $(srcdir)/firefox/patches/libnghttp2-*.patch
-	rm -Rf $(NGHTTP2_VERSION)
+$(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2
 	tar -xf $(NGHTTP2_VERSION).tar.bz2
 	cd $(NGHTTP2_VERSION)
-	for p in $^; do patch -p1 < $$p; done
-	# Re-generate the configure script
-	autoreconf -i && automake && autoconf
-	touch .patched
-
-$(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2 $(NGHTTP2_VERSION)/.patched
-	cd $(NGHTTP2_VERSION)
-	./configure --prefix=$(nghttp2_install_dir) --with-pic
+	./configure --prefix=$(nghttp2_install_dir) --with-pic --disable-shared
 	$(MAKE) MAKEFLAGS=
 	$(MAKE) install MAKEFLAGS=
 
