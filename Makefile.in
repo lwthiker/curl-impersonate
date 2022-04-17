@@ -48,6 +48,16 @@ firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-imp
 	$(MAKE) MAKEFLAGS=
 .PHONY: firefox-build
 
+firefox-checkbuild: ## Run basic checks on the built binary
+	cd $(CURL_VERSION)
+	# Make sure all needed features were compiled in
+	./src/curl-impersonate-ff -V | grep -q zlib
+	./src/curl-impersonate-ff -V | grep -q brotli
+	./src/curl-impersonate-ff -V | grep -q nghttp2
+	./src/curl-impersonate-ff -V | grep -q NSS
+	$(info Build OK)
+.PHONY: firefox-checkbuild
+
 firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	$(MAKE) install-exec MAKEFLAGS=
@@ -66,6 +76,16 @@ chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impers
 	# Don't pass this Makefile's MAKEFLAGS
 	$(MAKE) MAKEFLAGS=
 .PHONY: chrome-build
+
+chrome-checkbuild: ## Run basic checks on the built binary
+	cd $(CURL_VERSION)
+	# Make sure all needed features were compiled in
+	./src/curl-impersonate-chrome -V | grep -q zlib
+	./src/curl-impersonate-chrome -V | grep -q brotli
+	./src/curl-impersonate-chrome -V | grep -q nghttp2
+	./src/curl-impersonate-chrome -V | grep -q BoringSSL
+	$(info Build OK)
+.PHONY: chrome-checkbuild
 
 chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)

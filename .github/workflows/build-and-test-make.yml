@@ -47,11 +47,13 @@ jobs:
       - name: Build the Chrome version of curl-impersonate
         run: |
           make chrome-build
+          make chrome-checkbuild
           make chrome-install
 
       - name: Build the Firefox version of curl-impersonate
         run: |
           make firefox-build
+          make firefox-checkbuild
           make firefox-install
     
       - name: Prepare the tests
