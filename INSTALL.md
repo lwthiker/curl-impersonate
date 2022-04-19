@@ -9,7 +9,8 @@ There are currently two build options depending on your use case:
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
 ## Native build
-Currently tested for Linux only. Work on porting to Mac is in progress.
+
+### Linux (Ubuntu)
 
 Install dependencies for building all the components:
 ```
@@ -18,7 +19,7 @@ sudo apt install build-essential pkg-config cmake ninja-build curl autoconf auto
 sudo apt install python3-pip python-is-python3
 pip install gyp-next
 export PATH="$PATH:~/.local/bin" # Add gyp to PATH
-# For the Chrome vesion only
+# For the Chrome version only
 sudo apt install golang-go
 ```
 
@@ -61,6 +62,32 @@ or run directly with you own flags:
 ```
 curl-impersonate-ff https://www.wikipedia.org
 curl-impersonate-chrome https://www.wikipedia.org
+```
+
+### macOS
+*macOS support is still a work in progress and currently supports the Chrome version only.*
+
+Install dependencies for building all the components:
+```
+brew install pkg-config make cmake ninja autoconf automake libtool
+# For the Chrome version only
+brew install go
+```
+
+Generate the configure script:
+```
+autoconf
+```
+
+Configure and compile:
+```
+mkdir build && cd build
+../configure
+# Build and install the Chrome version
+gmake chrome-build
+sudo gmake chrome-install
+# Optionally remove all the build files
+cd ../ && rm -Rf build
 ```
 
 ### Static compilation

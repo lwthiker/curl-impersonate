@@ -45,38 +45,58 @@ help: ## Show this help message
 firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-impersonate
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
-	make MAKEFLAGS=
+	$(MAKE) MAKEFLAGS=
 .PHONY: firefox-build
+
+firefox-checkbuild: ## Run basic checks on the built binary
+	cd $(CURL_VERSION)
+	# Make sure all needed features were compiled in
+	./src/curl-impersonate-ff -V | grep -q zlib
+	./src/curl-impersonate-ff -V | grep -q brotli
+	./src/curl-impersonate-ff -V | grep -q nghttp2
+	./src/curl-impersonate-ff -V | grep -q NSS
+	$(info Build OK)
+.PHONY: firefox-checkbuild
 
 firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
-	make install-exec MAKEFLAGS=
+	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
 	cp -f $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install
 
 firefox-uninstall: ## Uninstall the Firefox version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
-	make uninstall MAKEFLAGS=
+	$(MAKE) uninstall MAKEFLAGS=
 	rm -Rf @bindir@/curl_ff*
 .PHONY: firefox-uninstall
 
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
-	make MAKEFLAGS=
+	$(MAKE) MAKEFLAGS=
 .PHONY: chrome-build
+
+chrome-checkbuild: ## Run basic checks on the built binary
+	cd $(CURL_VERSION)
+	# Make sure all needed features were compiled in
+	./src/curl-impersonate-chrome -V | grep -q zlib
+	./src/curl-impersonate-chrome -V | grep -q brotli
+	./src/curl-impersonate-chrome -V | grep -q nghttp2
+	./src/curl-impersonate-chrome -V | grep -q BoringSSL
+	$(info Build OK)
+.PHONY: chrome-checkbuild
 
 chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
-	make install-exec MAKEFLAGS=
+	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
 	cp -f $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install
 
 chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
-	make uninstall MAKEFLAGS=
+	$(MAKE) uninstall MAKEFLAGS=
 	rm -Rf @bindir@/curl_chrome* @bindir@/curl_edge* @bindir@/curl_safari*
 .PHONY: chrome-uninstall
 
@@ -137,21 +157,12 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 $(NGHTTP2_VERSION).tar.bz2:
 	curl -L $(NGHTTP2_URL) -o $(NGHTTP2_VERSION).tar.bz2
 
-# Patch nghttp2 and use a dummy '.patched' file to mark it patched
-$(NGHTTP2_VERSION)/.patched: $(srcdir)/firefox/patches/libnghttp2-*.patch
-	rm -Rf $(NGHTTP2_VERSION)
+$(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2
 	tar -xf $(NGHTTP2_VERSION).tar.bz2
 	cd $(NGHTTP2_VERSION)
-	for p in $^; do patch -p1 < $$p; done
-	# Re-generate the configure script
-	autoreconf -i && automake && autoconf
-	touch .patched
-
-$(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2 $(NGHTTP2_VERSION)/.patched
-	cd $(NGHTTP2_VERSION)
-	./configure --prefix=$(nghttp2_install_dir) --with-pic
-	make MAKEFLAGS=
-	make install MAKEFLAGS=
+	./configure --prefix=$(nghttp2_install_dir) --with-pic --disable-shared
+	$(MAKE) MAKEFLAGS=
+	$(MAKE) install MAKEFLAGS=
 
 $(CURL_VERSION).tar.xz:
 	curl -L "https://curl.se/download/$(CURL_VERSION).tar.xz" \
@@ -190,7 +201,7 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 				USE_CURL_SSLKEYLOGFILE=true \
 				CFLAGS="-I$(nss_install_dir)/../public/nss -I$(nss_install_dir)/include/nspr"
 	# Remove possible leftovers from a previous compilation
-	make clean MAKEFLAGS=
+	$(MAKE) clean MAKEFLAGS=
 	touch .firefox
 	# Remove the Chrome flag if it exists
 	rm -f .chrome
@@ -207,7 +218,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 				LIBS="-pthread" \
 				CFLAGS="-I$(boringssl_install_dir)"
 	# Remove possible leftovers from a previous compilation
-	make clean MAKEFLAGS=
+	$(MAKE) clean MAKEFLAGS=
 	touch .chrome
 	# Remove the Firefox flag if it exists
 	rm -f .firefox
