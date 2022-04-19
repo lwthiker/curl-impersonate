@@ -216,7 +216,7 @@ index 769363941..6e2f1b829 100644
  
  CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..f08403bc0 100644
+index 20293a710..941ef732b 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -475,6 +475,28 @@ index 20293a710..f08403bc0 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
+@@ -967,6 +1188,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+  */
+ void curl_easy_reset(struct Curl_easy *data)
+ {
++  char *target;
++
+   Curl_free_request_state(data);
+ 
+   /* zero out UserDefined data: */
+@@ -991,6 +1214,12 @@ void curl_easy_reset(struct Curl_easy *data)
+ #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
+   Curl_http_auth_cleanup_digest(data);
+ #endif
++
++  target = curl_getenv("CURL_IMPERSONATE");
++  if(target) {
++    curl_easy_impersonate(data, target);
++    free(target);
++  }
+ }
+ 
+ /*
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
 index 04871ad1e..cd5998146 100644
 --- a/lib/easyoptions.c
