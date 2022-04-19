@@ -1,8 +1,0 @@
---- nghttp2-1.46.0-original/lib/libnghttp2.pc.in	2021-10-19 12:31:47.000000000 +0300
-+++ nghttp2-1.46.0/lib/libnghttp2.pc.in	2022-02-17 13:44:46.722604316 +0200
-@@ -31,3 +31,4 @@
- Version: @VERSION@
--Libs: -L${libdir} -lnghttp2
-+Libs: -L${libdir}
-+Libs.private: -l:libnghttp2.a
- Cflags: -I${includedir}
