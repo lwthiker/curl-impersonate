@@ -1,5 +1,25 @@
+diff --git a/Makefile.am b/Makefile.am
+index 3e55230ee..e3ea22b96 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -192,13 +192,13 @@ CLEANFILES = $(VC6_LIBDSP) $(VC6_SRCDSP) $(VC7_LIBVCPROJ) $(VC7_SRCVCPROJ) \
+  $(VC11_LIBVCXPROJ) $(VC11_SRCVCXPROJ) $(VC12_LIBVCXPROJ) $(VC12_SRCVCXPROJ) \
+  $(VC14_LIBVCXPROJ) $(VC14_SRCVCXPROJ) $(VC15_LIBVCXPROJ) $(VC15_SRCVCXPROJ)
+ 
+-bin_SCRIPTS = curl-config
++bin_SCRIPTS = curl-impersonate-chrome-config
+ 
+ SUBDIRS = lib src
+ DIST_SUBDIRS = $(SUBDIRS) tests packages scripts include docs
+ 
+ pkgconfigdir = $(libdir)/pkgconfig
+-pkgconfig_DATA = libcurl.pc
++pkgconfig_DATA = libcurl-impersonate-chrome.pc
+ 
+ # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
+ include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index 63e320236..5870fa430 100644
+index 63e320236..86ab654c7 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1331,7 +1331,8 @@ if test X"$OPT_BROTLI" != Xno; then
@@ -8,7 +28,7 @@ index 63e320236..5870fa430 100644
    if test -n "$PREFIX_BROTLI"; then
 -    LIB_BROTLI="-lbrotlidec"
 +    # curl-impersonate: Use static libbrotli
-+    LIB_BROTLI="-Wl,-Bstatic -lbrotlidec-static -lbrotlicommon-static -Wl,-Bdynamic"
++    LIB_BROTLI="-lbrotlidec-static -lbrotlicommon-static"
      LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
      CPP_BROTLI=-I${PREFIX_BROTLI}/include
      DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
@@ -44,6 +64,42 @@ index 63e320236..5870fa430 100644
      AC_MSG_NOTICE([-L is $LD_H2])
  
      LDFLAGS="$LDFLAGS $LD_H2"
+@@ -4255,8 +4260,8 @@ AC_CONFIG_FILES([Makefile \
+            tests/unit/Makefile \
+            packages/Makefile \
+            packages/vms/Makefile \
+-           curl-config \
+-           libcurl.pc
++           curl-impersonate-chrome-config:curl-config.in \
++           libcurl-impersonate-chrome.pc:libcurl.pc.in
+ ])
+ AC_OUTPUT
+ 
+diff --git a/curl-config.in b/curl-config.in
+index 8b4a29a9a..3d6399251 100644
+--- a/curl-config.in
++++ b/curl-config.in
+@@ -161,9 +161,9 @@ while test $# -gt 0; do
+            CURLLIBDIR=""
+         fi
+         if test "X@ENABLE_SHARED@" = "Xno"; then
+-          echo ${CURLLIBDIR}-lcurl @LIBCURL_LIBS@
++          echo ${CURLLIBDIR}-lcurl-impersonate-chrome @LIBCURL_LIBS@
+         else
+-          echo ${CURLLIBDIR}-lcurl
++          echo ${CURLLIBDIR}-lcurl-impersonate-chrome
+         fi
+         ;;
+     --ssl-backends)
+@@ -172,7 +172,7 @@ while test $# -gt 0; do
+ 
+     --static-libs)
+         if test "X@ENABLE_STATIC@" != "Xno" ; then
+-          echo @libdir@/libcurl.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
++          echo @libdir@/libcurl-impersonate-chrome.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
+         else
+           echo "curl was built with static libraries disabled" >&2
+           exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
 index 7b69ce2d6..a62c8a4a9 100644
 --- a/include/curl/curl.h
@@ -107,8 +163,88 @@ index 2dbfb26b5..e0bf86169 100644
  /*
   * NAME curl_easy_getinfo()
   *
+diff --git a/lib/Makefile.am b/lib/Makefile.am
+index 769363941..cd59ad4b2 100644
+--- a/lib/Makefile.am
++++ b/lib/Makefile.am
+@@ -32,7 +32,7 @@ EXTRA_DIST = Makefile.m32 config-win32.h config-win32ce.h           \
+  firefox-db2pem.sh config-vxworks.h Makefile.vxworks checksrc.pl    \
+  setup-win32.h .checksrc
+ 
+-lib_LTLIBRARIES = libcurl.la
++lib_LTLIBRARIES = libcurl-impersonate-chrome.la
+ 
+ if BUILD_UNITTESTS
+ noinst_LTLIBRARIES = libcurlu.la
+@@ -84,43 +84,43 @@ AM_CPPFLAGS += -DBUILDING_LIBCURL
+ AM_LDFLAGS =
+ AM_CFLAGS =
+ 
+-libcurl_la_CPPFLAGS_EXTRA =
+-libcurl_la_LDFLAGS_EXTRA =
+-libcurl_la_CFLAGS_EXTRA =
++libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA =
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA =
++libcurl_impersonate_chrome_la_CFLAGS_EXTRA =
+ 
+ if CURL_LT_SHLIB_USE_VERSION_INFO
+-libcurl_la_LDFLAGS_EXTRA += $(VERSIONINFO)
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += $(VERSIONINFO)
+ endif
+ 
+ if CURL_LT_SHLIB_USE_NO_UNDEFINED
+-libcurl_la_LDFLAGS_EXTRA += -no-undefined
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -no-undefined
+ endif
+ 
+ if CURL_LT_SHLIB_USE_MIMPURE_TEXT
+-libcurl_la_LDFLAGS_EXTRA += -mimpure-text
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -mimpure-text
+ endif
+ 
+ if CURL_LT_SHLIB_USE_VERSIONED_SYMBOLS
+-libcurl_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
+ else
+ # if symbol-hiding is enabled, hide them!
+ if DOING_CURL_SYMBOL_HIDING
+-libcurl_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
++libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
+ endif
+ endif
+ 
+ if USE_CPPFLAG_CURL_STATICLIB
+-libcurl_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
++libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
+ endif
+ 
+ if DOING_CURL_SYMBOL_HIDING
+-libcurl_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
+-libcurl_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
++libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
++libcurl_impersonate_chrome_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
+ endif
+ 
+-libcurl_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_la_CPPFLAGS_EXTRA)
+-libcurl_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_la_LDFLAGS_EXTRA) $(LDFLAGS) $(LIBCURL_LIBS)
+-libcurl_la_CFLAGS = $(AM_CFLAGS) $(libcurl_la_CFLAGS_EXTRA)
++libcurl_impersonate_chrome_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA)
++libcurl_impersonate_chrome_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_impersonate_chrome_la_LDFLAGS_EXTRA) $(LDFLAGS) $(LIBCURL_LIBS)
++libcurl_impersonate_chrome_la_CFLAGS = $(AM_CFLAGS) $(libcurl_impersonate_chrome_la_CFLAGS_EXTRA)
+ 
+ libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS
+ libcurlu_la_LDFLAGS = $(AM_LDFLAGS) -static $(LIBCURL_LIBS)
+@@ -129,7 +129,7 @@ libcurlu_la_CFLAGS = $(AM_CFLAGS)
+ # Makefile.inc provides the CSOURCES and HHEADERS defines
+ include Makefile.inc
+ 
+-libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
++libcurl_impersonate_chrome_la_SOURCES = $(CSOURCES) $(HHEADERS)
+ libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
+ 
+ CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..2e128d3b4 100644
+index 20293a710..13cf82dc7 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -119,7 +255,7 @@ index 20293a710..2e128d3b4 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,409 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,414 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -523,13 +659,18 @@ index 20293a710..2e128d3b4 100644
 +      return ret;
 +  }
 +
++  /* Always enable all supported compressions. */
++  ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
++  if(ret)
++    return ret;
++
 +  return CURLE_OK;
 +}
 +
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +694,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +699,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -537,7 +678,7 @@ index 20293a710..2e128d3b4 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +713,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +718,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -560,7 +701,7 @@ index 20293a710..2e128d3b4 100644
    return data;
  }
  
-@@ -878,6 +1299,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1304,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -574,7 +715,7 @@ index 20293a710..2e128d3b4 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -967,6 +1395,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -967,6 +1400,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
@@ -583,7 +724,7 @@ index 20293a710..2e128d3b4 100644
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -991,6 +1421,12 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -991,6 +1426,12 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
@@ -1705,6 +1846,52 @@ index 6007bbba0..3c79e0d30 100644
  }
  
  #ifdef USE_SSL
+diff --git a/libcurl.pc.in b/libcurl.pc.in
+index 8ac15d407..986d42b0e 100644
+--- a/libcurl.pc.in
++++ b/libcurl.pc.in
+@@ -34,6 +34,6 @@ Name: libcurl
+ URL: https://curl.se/
+ Description: Library to transfer files with ftp, http, etc.
+ Version: @CURLVERSION@
+-Libs: -L${libdir} -lcurl @LIBCURL_NO_SHARED@
++Libs: -L${libdir} -lcurl-impersonate-chrome @LIBCURL_NO_SHARED@
+ Libs.private: @LIBCURL_LIBS@
+ Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
+diff --git a/src/Makefile.am b/src/Makefile.am
+index c8abc93b1..cf8dfdef7 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -41,7 +41,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
+               -I$(top_srcdir)/lib            \
+               -I$(top_srcdir)/src
+ 
+-bin_PROGRAMS = curl
++bin_PROGRAMS = curl-impersonate-chrome
+ 
+ SUBDIRS = ../docs
+ 
+@@ -52,7 +52,7 @@ endif
+ include Makefile.inc
+ 
+ # CURL_FILES comes from Makefile.inc
+-curl_SOURCES = $(CURL_FILES)
++curl_impersonate_chrome_SOURCES = $(CURL_FILES)
+ 
+ # This might hold -Werror
+ CFLAGS += @CURL_CFLAG_EXTRAS@
+@@ -61,9 +61,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
+ LIBS = $(BLANK_AT_MAKETIME)
+ 
+ if USE_EXPLICIT_LIB_DEPS
+-curl_LDADD = $(top_builddir)/lib/libcurl.la @LIBCURL_LIBS@
++curl_impersonate_chrome_LDADD = $(top_builddir)/lib/libcurl-impersonate-chrome.la @LIBCURL_LIBS@
+ else
+-curl_LDADD = $(top_builddir)/lib/libcurl.la @NSS_LIBS@ @SSL_LIBS@ @ZLIB_LIBS@ @CURL_NETWORK_AND_TIME_LIBS@
++curl_impersonate_chrome_LDADD = $(top_builddir)/lib/libcurl-impersonate-chrome.la @NSS_LIBS@ @SSL_LIBS@ @ZLIB_LIBS@ @CURL_NETWORK_AND_TIME_LIBS@
+ endif
+ 
+ # if unit tests are enabled, build a static library to link them with
 diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
 index 227b914e3..9f0d0b18b 100644
 --- a/src/tool_cfgable.h
