@@ -16,7 +16,7 @@ Install dependencies for building all the components:
 ```
 sudo apt install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
 # For the Firefox version only
-sudo apt install python3-pip python-is-python3
+sudo apt install python3-pip
 pip install gyp-next
 export PATH="$PATH:~/.local/bin" # Add gyp to PATH
 # For the Chrome version only

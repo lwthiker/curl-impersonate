@@ -126,7 +126,10 @@ $(NSS_VERSION).tar.gz:
 $(nss_static_libs): $(NSS_VERSION).tar.gz
 	tar xf $(NSS_VERSION).tar.gz
 	cd $(NSS_VERSION)/nss
-	./build.sh -o --disable-tests --static
+	./build.sh -o --disable-tests --static --python=python3
+	# Hack for macOS: Remove dynamic libraries to force the linker to use the
+	# static ones when linking curl.
+	rm -Rf $(nss_install_dir)/lib/*.dylib
 
 
 boringssl.zip:
