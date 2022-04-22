@@ -14,7 +14,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-20.04, macos-11]
+        include:
+          - os: ubuntu-20.04
+            capture_interface: eth0
+          - os: macos-11
+            capture_interface: en0
     steps:
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-20.04'
@@ -29,6 +34,19 @@ jobs:
           sudo apt install libcurl4-openssl-dev
           # More dependencies for the tests
           sudo apt install tcpdump nghttp2-server libnss3
+
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-11'
+        run: |
+          brew install pkg-config make cmake ninja autoconf automake libtool
+          # Firefox version dependencies
+          pip3 install gyp-next
+          # Chrome version dependencies
+          brew install go
+          # Needed to compile 'minicurl'
+          brew install curl
+          # More dependencies for the tests
+          brew install tcpdump nghttp2 nss
 
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -65,4 +83,4 @@ jobs:
         run: |
           cd tests
           # sudo is needed for capturing packets
-          sudo pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
+          sudo pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install --capture-interface ${{ matrix.capture_interface }}
