@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  build-docker-and-test:
     name: Build curl-impersonate Docker images and run the tests
     runs-on: ubuntu-latest
     services:
