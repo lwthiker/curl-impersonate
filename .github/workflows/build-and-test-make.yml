@@ -42,7 +42,8 @@ jobs:
           # Firefox version dependencies
           pip3 install gyp-next
           # Chrome version dependencies
-          brew install go
+          # (Go is already installed)
+          # brew install go
           # Needed to compile 'minicurl'
           brew install curl
           # More dependencies for the tests
