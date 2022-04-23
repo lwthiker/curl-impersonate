@@ -1,6 +1,7 @@
 import os
 import io
 import re
+import sys
 import logging
 import subprocess
 import tempfile
@@ -145,7 +146,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "chrome98"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "chrome_98.0.4758.102_win10"
         ),
         (
@@ -153,7 +154,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "chrome99"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "chrome_99.0.4844.51_win10"
         ),
         (
@@ -161,7 +162,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "chrome99_android"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "chrome_99.0.4844.73_android12-pixel6"
         ),
         (
@@ -169,7 +170,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "edge98"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "edge_98.0.1108.62_win10"
         ),
         (
@@ -177,7 +178,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "edge99"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "edge_99.0.1150.30_win10"
         ),
         (
@@ -185,7 +186,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "safari15_3"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "safari_15.3_macos11.6.4"
         ),
         (
@@ -193,7 +194,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff91esr"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_91.6.0esr_win10"
         ),
         (
@@ -201,7 +202,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff95"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_95.0.2_win10"
         ),
         (
@@ -209,7 +210,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff98"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_98.0_win10"
         )
     ]
@@ -254,6 +255,12 @@ class TestImpersonation:
 
         p.terminate()
         p.wait(timeout=10)
+
+    def _set_ld_preload(self, env_vars, lib):
+        if sys.platform.startswith("linux"):
+            env_vars["LD_PRELOAD"] = lib + ".so"
+        elif sys.platform.startswith("darwin"):
+            env_vars["DYLD_INSERT_LIBRARIES"] = lib + ".dylib"
 
     def _run_curl(self, curl_binary, env_vars, extra_args, url,
                   output="/dev/null"):
@@ -368,9 +375,15 @@ class TestImpersonation:
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
 
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
@@ -425,9 +438,16 @@ class TestImpersonation:
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
+
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=["-k"],
@@ -481,9 +501,15 @@ class TestImpersonation:
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
 
         output = tempfile.mkstemp()[1]
         ret = self._run_curl(curl_binary,
