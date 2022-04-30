@@ -58,12 +58,12 @@ See [INSTALL.md](INSTALL.md).
 Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
 # Firefox version
-docker pull lwthiker/curl-impersonate:0.3-ff
-docker run --rm lwthiker/curl-impersonate:0.3-ff curl_ff95 https://www.wikipedia.org
+docker pull lwthiker/curl-impersonate:0.4-ff
+docker run --rm lwthiker/curl-impersonate:0.4-ff curl_ff95 https://www.wikipedia.org
 
 # Chrome version
-docker pull lwthiker/curl-impersonate:0.3-chrome
-docker run --rm lwthiker/curl-impersonate:0.3-chrome curl_chrome99 https://www.wikipedia.org
+docker pull lwthiker/curl-impersonate:0.4-chrome
+docker run --rm lwthiker/curl-impersonate:0.4-chrome curl_chrome99 https://www.wikipedia.org
 ```
 
 ### Distro packages
