@@ -48,7 +48,7 @@ ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_75_RTM/src/n
 RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
 RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
-    ./build.sh -o --disable-tests --static
+    ./build.sh -o --disable-tests --static --python=python3
 
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2

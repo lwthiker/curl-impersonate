@@ -86,7 +86,7 @@ You can call it with the target names, e.g. `chrome98`, and it will internally s
 Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
 
 ### Using CURL_IMPERSONATE env var
-*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD`. You can then set the `CURL_IMPERSONATE` env var. For example:
+*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
 LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome98 my_app
 ```

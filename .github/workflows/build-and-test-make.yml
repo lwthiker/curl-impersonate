@@ -14,29 +14,52 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-20.04, macos-11]
+        include:
+          - os: ubuntu-20.04
+            capture_interface: eth0
+            make: make
+          - os: macos-11
+            capture_interface: en0
+            make: gmake
     steps:
+      - uses: actions/setup-python@v3
+
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-20.04'
         run: |
-          sudo apt install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
-          # Firefox version dependencies
-          sudo apt install python3-pip python-is-python3
-          pip install gyp-next
+          sudo apt-get update
+          sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
           # Chrome version dependencies
-          sudo apt install golang-go
+          sudo apt-get install golang-go
           # Needed to compile 'minicurl'
-          sudo apt install libcurl4-openssl-dev
+          sudo apt-get install libcurl4-openssl-dev
           # More dependencies for the tests
-          sudo apt install tcpdump nghttp2-server libnss3
+          sudo apt-get install tcpdump nghttp2-server libnss3
+
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-11'
+        run: |
+          brew install pkg-config make cmake ninja autoconf automake libtool
+          # Chrome version dependencies
+          # (Go is already installed)
+          # brew install go
+          # Needed to compile 'minicurl'
+          brew install curl
+          # More dependencies for the tests
+          brew install tcpdump nghttp2 nss
+
+      - name: Install common dependencies
+        run: |
+          # Firefox version dependencies
+          pip3 install gyp-next
 
       - name: Check out the repo
         uses: actions/checkout@v2
 
       - name: Install dependencies for the tests script
         run: |
-          # Install globally so that we can run 'pytest' with 'sudo'
-          sudo pip install -r tests/requirements.txt
+          pip3 install -r tests/requirements.txt
 
       - name: Run configure script
         run: |
@@ -46,15 +69,15 @@ jobs:
 
       - name: Build the Chrome version of curl-impersonate
         run: |
-          make chrome-build
-          make chrome-checkbuild
-          make chrome-install
+          ${{ matrix.make }} chrome-build
+          ${{ matrix.make }} chrome-checkbuild
+          ${{ matrix.make }} chrome-install
 
       - name: Build the Firefox version of curl-impersonate
         run: |
-          make firefox-build
-          make firefox-checkbuild
-          make firefox-install
+          ${{ matrix.make }} firefox-build
+          ${{ matrix.make }} firefox-checkbuild
+          ${{ matrix.make }} firefox-install
     
       - name: Prepare the tests
         run: |
@@ -65,4 +88,5 @@ jobs:
         run: |
           cd tests
           # sudo is needed for capturing packets
-          sudo pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install
+          python_bin=$(which python3)
+          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install --capture-interface ${{ matrix.capture_interface }}
