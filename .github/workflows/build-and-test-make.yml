@@ -28,13 +28,14 @@ jobs:
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-20.04'
         run: |
-          sudo apt install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
+          sudo apt-get update
+          sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
           # Chrome version dependencies
-          sudo apt install golang-go
+          sudo apt-get install golang-go
           # Needed to compile 'minicurl'
-          sudo apt install libcurl4-openssl-dev
+          sudo apt-get install libcurl4-openssl-dev
           # More dependencies for the tests
-          sudo apt install tcpdump nghttp2-server libnss3
+          sudo apt-get install tcpdump nghttp2-server libnss3
 
       - name: Install macOS dependencies
         if: matrix.os == 'macos-11'
