@@ -2,6 +2,7 @@ import os
 import io
 import re
 import sys
+import asyncio
 import logging
 import subprocess
 import tempfile
@@ -241,20 +242,69 @@ class TestImpersonation:
         p.terminate()
         p.wait(timeout=10)
 
+    async def _read_proc_output(self, proc, timeout):
+        """Read an async process' output until timeout is reached"""
+        data = bytes()
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
+        passed = loop.time() - start_time
+        while passed < timeout:
+            try:
+                data += await asyncio.wait_for(
+                    proc.stdout.readline(), timeout=timeout - passed
+                )
+            except asyncio.TimeoutError:
+                pass
+            passed = loop.time() - start_time
+        return data
+
+    async def _wait_nghttpd(self, proc):
+        """Wait for nghttpd to start listening on its designated port"""
+        data = bytes()
+        while data is not None:
+            data = await proc.stdout.readline()
+            if not data:
+                # Process terminated
+                return False
+
+            line = data.decode("utf-8").rstrip()
+            if "listen 0.0.0.0:8443" in line:
+                return True
+
+        return False
+
     @pytest.fixture
-    def nghttpd(self):
-        """Initiailize an HTTP/2 server"""
+    async def nghttpd(self):
+        """Initiailize an HTTP/2 server.
+        The returned object is an asyncio.subprocess.Process object,
+        so async methods must be used with it.
+        """
         logging.debug(f"Running nghttpd on :8443")
 
-        p = subprocess.Popen([
+        # Launch nghttpd and wait for it to start listening.
+
+        proc = await asyncio.create_subprocess_exec(
             "nghttpd", "-v",
-            "8443", "ssl/server.key", "ssl/server.crt"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            "8443", "ssl/server.key", "ssl/server.crt",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
-        yield p
+        try:
+            # Wait up to 3 seconds for nghttpd to start.
+            # Otherwise fail.
+            started = await asyncio.wait_for(
+                self._wait_nghttpd(proc), timeout=3
+            )
+            if not started:
+                raise Exception("nghttpd failed to start on time")
+        except asyncio.TimeoutError:
+            raise Exception("nghttpd failed to start on time")
 
-        p.terminate()
-        p.wait(timeout=10)
+        yield proc
+
+        proc.terminate()
+        await proc.wait()
 
     def _set_ld_preload(self, env_vars, lib):
         if sys.platform.startswith("linux"):
@@ -422,18 +472,19 @@ class TestImpersonation:
         equals, msg =  sig.equals(expected_sig, reason=True)
         assert equals, msg
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "curl_binary, env_vars, ld_preload, expected_signature",
         CURL_BINARIES_AND_SIGNATURES
     )
-    def test_http2_headers(self,
-                           pytestconfig,
-                           nghttpd,
-                           curl_binary,
-                           env_vars,
-                           ld_preload,
-                           browser_signatures,
-                           expected_signature):
+    async def test_http2_headers(self,
+                                 pytestconfig,
+                                 nghttpd,
+                                 curl_binary,
+                                 env_vars,
+                                 ld_preload,
+                                 browser_signatures,
+                                 expected_signature):
         curl_binary = os.path.join(
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
@@ -453,17 +504,8 @@ class TestImpersonation:
                              extra_args=["-k"],
                              url="https://localhost:8443")
         assert ret == 0
-        try:
-            output, stderr = nghttpd.communicate(timeout=2)
 
-            # If nghttpd finished running before timeout, it's likely it failed
-            # with an error.
-            assert nghttpd.returncode == 0, \
-                (f"nghttpd failed with error code {nghttpd.returncode}, "
-                 f"stderr: {stderr}")
-        except subprocess.TimeoutExpired:
-            nghttpd.kill()
-            output, stderr = nghttpd.communicate(timeout=3)
+        output = await self._read_proc_output(nghttpd, timeout=2)
 
         assert len(output) > 0
         pseudo_headers, headers = self._parse_nghttpd2_output(output)
