@@ -760,7 +760,7 @@ index cc9c88870..a35a20e10 100644
       killed. */
    struct dynamically_allocated_data {
 diff --git a/lib/vtls/nss.c b/lib/vtls/nss.c
-index 2b44f0512..4c60797c7 100644
+index 2b44f0512..eec2bf76f 100644
 --- a/lib/vtls/nss.c
 +++ b/lib/vtls/nss.c
 @@ -143,6 +143,7 @@ static const struct cipher_s cipherlist[] = {
@@ -867,32 +867,15 @@ index 2b44f0512..4c60797c7 100644
  /*
   * Return true if at least one cipher-suite is enabled. Used to determine
   * if we need to call NSS_SetDomesticPolicy() to enable the default ciphers.
-@@ -1320,6 +1410,24 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
+@@ -1320,6 +1410,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
  
    if(module)
      SECMOD_DestroyModule(module);
 +
-+  /* Patch for Ubuntu - add a "nss/" suffix to the library name */
-+  config_string = aprintf("library=/usr/lib/x86_64-linux-gnu/nss/%s name=%s", library, name);
-+  if(!config_string)
-+    return CURLE_OUT_OF_MEMORY;
-+
-+  module = SECMOD_LoadUserModule(config_string, NULL, PR_FALSE);
-+  free(config_string);
-+
-+  if(module && module->loaded) {
-+    /* loaded successfully */
-+    *pmod = module;
-+    return CURLE_OK;
-+  }
-+
-+  if(module)
-+    SECMOD_DestroyModule(module);
-+
    return CURLE_FAILED_INIT;
  }
  
-@@ -1921,6 +2029,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1921,6 +2012,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
    if(SSL_OptionSet(model, SSL_NO_CACHE, ssl_no_cache) != SECSuccess)
      goto error;
  
@@ -905,7 +888,7 @@ index 2b44f0512..4c60797c7 100644
    /* enable/disable the requested SSL version(s) */
    if(nss_init_sslver(&sslver, data, conn) != CURLE_OK)
      goto error;
-@@ -1960,6 +2074,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1960,6 +2057,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      }
    }
  
@@ -920,7 +903,7 @@ index 2b44f0512..4c60797c7 100644
    if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
      infof(data, "warning: ignoring value of ssl.verifyhost");
  
-@@ -2113,6 +2235,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2113,6 +2218,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      int cur = 0;
      unsigned char protocols[128];
  
@@ -931,7 +914,7 @@ index 2b44f0512..4c60797c7 100644
  #ifdef USE_HTTP2
      if(data->state.httpwant >= CURL_HTTP_VERSION_2
  #ifndef CURL_DISABLE_PROXY
-@@ -2124,9 +2250,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2124,9 +2233,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
        cur += ALPN_H2_LENGTH;
      }
  #endif
@@ -954,10 +937,10 @@ index 8ac15d407..68d01b219 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index 397ba71b1..922cb9a07 100644
+index 397ba71b1..d2a8fc1f2 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
-@@ -74,7 +74,74 @@ if test "x$OPT_NSS" != xno; then
+@@ -74,7 +74,107 @@ if test "x$OPT_NSS" != xno; then
        # Without pkg-config, we'll kludge in some defaults
        AC_MSG_WARN([Using hard-wired libraries and compilation flags for NSS.])
        addld="-L$OPT_NSS/lib"
@@ -1030,10 +1013,43 @@ index 397ba71b1..922cb9a07 100644
 +          ;;
 +      esac
 +
++      # Attempt to locate libnssckbi.
++      # This library file contains the trusted certificates and nss loads it
++      # at runtime using dlopen. If it's not in a path findable by dlopen
++      # we have to add that path explicitly using -rpath so it may find it.
++      # On Ubuntu and Mac M1 it is in a non-standard location.
++      AC_MSG_CHECKING([if libnssckbi is in a non-standard location])
++      case $host_os in
++        linux*)
++          search_paths="/usr/lib/$host /usr/lib/$host/nss"
++          search_paths="$search_paths /usr/lib/$host_cpu-$host_os"
++          search_paths="$search_paths /usr/lib/$host_cpu-$host_os/nss"
++          search_ext="so"
++          ;;
++        darwin*)
++          search_paths="/opt/homebrew/lib"
++          search_ext="dylib"
++          ;;
++      esac
++
++      found="no"
++      for path in $search_paths; do
++        if test -f "$path/libnssckbi.$search_ext"; then
++          AC_MSG_RESULT([$path])
++          addld="$addld -Wl,-rpath,$path"
++          found="yes"
++          break
++        fi
++      done
++
++      if test "$found" = "no"; then
++        AC_MSG_RESULT([no])
++      fi
++
        addcflags="-I$OPT_NSS/include"
        version="unknown"
        nssprefix=$OPT_NSS
-@@ -91,7 +158,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -91,7 +191,7 @@ if test "x$OPT_NSS" != xno; then
      fi
  
      dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
@@ -1042,7 +1058,7 @@ index 397ba71b1..922cb9a07 100644
       [
       AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
       AC_SUBST(USE_NSS, [1])
-@@ -101,9 +168,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -101,9 +201,7 @@ if test "x$OPT_NSS" != xno; then
       test nss != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
       ],
       [
