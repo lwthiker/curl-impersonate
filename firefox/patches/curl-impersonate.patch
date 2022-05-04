@@ -649,10 +649,43 @@ index f08a343e3..879151dd2 100644
    if(result)
      return result;
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..1f4d496f3 100644
+index e74400a4c..5df654d04 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
-@@ -1818,7 +1818,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+@@ -56,7 +56,7 @@
+ #define NGHTTP2_HAS_SET_LOCAL_WINDOW_SIZE 1
+ #endif
+ 
+-#define HTTP2_HUGE_WINDOW_SIZE (32 * 1024 * 1024) /* 32 MB */
++#define HTTP2_HUGE_WINDOW_SIZE (12 * 1024 * 1024) /*  12 MB */
+ 
+ #ifdef DEBUG_HTTP2
+ #define H2BUGF(x) x
+@@ -1193,14 +1193,18 @@ static void populate_settings(struct Curl_easy *data,
+ {
+   nghttp2_settings_entry *iv = httpc->local_settings;
+ 
+-  iv[0].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+-  iv[0].value = Curl_multi_max_concurrent_streams(data->multi);
++  /* curl-impersonate: Align HTTP/2 settings to Firefox's */
++  iv[0].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
++  iv[0].value = 0x10000;
+ 
+   iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
+-  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
++  iv[1].value = 0x20000;
+ 
+-  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+-  iv[2].value = data->multi->push_cb != NULL;
++  iv[2].settings_id = NGHTTP2_SETTINGS_MAX_FRAME_SIZE;
++  iv[2].value = 0x4000;
++
++  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
++  // iv[2].value = data->multi->push_cb != NULL;
+ 
+   httpc->local_settings_num = 3;
+ }
+@@ -1818,7 +1822,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
  
  /* Index where :authority header field will appear in request header
     field list. */

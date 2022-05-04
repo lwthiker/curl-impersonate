@@ -935,7 +935,7 @@ index b4aaba2a2..1cf65c4b1 100644
  #else
    int unused; /* prevent a compiler warning */
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..b22271d23 100644
+index e74400a4c..09ae839de 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -41,6 +41,7 @@
@@ -946,6 +946,15 @@ index e74400a4c..b22271d23 100644
  
  #define H2_BUFSIZE 32768
  
+@@ -56,7 +57,7 @@
+ #define NGHTTP2_HAS_SET_LOCAL_WINDOW_SIZE 1
+ #endif
+ 
+-#define HTTP2_HUGE_WINDOW_SIZE (32 * 1024 * 1024) /* 32 MB */
++#define HTTP2_HUGE_WINDOW_SIZE (15 * 1024 * 1024) /*  15 MB */
+ 
+ #ifdef DEBUG_HTTP2
+ #define H2BUGF(x) x
 @@ -1193,16 +1194,27 @@ static void populate_settings(struct Curl_easy *data,
  {
    nghttp2_settings_entry *iv = httpc->local_settings;
