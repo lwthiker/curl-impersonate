@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+env:
+  NSS_VERSION: nss-3.75
+  BORING_SSL_COMMIT: 3a667d10e94186fd503966f5638e134fe9fb4080
+
 jobs:
   build-and-test:
     name: Build curl-impersonate and run the tests
@@ -67,11 +71,41 @@ jobs:
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install
 
+      # Cache the build of BoringSSL, which is the longest part of the build
+      # We must cache the .zip as well, otherwise the Makefile will
+      # rebuild BoringSSL.
+      - name: Cache BoringSSL source
+        uses: actions/cache@v3
+        with:
+          path: boringssl.zip
+          key: ${{ runner.os }}-boring-source-${{ env.BORING_SSL_COMMIT }}
+
+      - name: Cache BoringSSL build
+        uses: actions/cache@v3
+        with:
+          path: boringssl/build
+          key: ${{ runner.os }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+
       - name: Build the Chrome version of curl-impersonate
         run: |
           ${{ matrix.make }} chrome-build
           ${{ matrix.make }} chrome-checkbuild
           ${{ matrix.make }} chrome-install
+
+      # Cache the build of NSS, which is the longest part of the build
+      # We must cache the .tar.gz as well, otherwise the Makefile will
+      # rebuild NSS.
+      - name: Cache NSS source
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}.tar.gz
+          key: ${{ runner.os }}-nss-source-${{ env.NSS_VERSION }}
+
+      - name: Cache NSS build
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}/dist/Release
+          key: ${{ runner.os }}-nss-build-${{ env.NSS_VERSION }}
 
       - name: Build the Firefox version of curl-impersonate
         run: |
