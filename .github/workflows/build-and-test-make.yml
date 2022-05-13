@@ -116,7 +116,7 @@ jobs:
         id: cache-nss
         uses: actions/cache@v3
         with:
-          path: ${{ env.NSS_VERSION }}/dist/Release
+          path: ${{ env.NSS_VERSION }}/dist
           key: ${{ runner.os }}-nss-build-${{ env.NSS_VERSION }}
 
       # Trick the Makefile into skipping the NSS build step
@@ -125,7 +125,7 @@ jobs:
         if: ${{ steps.cache-nss.outputs.cache-hit != false }}
         run: |
           touch ${{ env.NSS_VERSION }}.tar.gz
-          find ${{ env.NSS_VERSION }}/dist/Release -type f | xargs touch
+          find ${{ env.NSS_VERSION }}/dist -type f | xargs touch
 
       - name: Build the Firefox version of curl-impersonate
         run: |
