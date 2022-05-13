@@ -73,7 +73,8 @@ jobs:
 
       # Cache the build of BoringSSL, which is the longest part of the build
       # We must cache the .zip as well, otherwise the Makefile will
-      # rebuild BoringSSL.
+      # rebuild BoringSSL. This whole thing is a bit hacky, but necessary to
+      # reduce the insanely long build times.
       - name: Cache BoringSSL source
         uses: actions/cache@v3
         with:
@@ -88,11 +89,12 @@ jobs:
           key: ${{ runner.os }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
 
       # Trick the Makefile into skipping the BoringSSL build step
-      # if it was found in the cache.
+      # if it was found in the cache. See Makefile.in
       - name: Post BoringSSL cache restore
         if: ${{ steps.cache-boringssl.outputs.cache-hit != false }}
         run: |
           touch boringssl.zip
+          touch boringssl/.patched
           find boringssl/build -type f | xargs touch
 
       - name: Build the Chrome version of curl-impersonate
