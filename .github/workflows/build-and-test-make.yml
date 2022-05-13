@@ -81,10 +81,19 @@ jobs:
           key: ${{ runner.os }}-boring-source-${{ env.BORING_SSL_COMMIT }}
 
       - name: Cache BoringSSL build
+        id: cache-boringssl
         uses: actions/cache@v3
         with:
           path: boringssl/build
           key: ${{ runner.os }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+
+      # Trick the Makefile into skipping the BoringSSL build step
+      # if it was found in the cache.
+      - name: Post BoringSSL cache restore
+        if: ${{ steps.cache-boringssl.outputs.cache-hit == true }}
+        run: |
+          touch boringssl.zip
+          find boringssl/build -type f | xargs touch
 
       - name: Build the Chrome version of curl-impersonate
         run: |
@@ -102,10 +111,19 @@ jobs:
           key: ${{ runner.os }}-nss-source-${{ env.NSS_VERSION }}
 
       - name: Cache NSS build
+        id: cache-nss
         uses: actions/cache@v3
         with:
           path: ${{ env.NSS_VERSION }}/dist/Release
           key: ${{ runner.os }}-nss-build-${{ env.NSS_VERSION }}
+
+      # Trick the Makefile into skipping the NSS build step
+      # if it was found in the cache.
+      - name: Post NSS cache restore
+        if: ${{ steps.cache-nss.outputs.cache-hit == true }}
+        run: |
+          touch ${{ env.NSS_VERSION }}.tar.gz
+          find ${{ env.NSS_VERSION }}/dist/Release -type f | xargs touch
 
       - name: Build the Firefox version of curl-impersonate
         run: |
