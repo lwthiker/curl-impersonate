@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+env:
+  NSS_VERSION: nss-3.75
+  BORING_SSL_COMMIT: 3a667d10e94186fd503966f5638e134fe9fb4080
+
 jobs:
   build-and-test:
     name: Build curl-impersonate and run the tests
@@ -67,11 +71,61 @@ jobs:
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install
 
+      # Cache the build of BoringSSL, which is the longest part of the build
+      # We must cache the .zip as well, otherwise the Makefile will
+      # rebuild BoringSSL. This whole thing is a bit hacky, but necessary to
+      # reduce the insanely long build times.
+      - name: Cache BoringSSL source
+        uses: actions/cache@v3
+        with:
+          path: boringssl.zip
+          key: ${{ runner.os }}-boring-source-${{ env.BORING_SSL_COMMIT }}
+
+      - name: Cache BoringSSL build
+        id: cache-boringssl
+        uses: actions/cache@v3
+        with:
+          path: boringssl/build
+          key: ${{ runner.os }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+
+      # Trick the Makefile into skipping the BoringSSL build step
+      # if it was found in the cache. See Makefile.in
+      - name: Post BoringSSL cache restore
+        if: ${{ steps.cache-boringssl.outputs.cache-hit != false }}
+        run: |
+          touch boringssl.zip
+          touch boringssl/.patched
+          find boringssl/build -type f | xargs touch
+
       - name: Build the Chrome version of curl-impersonate
         run: |
           ${{ matrix.make }} chrome-build
           ${{ matrix.make }} chrome-checkbuild
           ${{ matrix.make }} chrome-install
+
+      # Cache the build of NSS, which is the longest part of the build
+      # We must cache the .tar.gz as well, otherwise the Makefile will
+      # rebuild NSS.
+      - name: Cache NSS source
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}.tar.gz
+          key: ${{ runner.os }}-nss-source-${{ env.NSS_VERSION }}
+
+      - name: Cache NSS build
+        id: cache-nss
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}/dist
+          key: ${{ runner.os }}-nss-build-${{ env.NSS_VERSION }}
+
+      # Trick the Makefile into skipping the NSS build step
+      # if it was found in the cache.
+      - name: Post NSS cache restore
+        if: ${{ steps.cache-nss.outputs.cache-hit != false }}
+        run: |
+          touch ${{ env.NSS_VERSION }}.tar.gz
+          find ${{ env.NSS_VERSION }}/dist -type f | xargs touch
 
       - name: Build the Firefox version of curl-impersonate
         run: |
