@@ -90,7 +90,7 @@ jobs:
       # Trick the Makefile into skipping the BoringSSL build step
       # if it was found in the cache.
       - name: Post BoringSSL cache restore
-        if: ${{ steps.cache-boringssl.outputs.cache-hit == true }}
+        if: ${{ steps.cache-boringssl.outputs.cache-hit != false }}
         run: |
           touch boringssl.zip
           find boringssl/build -type f | xargs touch
@@ -120,7 +120,7 @@ jobs:
       # Trick the Makefile into skipping the NSS build step
       # if it was found in the cache.
       - name: Post NSS cache restore
-        if: ${{ steps.cache-nss.outputs.cache-hit == true }}
+        if: ${{ steps.cache-nss.outputs.cache-hit != false }}
         run: |
           touch ${{ env.NSS_VERSION }}.tar.gz
           find ${{ env.NSS_VERSION }}/dist/Release -type f | xargs touch
