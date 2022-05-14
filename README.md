@@ -51,6 +51,11 @@ See [Advanced usage](#Advanced-usage) for more options.
 ## Installation
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
+### Pre-compiled binaries
+Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page.
+
+These binaries are statically compiled with libcurl(-impersonate) for ease of use. If you wish to use libcurl-impersonate, please build from source.
+
 ### Building from source
 See [INSTALL.md](INSTALL.md).
 
