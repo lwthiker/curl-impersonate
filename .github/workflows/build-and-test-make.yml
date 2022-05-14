@@ -161,10 +161,10 @@ jobs:
           ./configure --prefix=${{ runner.temp }}/install --enable-static
           ${{ matrix.make }} chrome-build
           ${{ matrix.make }} chrome-checkbuild
-          ${{ matrix.make }} chrome-install
+          ${{ matrix.make }} chrome-install-strip
           ${{ matrix.make }} firefox-build
           ${{ matrix.make }} firefox-checkbuild
-          ${{ matrix.make }} firefox-install
+          ${{ matrix.make }} firefox-install-strip
 
       - name: Create tar release files
         if: startsWith(github.ref, 'refs/tags/')
