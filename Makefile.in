@@ -64,14 +64,30 @@ firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
-	cp -f $(srcdir)/firefox/curl_ff* @bindir@
+	install $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install
+
+firefox-install-strip: ## Like 'firefox-install', but strip binaries for smaller size
+	cd $(CURL_VERSION)
+	$(MAKE) install-exec MAKEFLAGS=
+	# We could have used 'install-strip' but then the docs would be installed as well.
+	# Instead strip manually.
+	strip @bindir@/curl-impersonate-ff
+	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
+	install $(srcdir)/firefox/curl_ff* @bindir@
+.PHONY: firefox-install-strip
 
 firefox-uninstall: ## Uninstall the Firefox version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
 	$(MAKE) uninstall MAKEFLAGS=
 	rm -Rf @bindir@/curl_ff*
 .PHONY: firefox-uninstall
+
+firefox-clean: ## Clean build artifacts of the Firefox version. Use after re-running './configure'
+	cd $(CURL_VERSION)
+	$(MAKE) clean MAKEFLAGS=
+	rm -f .firefox
+.PHONY: firefox-clean
 
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
 	cd $(CURL_VERSION)
@@ -93,8 +109,18 @@ chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
-	cp -f $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
+	install $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install
+
+chrome-install-strip: ## Like 'chrome-install', but strip binaries for smaller size
+	cd $(CURL_VERSION)
+	$(MAKE) install-exec MAKEFLAGS=
+	# We could have used 'install-strip' but then the docs would be installed as well.
+	# Instead strip manually.
+	strip @bindir@/curl-impersonate-chrome
+	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
+	install $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
+.PHONY: chrome-install-strip
 
 chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
@@ -102,7 +128,13 @@ chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'mak
 	rm -Rf @bindir@/curl_chrome* @bindir@/curl_edge* @bindir@/curl_safari*
 .PHONY: chrome-uninstall
 
-clean: ## Remove build artifacts
+chrome-clean: ## Clean build artifacts of the Chrome version. Use after re-running './configure'
+	cd $(CURL_VERSION)
+	$(MAKE) clean MAKEFLAGS=
+	rm -f .chrome
+.PHONY: chrome-clean
+
+clean: ## Remove all build artifacts, including dependencies
 	rm -Rf brotli-$(BROTLI_VERSION).tar.gz brotli-$(BROTLI_VERSION)
 	rm -Rf $(NSS_VERSION).tar.gz $(NSS_VERSION)
 	rm -Rf boringssl.zip boringssl

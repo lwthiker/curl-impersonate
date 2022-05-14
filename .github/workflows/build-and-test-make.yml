@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - main
@@ -23,9 +25,11 @@ jobs:
           - os: ubuntu-20.04
             capture_interface: eth0
             make: make
+            release_name: x86_64-linux-gnu
           - os: macos-11
             capture_interface: en0
             make: gmake
+            release_name: x86_64-macos
     steps:
       - uses: actions/setup-python@v3
 
@@ -143,4 +147,34 @@ jobs:
           cd tests
           # sudo is needed for capturing packets
           python_bin=$(which python3)
-          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp}}/install --capture-interface ${{ matrix.capture_interface }}
+          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp }}/install --capture-interface ${{ matrix.capture_interface }}
+
+       # If it's a tag, create a release and upload the binaries.
+       # For that we recompile curl-impersonate statically.
+      - name: Recompile statically for release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          ${{ matrix.make }} chrome-clean
+          ${{ matrix.make }} firefox-clean
+          rm -Rf ${{ runner.temp }}/install
+          mkdir ${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install --enable-static
+          ${{ matrix.make }} chrome-build
+          ${{ matrix.make }} chrome-checkbuild
+          ${{ matrix.make }} chrome-install-strip
+          ${{ matrix.make }} firefox-build
+          ${{ matrix.make }} firefox-checkbuild
+          ${{ matrix.make }} firefox-install-strip
+
+      - name: Create tar release files
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd ${{ runner.temp }}/install/bin
+          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
+          echo "release_file=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Upload release files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ env.release_file }}
