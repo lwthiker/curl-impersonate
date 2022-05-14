@@ -760,7 +760,7 @@ index 04871ad1e..ce280eaa3 100644
  }
  #endif
 diff --git a/lib/http.c b/lib/http.c
-index f08a343e3..879151dd2 100644
+index f08a343e3..2bbce4b23 100644
 --- a/lib/http.c
 +++ b/lib/http.c
 @@ -84,6 +84,7 @@
@@ -908,16 +908,16 @@ index f08a343e3..879151dd2 100644
  CURLcode Curl_http_useragent(struct Curl_easy *data)
  {
    /* The User-Agent string might have been allocated in url.c already, because
-@@ -3067,6 +3163,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
-   if(result)
-     return result;
+@@ -3063,6 +3159,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+   http = data->req.p.http;
+   DEBUGASSERT(http);
  
 +  /* curl-impersonate: Add HTTP headers to impersonate real browsers. */
 +  result = Curl_http_merge_headers(data);
 +  if (result)
 +    return result;
 +
-   result = Curl_http_useragent(data);
+   result = Curl_http_host(data, conn);
    if(result)
      return result;
 diff --git a/lib/http.h b/lib/http.h
