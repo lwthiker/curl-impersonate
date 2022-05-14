@@ -76,7 +76,7 @@ firefox-uninstall: ## Uninstall the Firefox version of curl-impersonate after 'm
 firefox-clean: ## Clean build artifacts of the Firefox version. Use after re-running './configure'
 	cd $(CURL_VERSION)
 	$(MAKE) clean MAKEFLAGS=
-	rm .firefox
+	rm -f .firefox
 .PHONY: firefox-clean
 
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
@@ -111,7 +111,7 @@ chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'mak
 chrome-clean: ## Clean build artifacts of the Chrome version. Use after re-running './configure'
 	cd $(CURL_VERSION)
 	$(MAKE) clean MAKEFLAGS=
-	rm .chrome
+	rm -f .chrome
 .PHONY: chrome-clean
 
 clean: ## Remove all build artifacts, including dependencies
