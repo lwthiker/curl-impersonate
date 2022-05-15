@@ -244,7 +244,7 @@ index 769363941..cd59ad4b2 100644
  
  CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..23141fe16 100644
+index 20293a710..37cda0992 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -255,7 +255,7 @@ index 20293a710..23141fe16 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,414 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,454 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -293,46 +293,6 @@ index 20293a710..23141fe16 100644
 +   * configurable through curl_easy_setopt() */
 +} impersonations[] = {
 +  {
-+    .target = "chrome98",
-+    .httpversion = CURL_HTTP_VERSION_2_0,
-+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
-+    .ciphers =
-+      "TLS_AES_128_GCM_SHA256,"
-+      "TLS_AES_256_GCM_SHA384,"
-+      "TLS_CHACHA20_POLY1305_SHA256,"
-+      "ECDHE-ECDSA-AES128-GCM-SHA256,"
-+      "ECDHE-RSA-AES128-GCM-SHA256,"
-+      "ECDHE-ECDSA-AES256-GCM-SHA384,"
-+      "ECDHE-RSA-AES256-GCM-SHA384,"
-+      "ECDHE-ECDSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-AES128-SHA,"
-+      "ECDHE-RSA-AES256-SHA,"
-+      "AES128-GCM-SHA256,"
-+      "AES256-GCM-SHA384,"
-+      "AES128-SHA,"
-+      "AES256-SHA",
-+    .npn = false,
-+    .alpn = true,
-+    .alps = true,
-+    .tls_session_ticket = true,
-+    .cert_compression = "brotli",
-+    .http_headers = {
-+      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Google Chrome\";v=\"98\"",
-+      "sec-ch-ua-mobile: ?0",
-+      "sec-ch-ua-platform: \"Windows\"",
-+      "Upgrade-Insecure-Requests: 1",
-+      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
-+      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-+      "Sec-Fetch-Site: none",
-+      "Sec-Fetch-Mode: navigate",
-+      "Sec-Fetch-User: ?1",
-+      "Sec-Fetch-Dest: document",
-+      "Accept-Encoding: gzip, deflate, br",
-+      "Accept-Language: en-US,en;q=0.9"
-+    }
-+  },
-+  {
 +    .target = "chrome99",
 +    .httpversion = CURL_HTTP_VERSION_2_0,
 +    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
@@ -363,6 +323,86 @@ index 20293a710..23141fe16 100644
 +      "sec-ch-ua-platform: \"Windows\"",
 +      "Upgrade-Insecure-Requests: 1",
 +      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-User: ?1",
++      "Sec-Fetch-Dest: document",
++      "Accept-Encoding: gzip, deflate, br",
++      "Accept-Language: en-US,en;q=0.9"
++    }
++  },
++  {
++    .target = "chrome100",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++    .npn = false,
++    .alpn = true,
++    .alps = true,
++    .tls_session_ticket = true,
++    .cert_compression = "brotli",
++    .http_headers = {
++      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"100\", \"Google Chrome\";v=\"100\"",
++      "sec-ch-ua-mobile: ?0",
++      "sec-ch-ua-platform: \"Windows\"",
++      "Upgrade-Insecure-Requests: 1",
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-User: ?1",
++      "Sec-Fetch-Dest: document",
++      "Accept-Encoding: gzip, deflate, br",
++      "Accept-Language: en-US,en;q=0.9"
++    }
++  },
++  {
++    .target = "chrome101",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++    .npn = false,
++    .alpn = true,
++    .alps = true,
++    .tls_session_ticket = true,
++    .cert_compression = "brotli",
++    .http_headers = {
++      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"101\", \"Google Chrome\";v=\"101\"",
++      "sec-ch-ua-mobile: ?0",
++      "sec-ch-ua-platform: \"Windows\"",
++      "Upgrade-Insecure-Requests: 1",
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
 +      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 +      "Sec-Fetch-Site: none",
 +      "Sec-Fetch-Mode: navigate",
@@ -413,46 +453,6 @@ index 20293a710..23141fe16 100644
 +    }
 +  },
 +  {
-+    .target = "edge98",
-+    .httpversion = CURL_HTTP_VERSION_2_0,
-+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
-+    .ciphers =
-+      "TLS_AES_128_GCM_SHA256,"
-+      "TLS_AES_256_GCM_SHA384,"
-+      "TLS_CHACHA20_POLY1305_SHA256,"
-+      "ECDHE-ECDSA-AES128-GCM-SHA256,"
-+      "ECDHE-RSA-AES128-GCM-SHA256,"
-+      "ECDHE-ECDSA-AES256-GCM-SHA384,"
-+      "ECDHE-RSA-AES256-GCM-SHA384,"
-+      "ECDHE-ECDSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-AES128-SHA,"
-+      "ECDHE-RSA-AES256-SHA,"
-+      "AES128-GCM-SHA256,"
-+      "AES256-GCM-SHA384,"
-+      "AES128-SHA,"
-+      "AES256-SHA",
-+    .npn = false,
-+    .alpn = true,
-+    .alps = true,
-+    .tls_session_ticket = true,
-+    .cert_compression = "brotli",
-+    .http_headers = {
-+      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Microsoft Edge\";v=\"98\"",
-+      "sec-ch-ua-mobile: ?0",
-+      "sec-ch-ua-platform: \"Windows\"",
-+      "Upgrade-Insecure-Requests: 1",
-+      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36 Edg/98.0.1108.62",
-+      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-+      "Sec-Fetch-Site: none",
-+      "Sec-Fetch-Mode: navigate",
-+      "Sec-Fetch-User: ?1",
-+      "Sec-Fetch-Dest: document",
-+      "Accept-Encoding: gzip, deflate, br",
-+      "Accept-Language: en-US,en;q=0.9"
-+    }
-+  },
-+  {
 +    .target = "edge99",
 +    .httpversion = CURL_HTTP_VERSION_2_0,
 +    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
@@ -483,6 +483,46 @@ index 20293a710..23141fe16 100644
 +      "sec-ch-ua-platform: \"Windows\"",
 +      "Upgrade-Insecure-Requests: 1",
 +      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 Edg/99.0.1150.30",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-User: ?1",
++      "Sec-Fetch-Dest: document",
++      "Accept-Encoding: gzip, deflate, br",
++      "Accept-Language: en-US,en;q=0.9"
++    }
++  },
++  {
++    .target = "edge101",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++    .npn = false,
++    .alpn = true,
++    .alps = true,
++    .tls_session_ticket = true,
++    .cert_compression = "brotli",
++    .http_headers = {
++      "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"101\", \"Microsoft Edge\";v=\"101\"",
++      "sec-ch-ua-mobile: ?0",
++      "sec-ch-ua-platform: \"Windows\"",
++      "Upgrade-Insecure-Requests: 1",
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36 Edg/101.0.1210.47",
 +      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 +      "Sec-Fetch-Site: none",
 +      "Sec-Fetch-Mode: navigate",
@@ -670,7 +710,7 @@ index 20293a710..23141fe16 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +699,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +739,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -678,7 +718,7 @@ index 20293a710..23141fe16 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +718,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +758,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -701,7 +741,7 @@ index 20293a710..23141fe16 100644
    return data;
  }
  
-@@ -878,6 +1304,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1344,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -921,7 +961,7 @@ index f08a343e3..879151dd2 100644
    if(result)
      return result;
 diff --git a/lib/http.h b/lib/http.h
-index b4aaba2a2..1cf65c4b1 100644
+index b4aaba2a2..0d716640c 100644
 --- a/lib/http.h
 +++ b/lib/http.h
 @@ -278,7 +278,8 @@ struct http_conn {
@@ -930,12 +970,12 @@ index b4aaba2a2..1cf65c4b1 100644
    /* list of settings that will be sent */
 -  nghttp2_settings_entry local_settings[3];
 +  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
-+  nghttp2_settings_entry local_settings[5];
++  nghttp2_settings_entry local_settings[4];
    size_t local_settings_num;
  #else
    int unused; /* prevent a compiler warning */
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..09ae839de 100644
+index e74400a4c..b0e6674f2 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -41,6 +41,7 @@
@@ -955,7 +995,7 @@ index e74400a4c..09ae839de 100644
  
  #ifdef DEBUG_HTTP2
  #define H2BUGF(x) x
-@@ -1193,16 +1194,27 @@ static void populate_settings(struct Curl_easy *data,
+@@ -1193,16 +1194,30 @@ static void populate_settings(struct Curl_easy *data,
  {
    nghttp2_settings_entry *iv = httpc->local_settings;
  
@@ -982,15 +1022,18 @@ index e74400a4c..09ae839de 100644
 +  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
 +  // iv[2].value = data->multi->push_cb != NULL;
 +  
-+  // Looks like random setting set by Chrome, maybe similar to TLS GREASE. */
-+  Curl_rand(data, (unsigned char *)&iv[4].settings_id, sizeof(iv[4].settings_id));
-+  Curl_rand(data, (unsigned char *)&iv[4].value, sizeof(iv[4].value));
++  // curl-impersonate:
++  // Up until Chrome 98, there was a randomly chosen setting number in the
++  // HTTP2 SETTINGS frame. This might be something similar to TLS GREASE.
++  // However, it seems to have been removed since.
++  // Curl_rand(data, (unsigned char *)&iv[4].settings_id, sizeof(iv[4].settings_id));
++  // Curl_rand(data, (unsigned char *)&iv[4].value, sizeof(iv[4].value));
 +
-+  httpc->local_settings_num = 5;
++  httpc->local_settings_num = 4;
  }
  
  void Curl_http2_done(struct Curl_easy *data, bool premature)
-@@ -1816,10 +1828,6 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+@@ -1816,10 +1831,6 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
    return -1;
  }
  
@@ -1001,7 +1044,7 @@ index e74400a4c..09ae839de 100644
  /* USHRT_MAX is 65535 == 0xffff */
  #define HEADER_OVERFLOW(x) \
    (x.namelen > 0xffff || x.valuelen > 0xffff - x.namelen)
-@@ -1890,6 +1898,53 @@ static header_instruction inspect_header(const char *name, size_t namelen,
+@@ -1890,6 +1901,53 @@ static header_instruction inspect_header(const char *name, size_t namelen,
    }
  }
  
@@ -1055,7 +1098,7 @@ index e74400a4c..09ae839de 100644
  static ssize_t http2_send(struct Curl_easy *data, int sockindex,
                            const void *mem, size_t len, CURLcode *err)
  {
-@@ -1905,6 +1960,7 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -1905,6 +1963,7 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    nghttp2_nv *nva = NULL;
    size_t nheader;
    size_t i;
@@ -1063,7 +1106,7 @@ index e74400a4c..09ae839de 100644
    size_t authority_idx;
    char *hdbuf = (char *)mem;
    char *end, *line_end;
-@@ -2010,12 +2066,21 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2010,12 +2069,21 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    end = memchr(hdbuf, ' ', line_end - hdbuf);
    if(!end || end == hdbuf)
      goto fail;
@@ -1091,7 +1134,7 @@ index e74400a4c..09ae839de 100644
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
-@@ -2032,25 +2097,35 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2032,25 +2100,35 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    }
    if(!end || end == hdbuf)
      goto fail;
@@ -1140,7 +1183,7 @@ index e74400a4c..09ae839de 100644
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
-@@ -2117,10 +2192,13 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2117,10 +2195,13 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
      ++i;
    }
  
