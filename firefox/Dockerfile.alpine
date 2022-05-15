@@ -33,9 +33,9 @@ RUN cd brotli-${BROTLI_VERSION} && \
 # Needed for building libnss
 RUN pip install gyp-next
 
-ARG NSS_VERSION=nss-3.75
+ARG NSS_VERSION=nss-3.77
 # This tarball is already bundled with nspr, a dependency of libnss.
-ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_75_RTM/src/nss-3.75-with-nspr-4.32.tar.gz
+ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_77_RTM/src/nss-3.77-with-nspr-4.32.tar.gz
 
 # Download and compile nss.
 RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
