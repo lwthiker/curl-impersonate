@@ -11,7 +11,7 @@ on:
       - main
 
 env:
-  NSS_VERSION: nss-3.75
+  NSS_VERSION: nss-3.77
   BORING_SSL_COMMIT: 3a667d10e94186fd503966f5638e134fe9fb4080
 
 jobs:
