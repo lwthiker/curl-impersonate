@@ -129,11 +129,12 @@ class TestImpersonation:
     # List of binaries and their expected signatures
     CURL_BINARIES_AND_SIGNATURES = [
         # Test wrapper scripts
-        ("curl_chrome98", None, None, "chrome_98.0.4758.102_win10"),
         ("curl_chrome99", None, None, "chrome_99.0.4844.51_win10"),
+        ("curl_chrome100", None, None, "chrome_100.0.4896.127_win10"),
+        ("curl_chrome101", None, None, "chrome_101.0.4951.67_win10"),
         ("curl_chrome99_android", None, None, "chrome_99.0.4844.73_android12-pixel6"),
-        ("curl_edge98", None, None, "edge_98.0.1108.62_win10"),
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
+        ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
         ("curl_safari15_3", None, None, "safari_15.3_macos11.6.4"),
         ("curl_ff91esr", None, None, "firefox_91.6.0esr_win10"),
         ("curl_ff95", None, None, "firefox_95.0.2_win10"),
@@ -146,18 +147,26 @@ class TestImpersonation:
         (
             "minicurl",
             {
-                "CURL_IMPERSONATE": "chrome98"
-            },
-            "libcurl-impersonate-chrome",
-            "chrome_98.0.4758.102_win10"
-        ),
-        (
-            "minicurl",
-            {
                 "CURL_IMPERSONATE": "chrome99"
             },
             "libcurl-impersonate-chrome",
             "chrome_99.0.4844.51_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "chrome100"
+            },
+            "libcurl-impersonate-chrome",
+            "chrome_100.0.4896.127_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "chrome101"
+            },
+            "libcurl-impersonate-chrome",
+            "chrome_101.0.4951.67_win10"
         ),
         (
             "minicurl",
@@ -170,18 +179,18 @@ class TestImpersonation:
         (
             "minicurl",
             {
-                "CURL_IMPERSONATE": "edge98"
-            },
-            "libcurl-impersonate-chrome",
-            "edge_98.0.1108.62_win10"
-        ),
-        (
-            "minicurl",
-            {
                 "CURL_IMPERSONATE": "edge99"
             },
             "libcurl-impersonate-chrome",
             "edge_99.0.1150.30_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "edge101",
+            },
+            "libcurl-impersonate-chrome",
+            "edge_101.0.1210.47_win10"
         ),
         (
             "minicurl",
