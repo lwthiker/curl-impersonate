@@ -6,6 +6,7 @@ import asyncio
 import logging
 import subprocess
 import tempfile
+from typing import List
 
 import yaml
 import dpkt
@@ -124,7 +125,10 @@ class TestImpersonation:
     # This ensures we will capture the correct traffic in tcpdump.
     LOCAL_PORTS = (50000, 50100)
 
-    TEST_URL = "https://www.wikipedia.org"
+    TEST_URLS = [
+        "https://www.wikimedia.org",
+        "https://www.wikipedia.org"
+    ]
 
     # List of binaries and their expected signatures
     CURL_BINARIES_AND_SIGNATURES = [
@@ -330,13 +334,13 @@ class TestImpersonation:
         elif sys.platform.startswith("darwin"):
             env_vars["DYLD_INSERT_LIBRARIES"] = lib + ".dylib"
 
-    def _run_curl(self, curl_binary, env_vars, extra_args, url,
+    def _run_curl(self, curl_binary, env_vars, extra_args, urls,
                   output="/dev/null"):
         env = os.environ.copy()
         if env_vars:
             env.update(env_vars)
 
-        logging.debug(f"Launching '{curl_binary}' to {url}")
+        logging.debug(f"Launching '{curl_binary}' to {urls}")
         if env_vars:
             logging.debug("Environment variables: {}".format(
                 " ".join([f"{k}={v}" for k, v in env_vars.items()])))
@@ -348,17 +352,18 @@ class TestImpersonation:
         ]
         if extra_args:
             args += extra_args
-        args.append(url)
+        args.extend(urls)
 
         curl = subprocess.Popen(args, env=env)
         return curl.wait(timeout=10)
 
-    def _extract_client_hello(self, pcap: bytes) -> bytes:
+    def _extract_client_hello(self, pcap: bytes) -> List[bytes]:
         """Find and return the Client Hello TLS record from a pcap.
 
         If there are multiple, returns the first.
         If there are none, returns None.
         """
+        client_hellos = []
         for ts, buf in dpkt.pcap.Reader(io.BytesIO(pcap)):
             eth = dpkt.ethernet.Ethernet(buf)
             if not isinstance(eth.data, dpkt.ip.IP) and not isinstance(eth.data, dpkt.ip6.IP6):
@@ -380,9 +385,9 @@ class TestImpersonation:
             if handshake.type != 0x01:
                 continue
             # Return the whole TLS record
-            return tcp.data
+            client_hellos.append(tcp.data)
 
-        return None
+        return client_hellos
 
     def _parse_nghttpd2_output(self, output):
         """Parse the output of nghttpd2.
@@ -456,7 +461,7 @@ class TestImpersonation:
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=None,
-                             url=self.TEST_URL)
+                             urls=self.TEST_URLS)
         assert ret == 0
 
         try:
@@ -474,21 +479,23 @@ class TestImpersonation:
         assert len(pcap) > 0
         logging.debug(f"Captured pcap of length {len(pcap)} bytes")
 
-        client_hello = self._extract_client_hello(pcap)
-        assert client_hello is not None
+        client_hellos = self._extract_client_hello(pcap)
+        # A client hello message for each URL
+        assert len(client_hellos) == len(self.TEST_URLS)
 
-        logging.debug(f"Found Client Hello, "
+        logging.debug(f"Found {len(client_hellos)} Client Hello messages, "
                       f"comparing to signature '{expected_signature}'")
 
-        sig = TLSClientHelloSignature.from_bytes(client_hello)
-        expected_sig = TLSClientHelloSignature.from_dict(
-            browser_signatures[expected_signature] \
-                              ["signature"] \
-                              ["tls_client_hello"]
-        )
+        for client_hello in client_hellos:
+            sig = TLSClientHelloSignature.from_bytes(client_hello)
+            expected_sig = TLSClientHelloSignature.from_dict(
+                browser_signatures[expected_signature] \
+                                  ["signature"] \
+                                  ["tls_client_hello"]
+            )
 
-        equals, msg =  sig.equals(expected_sig, reason=True)
-        assert equals, msg
+            equals, msg = sig.equals(expected_sig, reason=True)
+            assert equals, msg
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -520,7 +527,7 @@ class TestImpersonation:
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=["-k"],
-                             url="https://localhost:8443")
+                             urls=["https://localhost:8443"])
         assert ret == 0
 
         output = await self._read_proc_output(nghttpd, timeout=2)
@@ -575,7 +582,7 @@ class TestImpersonation:
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=None,
-                             url=self.TEST_URL,
+                             urls=[self.TEST_URLS[0]],
                              output=output)
         assert ret == 0
 
