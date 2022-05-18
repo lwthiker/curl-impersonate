@@ -216,7 +216,7 @@ index 769363941..6e2f1b829 100644
  
  CHECKSRC = $(CS_$(V))
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..941ef732b 100644
+index 20293a710..66730b5fc 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -80,6 +80,7 @@
@@ -227,7 +227,7 @@ index 20293a710..941ef732b 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +283,202 @@ void curl_global_cleanup(void)
+@@ -282,6 +283,237 @@ void curl_global_cleanup(void)
    init_flags  = 0;
  }
  
@@ -351,6 +351,41 @@ index 20293a710..941ef732b 100644
 +      "Sec-Fetch-User: ?1",
 +      "TE: Trailers"
 +    }
++  },
++  {
++    .target = "ff100",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "aes_128_gcm_sha_256,"
++      "chacha20_poly1305_sha_256,"
++      "aes_256_gcm_sha_384,"
++      "ecdhe_ecdsa_aes_128_gcm_sha_256,"
++      "ecdhe_rsa_aes_128_gcm_sha_256,"
++      "ecdhe_ecdsa_chacha20_poly1305_sha_256,"
++      "ecdhe_rsa_chacha20_poly1305_sha_256,"
++      "ecdhe_ecdsa_aes_256_gcm_sha_384,"
++      "ecdhe_rsa_aes_256_gcm_sha_384,"
++      "ecdhe_ecdsa_aes_256_sha,"
++      "ecdhe_ecdsa_aes_128_sha,"
++      "ecdhe_rsa_aes_128_sha,"
++      "ecdhe_rsa_aes_256_sha,"
++      "rsa_aes_128_gcm_sha_256,"
++      "rsa_aes_256_gcm_sha_384,"
++      "rsa_aes_128_sha,"
++      "rsa_aes_256_sha",
++    .http_headers = {
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
++      "Accept-Language: en-US,en;q=0.5",
++      "Accept-Encoding: gzip, deflate, br",
++      "Upgrade-Insecure-Requests: 1",
++      "Sec-Fetch-Dest: document",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-User: ?1",
++      "TE: Trailers"
++    }
 +  }
 +};
 +
@@ -430,7 +465,7 @@ index 20293a710..941ef732b 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +487,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -290,6 +522,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -438,7 +473,7 @@ index 20293a710..941ef732b 100644
  
    /* Make sure we inited the global SSL stuff */
    if(!initialized) {
-@@ -308,6 +506,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -308,6 +541,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -461,7 +496,7 @@ index 20293a710..941ef732b 100644
    return data;
  }
  
-@@ -878,6 +1092,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -878,6 +1127,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -475,7 +510,7 @@ index 20293a710..941ef732b 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -967,6 +1188,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -967,6 +1223,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
@@ -484,7 +519,7 @@ index 20293a710..941ef732b 100644
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -991,6 +1214,12 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -991,6 +1249,12 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
@@ -671,10 +706,43 @@ index f08a343e3..879151dd2 100644
    if(result)
      return result;
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..1f4d496f3 100644
+index e74400a4c..5df654d04 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
-@@ -1818,7 +1818,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+@@ -56,7 +56,7 @@
+ #define NGHTTP2_HAS_SET_LOCAL_WINDOW_SIZE 1
+ #endif
+ 
+-#define HTTP2_HUGE_WINDOW_SIZE (32 * 1024 * 1024) /* 32 MB */
++#define HTTP2_HUGE_WINDOW_SIZE (12 * 1024 * 1024) /*  12 MB */
+ 
+ #ifdef DEBUG_HTTP2
+ #define H2BUGF(x) x
+@@ -1193,14 +1193,18 @@ static void populate_settings(struct Curl_easy *data,
+ {
+   nghttp2_settings_entry *iv = httpc->local_settings;
+ 
+-  iv[0].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+-  iv[0].value = Curl_multi_max_concurrent_streams(data->multi);
++  /* curl-impersonate: Align HTTP/2 settings to Firefox's */
++  iv[0].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
++  iv[0].value = 0x10000;
+ 
+   iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
+-  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
++  iv[1].value = 0x20000;
+ 
+-  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+-  iv[2].value = data->multi->push_cb != NULL;
++  iv[2].settings_id = NGHTTP2_SETTINGS_MAX_FRAME_SIZE;
++  iv[2].value = 0x4000;
++
++  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
++  // iv[2].value = data->multi->push_cb != NULL;
+ 
+   httpc->local_settings_num = 3;
+ }
+@@ -1818,7 +1822,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
  
  /* Index where :authority header field will appear in request header
     field list. */
@@ -782,7 +850,7 @@ index cc9c88870..a35a20e10 100644
       killed. */
    struct dynamically_allocated_data {
 diff --git a/lib/vtls/nss.c b/lib/vtls/nss.c
-index 2b44f0512..4c60797c7 100644
+index 2b44f0512..eec2bf76f 100644
 --- a/lib/vtls/nss.c
 +++ b/lib/vtls/nss.c
 @@ -143,6 +143,7 @@ static const struct cipher_s cipherlist[] = {
@@ -889,32 +957,15 @@ index 2b44f0512..4c60797c7 100644
  /*
   * Return true if at least one cipher-suite is enabled. Used to determine
   * if we need to call NSS_SetDomesticPolicy() to enable the default ciphers.
-@@ -1320,6 +1410,24 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
+@@ -1320,6 +1410,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
  
    if(module)
      SECMOD_DestroyModule(module);
 +
-+  /* Patch for Ubuntu - add a "nss/" suffix to the library name */
-+  config_string = aprintf("library=/usr/lib/x86_64-linux-gnu/nss/%s name=%s", library, name);
-+  if(!config_string)
-+    return CURLE_OUT_OF_MEMORY;
-+
-+  module = SECMOD_LoadUserModule(config_string, NULL, PR_FALSE);
-+  free(config_string);
-+
-+  if(module && module->loaded) {
-+    /* loaded successfully */
-+    *pmod = module;
-+    return CURLE_OK;
-+  }
-+
-+  if(module)
-+    SECMOD_DestroyModule(module);
-+
    return CURLE_FAILED_INIT;
  }
  
-@@ -1921,6 +2029,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1921,6 +2012,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
    if(SSL_OptionSet(model, SSL_NO_CACHE, ssl_no_cache) != SECSuccess)
      goto error;
  
@@ -927,7 +978,7 @@ index 2b44f0512..4c60797c7 100644
    /* enable/disable the requested SSL version(s) */
    if(nss_init_sslver(&sslver, data, conn) != CURLE_OK)
      goto error;
-@@ -1960,6 +2074,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1960,6 +2057,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      }
    }
  
@@ -942,7 +993,7 @@ index 2b44f0512..4c60797c7 100644
    if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
      infof(data, "warning: ignoring value of ssl.verifyhost");
  
-@@ -2113,6 +2235,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2113,6 +2218,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      int cur = 0;
      unsigned char protocols[128];
  
@@ -953,7 +1004,7 @@ index 2b44f0512..4c60797c7 100644
  #ifdef USE_HTTP2
      if(data->state.httpwant >= CURL_HTTP_VERSION_2
  #ifndef CURL_DISABLE_PROXY
-@@ -2124,9 +2250,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2124,9 +2233,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
        cur += ALPN_H2_LENGTH;
      }
  #endif
@@ -976,19 +1027,119 @@ index 8ac15d407..68d01b219 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index 397ba71b1..abc09a91c 100644
+index 397ba71b1..d2a8fc1f2 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
-@@ -74,7 +74,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -74,7 +74,107 @@ if test "x$OPT_NSS" != xno; then
        # Without pkg-config, we'll kludge in some defaults
        AC_MSG_WARN([Using hard-wired libraries and compilation flags for NSS.])
        addld="-L$OPT_NSS/lib"
 -      addlib="-lssl3 -lsmime3 -lnss3 -lplds4 -lplc4 -lnspr4"
-+      addlib="-Wl,-Bstatic -Wl,--start-group -lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lsmime -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lsha-x86_c_lib -lgcm-aes-x86_c_lib -lhw-acc-crypto-avx -lhw-acc-crypto-avx2  -lnssutil -lnssb -lcryptohi -l:libplc4.a -l:libplds4.a -l:libnspr4.a -lsqlite -Wl,--end-group -Wl,-Bdynamic -pthread -ldl"
++
++      # curl-impersonate: Link NSS statically.
++      # NSS is poorly documented in this regard and a lot of trial and error
++      # was made to come up with the correct list of linking flags. The
++      # libraries have circular dependencies which makes their order extremely
++      # difficult to find out.
++
++      # Some references:
++      # https://github.com/mozilla/application-services/blob/b2690fd2e4cc3e8e10b6868ab0de8b79c89d3a93/components/support/rc_crypto/nss/nss_build_common/src/lib.rs#L94
++      # and
++      # https://hg.mozilla.org/mozilla-central/file/tip/security/nss/lib/freebl/freebl.gyp
++
++      # On Linux we can use special linker flags to force static linking
++      # (-l:libplc4.a etc.), otherwise the linker will prefer to use
++      # libplc4.so. On other systems the dynamic libraries would have to be
++      # removed manually from the NSS directory before building curl.
++      case $host_os in
++        linux*)
++          addlib="-lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lnssutil -lnssb -lcryptohi -l:libplc4.a -l:libplds4.a -l:libnspr4.a -lsqlite"
++          ;;
++        darwin*)
++          addlib="-lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lnssutil -lnssb -lcryptohi -lplc4 -lplds4 -lnspr4"
++          ;;
++        *)
++          addlib="-lssl -lnss_static -lpk11wrap_static -lcertdb -lcerthi -lnsspki -lnssdev -lsoftokn_static -lfreebl_static -lnssutil -lnssb -lcryptohi -lplc4 -lplds4 -lnspr4 -lsqlite"
++          ;;
++      esac
++
++      case $host_cpu in
++        arm)
++          addlib="$addlib -larmv8_c_lib"
++          ;;
++        aarch64)
++          addlib="$addlib -larmv8_c_lib -lgcm-aes-aarch64_c_lib"
++          ;;
++        x86)
++          addlib="$addlib -lgcm-aes-x86_c_lib"
++          ;;
++        x86_64)
++          addlib="$addlib -lgcm-aes-x86_c_lib -lhw-acc-crypto-avx -lhw-acc-crypto-avx2 -lsha-x86_c_lib"
++          case $host_os in
++            linux*)
++              addlib="$addlib -lintel-gcm-wrap_c_lib -lintel-gcm-s_lib"
++              ;;
++          esac
++          ;;
++      esac
++
++      # curl-impersonate:
++      # On Linux these linker flags are necessary to resolve
++      # the symbol mess and circular dependencies of NSS .a libraries
++      # to make the AC_CHECK_LIB test below pass.
++      case $host_os in
++        linux*)
++          addlib="-Wl,--start-group $addlib -Wl,--end-group"
++          ;;
++      esac
++
++      # External dependencies for nss
++      case $host_os in
++        linux*)
++          addlib="$addlib -pthread -ldl"
++          ;;
++        darwin*)
++          addlib="$addlib -lsqlite3"
++          ;;
++      esac
++
++      # Attempt to locate libnssckbi.
++      # This library file contains the trusted certificates and nss loads it
++      # at runtime using dlopen. If it's not in a path findable by dlopen
++      # we have to add that path explicitly using -rpath so it may find it.
++      # On Ubuntu and Mac M1 it is in a non-standard location.
++      AC_MSG_CHECKING([if libnssckbi is in a non-standard location])
++      case $host_os in
++        linux*)
++          search_paths="/usr/lib/$host /usr/lib/$host/nss"
++          search_paths="$search_paths /usr/lib/$host_cpu-$host_os"
++          search_paths="$search_paths /usr/lib/$host_cpu-$host_os/nss"
++          search_ext="so"
++          ;;
++        darwin*)
++          search_paths="/opt/homebrew/lib"
++          search_ext="dylib"
++          ;;
++      esac
++
++      found="no"
++      for path in $search_paths; do
++        if test -f "$path/libnssckbi.$search_ext"; then
++          AC_MSG_RESULT([$path])
++          addld="$addld -Wl,-rpath,$path"
++          found="yes"
++          break
++        fi
++      done
++
++      if test "$found" = "no"; then
++        AC_MSG_RESULT([no])
++      fi
++
        addcflags="-I$OPT_NSS/include"
        version="unknown"
        nssprefix=$OPT_NSS
-@@ -91,7 +91,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -91,7 +191,7 @@ if test "x$OPT_NSS" != xno; then
      fi
  
      dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
@@ -997,6 +1148,17 @@ index 397ba71b1..abc09a91c 100644
       [
       AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
       AC_SUBST(USE_NSS, [1])
+@@ -101,9 +201,7 @@ if test "x$OPT_NSS" != xno; then
+      test nss != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
+      ],
+      [
+-       LDFLAGS="$CLEANLDFLAGS"
+-       LIBS="$CLEANLIBS"
+-       CPPFLAGS="$CLEANCPPFLAGS"
++       AC_MSG_ERROR([Failed linking NSS statically])
+      ])
+ 
+     if test "x$USE_NSS" = "xyes"; then
 diff --git a/src/Makefile.am b/src/Makefile.am
 index c8abc93b1..fcecb10d0 100644
 --- a/src/Makefile.am
