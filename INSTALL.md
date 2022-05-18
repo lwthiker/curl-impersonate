@@ -16,7 +16,7 @@ Install dependencies for building all the components:
 ```
 sudo apt install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
 # For the Firefox version only
-sudo apt install python3-pip python-is-python3
+sudo apt install python3-pip libnss3
 pip install gyp-next
 export PATH="$PATH:~/.local/bin" # Add gyp to PATH
 # For the Chrome version only
@@ -65,11 +65,12 @@ curl-impersonate-chrome https://www.wikipedia.org
 ```
 
 ### macOS
-*macOS support is still a work in progress and currently supports the Chrome version only.*
-
 Install dependencies for building all the components:
 ```
 brew install pkg-config make cmake ninja autoconf automake libtool
+# For the Firefox version only
+brew install sqlite nss
+pip3 install gyp-next
 # For the Chrome version only
 brew install go
 ```
@@ -83,6 +84,9 @@ Configure and compile:
 ```
 mkdir build && cd build
 ../configure
+# Build and install the Firefox version
+gmake firefox-build
+sudo gmake firefox-install
 # Build and install the Chrome version
 gmake chrome-build
 sudo gmake chrome-install
@@ -92,6 +96,17 @@ cd ../ && rm -Rf build
 
 ### Static compilation
 To compile curl-impersonate statically with libcurl-impersonate, pass `--enable-static` to the `configure` script.
+
+### A note about the Firefox version
+The Firefox version compiles a static version of nss, Firefox's TLS library.
+For NSS to have a list of root certificates, curl attempts to load at runtime `libnssckbi`, one of the NSS libraries.
+If you get the error:
+```
+curl: (60) Peer's Certificate issuer is not recognized
+```
+Make sure that NSS is installed (see above).
+If the issue persists it might be that NSS is installed in a non-standard location on your system.
+Please open an issue in that case.
 
 ## Docker build
 The Docker build is a bit more reproducible and serves as the reference implementation. It creates a Debian-based Docker image with the binaries.

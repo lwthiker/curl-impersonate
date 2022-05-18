@@ -9,8 +9,10 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 BROTLI_VERSION := 1.0.9
-NSS_VERSION := nss-3.75
-NSS_URL := https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_75_RTM/src/nss-3.75-with-nspr-4.32.tar.gz
+ # In case this is changed, update build-and-test-make.yml as well
+NSS_VERSION := nss-3.77
+NSS_URL := https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_77_RTM/src/nss-3.77-with-nspr-4.32.tar.gz
+ # In case this is changed, update build-and-test-make.yml as well
 BORING_SSL_COMMIT := 3a667d10e94186fd503966f5638e134fe9fb4080
 NGHTTP2_VERSION := nghttp2-1.46.0
 NGHTTP2_URL := https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
@@ -62,14 +64,30 @@ firefox-install: ## Install the Firefox version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
-	cp -f $(srcdir)/firefox/curl_ff* @bindir@
+	install $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install
+
+firefox-install-strip: ## Like 'firefox-install', but strip binaries for smaller size
+	cd $(CURL_VERSION)
+	$(MAKE) install-exec MAKEFLAGS=
+	# We could have used 'install-strip' but then the docs would be installed as well.
+	# Instead strip manually.
+	strip @bindir@/curl-impersonate-ff
+	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
+	install $(srcdir)/firefox/curl_ff* @bindir@
+.PHONY: firefox-install-strip
 
 firefox-uninstall: ## Uninstall the Firefox version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
 	$(MAKE) uninstall MAKEFLAGS=
 	rm -Rf @bindir@/curl_ff*
 .PHONY: firefox-uninstall
+
+firefox-clean: ## Clean build artifacts of the Firefox version. Use after re-running './configure'
+	cd $(CURL_VERSION)
+	$(MAKE) clean MAKEFLAGS=
+	rm -f .firefox
+.PHONY: firefox-clean
 
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
 	cd $(CURL_VERSION)
@@ -91,8 +109,18 @@ chrome-install: ## Install the Chrome version of curl-impersonate after build
 	cd $(CURL_VERSION)
 	$(MAKE) install-exec MAKEFLAGS=
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
-	cp -f $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
+	install $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install
+
+chrome-install-strip: ## Like 'chrome-install', but strip binaries for smaller size
+	cd $(CURL_VERSION)
+	$(MAKE) install-exec MAKEFLAGS=
+	# We could have used 'install-strip' but then the docs would be installed as well.
+	# Instead strip manually.
+	strip @bindir@/curl-impersonate-chrome
+	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
+	install $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
+.PHONY: chrome-install-strip
 
 chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'make install'
 	cd $(CURL_VERSION)
@@ -100,7 +128,13 @@ chrome-uninstall: ## Uninstall the Chrome version of curl-impersonate after 'mak
 	rm -Rf @bindir@/curl_chrome* @bindir@/curl_edge* @bindir@/curl_safari*
 .PHONY: chrome-uninstall
 
-clean: ## Remove build artifacts
+chrome-clean: ## Clean build artifacts of the Chrome version. Use after re-running './configure'
+	cd $(CURL_VERSION)
+	$(MAKE) clean MAKEFLAGS=
+	rm -f .chrome
+.PHONY: chrome-clean
+
+clean: ## Remove all build artifacts, including dependencies
 	rm -Rf brotli-$(BROTLI_VERSION).tar.gz brotli-$(BROTLI_VERSION)
 	rm -Rf $(NSS_VERSION).tar.gz $(NSS_VERSION)
 	rm -Rf boringssl.zip boringssl
@@ -126,7 +160,10 @@ $(NSS_VERSION).tar.gz:
 $(nss_static_libs): $(NSS_VERSION).tar.gz
 	tar xf $(NSS_VERSION).tar.gz
 	cd $(NSS_VERSION)/nss
-	./build.sh -o --disable-tests --static
+	./build.sh -o --disable-tests --static --python=python3
+	# Hack for macOS: Remove dynamic libraries to force the linker to use the
+	# static ones when linking curl.
+	rm -Rf $(nss_install_dir)/lib/*.dylib
 
 
 boringssl.zip:

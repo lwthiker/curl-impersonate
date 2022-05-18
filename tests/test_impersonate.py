@@ -1,6 +1,8 @@
 import os
 import io
 import re
+import sys
+import asyncio
 import logging
 import subprocess
 import tempfile
@@ -127,15 +129,17 @@ class TestImpersonation:
     # List of binaries and their expected signatures
     CURL_BINARIES_AND_SIGNATURES = [
         # Test wrapper scripts
-        ("curl_chrome98", None, None, "chrome_98.0.4758.102_win10"),
         ("curl_chrome99", None, None, "chrome_99.0.4844.51_win10"),
+        ("curl_chrome100", None, None, "chrome_100.0.4896.127_win10"),
+        ("curl_chrome101", None, None, "chrome_101.0.4951.67_win10"),
         ("curl_chrome99_android", None, None, "chrome_99.0.4844.73_android12-pixel6"),
-        ("curl_edge98", None, None, "edge_98.0.1108.62_win10"),
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
+        ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
         ("curl_safari15_3", None, None, "safari_15.3_macos11.6.4"),
         ("curl_ff91esr", None, None, "firefox_91.6.0esr_win10"),
         ("curl_ff95", None, None, "firefox_95.0.2_win10"),
         ("curl_ff98", None, None, "firefox_98.0_win10"),
+        ("curl_ff100", None, None, "firefox_100.0_win10"),
 
         # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
         # linked against the regular libcurl and setting the
@@ -143,49 +147,57 @@ class TestImpersonation:
         (
             "minicurl",
             {
-                "CURL_IMPERSONATE": "chrome98"
+                "CURL_IMPERSONATE": "chrome99"
             },
-            "libcurl-impersonate-chrome.so",
-            "chrome_98.0.4758.102_win10"
+            "libcurl-impersonate-chrome",
+            "chrome_99.0.4844.51_win10"
         ),
         (
             "minicurl",
             {
-                "CURL_IMPERSONATE": "chrome99"
+                "CURL_IMPERSONATE": "chrome100"
             },
-            "libcurl-impersonate-chrome.so",
-            "chrome_99.0.4844.51_win10"
+            "libcurl-impersonate-chrome",
+            "chrome_100.0.4896.127_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "chrome101"
+            },
+            "libcurl-impersonate-chrome",
+            "chrome_101.0.4951.67_win10"
         ),
         (
             "minicurl",
             {
                 "CURL_IMPERSONATE": "chrome99_android"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "chrome_99.0.4844.73_android12-pixel6"
-        ),
-        (
-            "minicurl",
-            {
-                "CURL_IMPERSONATE": "edge98"
-            },
-            "libcurl-impersonate-chrome.so",
-            "edge_98.0.1108.62_win10"
         ),
         (
             "minicurl",
             {
                 "CURL_IMPERSONATE": "edge99"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "edge_99.0.1150.30_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "edge101",
+            },
+            "libcurl-impersonate-chrome",
+            "edge_101.0.1210.47_win10"
         ),
         (
             "minicurl",
             {
                 "CURL_IMPERSONATE": "safari15_3"
             },
-            "libcurl-impersonate-chrome.so",
+            "libcurl-impersonate-chrome",
             "safari_15.3_macos11.6.4"
         ),
         (
@@ -193,7 +205,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff91esr"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_91.6.0esr_win10"
         ),
         (
@@ -201,7 +213,7 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff95"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_95.0.2_win10"
         ),
         (
@@ -209,8 +221,16 @@ class TestImpersonation:
             {
                 "CURL_IMPERSONATE": "ff98"
             },
-            "libcurl-impersonate-ff.so",
+            "libcurl-impersonate-ff",
             "firefox_98.0_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "ff100"
+            },
+            "libcurl-impersonate-ff",
+            "firefox_100.0_win10"
         )
     ]
 
@@ -240,20 +260,75 @@ class TestImpersonation:
         p.terminate()
         p.wait(timeout=10)
 
+    async def _read_proc_output(self, proc, timeout):
+        """Read an async process' output until timeout is reached"""
+        data = bytes()
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
+        passed = loop.time() - start_time
+        while passed < timeout:
+            try:
+                data += await asyncio.wait_for(
+                    proc.stdout.readline(), timeout=timeout - passed
+                )
+            except asyncio.TimeoutError:
+                pass
+            passed = loop.time() - start_time
+        return data
+
+    async def _wait_nghttpd(self, proc):
+        """Wait for nghttpd to start listening on its designated port"""
+        data = bytes()
+        while data is not None:
+            data = await proc.stdout.readline()
+            if not data:
+                # Process terminated
+                return False
+
+            line = data.decode("utf-8").rstrip()
+            if "listen 0.0.0.0:8443" in line:
+                return True
+
+        return False
+
     @pytest.fixture
-    def nghttpd(self):
-        """Initiailize an HTTP/2 server"""
+    async def nghttpd(self):
+        """Initiailize an HTTP/2 server.
+        The returned object is an asyncio.subprocess.Process object,
+        so async methods must be used with it.
+        """
         logging.debug(f"Running nghttpd on :8443")
 
-        p = subprocess.Popen([
+        # Launch nghttpd and wait for it to start listening.
+
+        proc = await asyncio.create_subprocess_exec(
             "nghttpd", "-v",
-            "8443", "ssl/server.key", "ssl/server.crt"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            "8443", "ssl/server.key", "ssl/server.crt",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
-        yield p
+        try:
+            # Wait up to 3 seconds for nghttpd to start.
+            # Otherwise fail.
+            started = await asyncio.wait_for(
+                self._wait_nghttpd(proc), timeout=3
+            )
+            if not started:
+                raise Exception("nghttpd failed to start on time")
+        except asyncio.TimeoutError:
+            raise Exception("nghttpd failed to start on time")
 
-        p.terminate()
-        p.wait(timeout=10)
+        yield proc
+
+        proc.terminate()
+        await proc.wait()
+
+    def _set_ld_preload(self, env_vars, lib):
+        if sys.platform.startswith("linux"):
+            env_vars["LD_PRELOAD"] = lib + ".so"
+        elif sys.platform.startswith("darwin"):
+            env_vars["DYLD_INSERT_LIBRARIES"] = lib + ".dylib"
 
     def _run_curl(self, curl_binary, env_vars, extra_args, url,
                   output="/dev/null"):
@@ -368,9 +443,15 @@ class TestImpersonation:
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
 
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
@@ -409,41 +490,40 @@ class TestImpersonation:
         equals, msg =  sig.equals(expected_sig, reason=True)
         assert equals, msg
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "curl_binary, env_vars, ld_preload, expected_signature",
         CURL_BINARIES_AND_SIGNATURES
     )
-    def test_http2_headers(self,
-                           pytestconfig,
-                           nghttpd,
-                           curl_binary,
-                           env_vars,
-                           ld_preload,
-                           browser_signatures,
-                           expected_signature):
+    async def test_http2_headers(self,
+                                 pytestconfig,
+                                 nghttpd,
+                                 curl_binary,
+                                 env_vars,
+                                 ld_preload,
+                                 browser_signatures,
+                                 expected_signature):
         curl_binary = os.path.join(
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
+
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=["-k"],
                              url="https://localhost:8443")
         assert ret == 0
-        try:
-            output, stderr = nghttpd.communicate(timeout=2)
 
-            # If nghttpd finished running before timeout, it's likely it failed
-            # with an error.
-            assert nghttpd.returncode == 0, \
-                (f"nghttpd failed with error code {nghttpd.returncode}, "
-                 f"stderr: {stderr}")
-        except subprocess.TimeoutExpired:
-            nghttpd.kill()
-            output, stderr = nghttpd.communicate(timeout=3)
+        output = await self._read_proc_output(nghttpd, timeout=2)
 
         assert len(output) > 0
         pseudo_headers, headers = self._parse_nghttpd2_output(output)
@@ -481,9 +561,15 @@ class TestImpersonation:
             pytestconfig.getoption("install_dir"), "bin", curl_binary
         )
         if ld_preload:
-            env_vars["LD_PRELOAD"] = os.path.join(
+            # Injecting libcurl-impersonate with LD_PRELOAD is supported on
+            # Linux only. On Mac there is DYLD_INSERT_LIBRARIES but it
+            # reuqires more work to be functional.
+            if not sys.platform.startswith("linux"):
+                pytest.skip()
+
+            self._set_ld_preload(env_vars, os.path.join(
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
-            )
+            ))
 
         output = tempfile.mkstemp()[1]
         ret = self._run_curl(curl_binary,

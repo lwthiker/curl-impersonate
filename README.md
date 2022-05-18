@@ -28,14 +28,16 @@ Read the full description in the blog post: [part a](https://lwthiker.com/revers
 The following browsers can be impersonated.
 | Browser | Version | Build | OS | Target name | Wrapper script |
 | --- | --- | --- | --- | --- | --- |
-| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 98 | 98.0.4758.102 | Windows 10 | `chrome98` | [curl_chrome98](chrome/curl_chrome98) |
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 99 | 99.0.4844.51 | Windows 10 | `chrome99` | [curl_chrome99](chrome/curl_chrome99) |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 100 | 100.0.4896.75 | Windows 10 | `chrome100` | [curl_chrome100](chrome/curl_chrome100) |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 101 | 101.0.4951.67 | Windows 10 | `chrome101` | [curl_chrome101](chrome/curl_chrome101) |
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 99 | 99.0.4844.73 | Android 12 | `chrome99_android` | [curl_chrome99_android](chrome/curl_chrome99_android) |
-| ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") | 98 | 98.0.1108.62 | Windows 10 | `edge98` | [curl_edge98](chrome/curl_edge98) |
 | ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") | 99 | 99.0.1150.30 | Windows 10 | `edge99` | [curl_edge99](chrome/curl_edge99) |
+| ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") | 101 | 101.0.1210.47 | Windows 10 | `edge101` | [curl_edge101](chrome/curl_edge101) |
 | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 91 ESR | 91.6.0esr | Windows 10 | `ff91esr` | [curl_ff91esr](firefox/curl_ff91esr) |
 | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 95 | 95.0.2 | Windows 10 | `ff95` | [curl_ff95](firefox/curl_ff95) |
 | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 98 | 98.0 | Windows 10 | `ff98` | [curl_ff98](firefox/curl_ff98) |
+| ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 100 | 100.0 | Windows 10 | `ff100` | [curl_ff100](firefox/curl_ff100) |
 | ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 15.3 | 16612.4.9.1.8 | MacOS Big Sur | `safari15_3` | [curl_safari15_3](chrome/curl_safari15_3) |
 
 ## Basic usage
@@ -51,6 +53,11 @@ See [Advanced usage](#Advanced-usage) for more options.
 ## Installation
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
+### Pre-compiled binaries
+Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page.
+
+These binaries are statically compiled with libcurl(-impersonate) for ease of use. If you wish to use libcurl-impersonate, please build from source.
+
 ### Building from source
 See [INSTALL.md](INSTALL.md).
 
@@ -58,12 +65,12 @@ See [INSTALL.md](INSTALL.md).
 Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
 # Firefox version
-docker pull lwthiker/curl-impersonate:0.3-ff
-docker run --rm lwthiker/curl-impersonate:0.3-ff curl_ff95 https://www.wikipedia.org
+docker pull lwthiker/curl-impersonate:0.4-ff
+docker run --rm lwthiker/curl-impersonate:0.4-ff curl_ff95 https://www.wikipedia.org
 
 # Chrome version
-docker pull lwthiker/curl-impersonate:0.3-chrome
-docker run --rm lwthiker/curl-impersonate:0.3-chrome curl_chrome99 https://www.wikipedia.org
+docker pull lwthiker/curl-impersonate:0.4-chrome
+docker run --rm lwthiker/curl-impersonate:0.4-chrome curl_chrome99 https://www.wikipedia.org
 ```
 
 ### Distro packages
@@ -86,7 +93,7 @@ You can call it with the target names, e.g. `chrome98`, and it will internally s
 Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
 
 ### Using CURL_IMPERSONATE env var
-*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD`. You can then set the `CURL_IMPERSONATE` env var. For example:
+*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
 LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome98 my_app
 ```
