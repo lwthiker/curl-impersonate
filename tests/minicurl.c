@@ -16,13 +16,15 @@
 
 #include <curl/curl.h>
 
+/* Support up to 16 URLs */
+#define MAX_URLS 16
 /* Command line options. */
 struct opts {
     char *outfile;
     uint16_t local_port_start;
     uint16_t local_port_end;
     bool insecure;
-    char *url;
+    char *urls[MAX_URLS];
 };
 
 int parse_ports_range(char *str, uint16_t *start, uint16_t *end)
@@ -60,6 +62,7 @@ int parse_opts(int argc, char **argv, struct opts *opts)
 {
     int c;
     int r;
+    int i;
 
     memset(opts, 0, sizeof(*opts));
 
@@ -94,15 +97,67 @@ int parse_opts(int argc, char **argv, struct opts *opts)
         }
     }
 
-    if (optind < argc) {
-        opts->url = argv[optind++];
-    } else {
+    /* No URL supplied. */
+    if (optind >= argc) {
         return 1;
     }
 
-    if (optind < argc) {
-        /* Too many arguments. */
+    /* The rest of the options are URLs */
+    i = 0;
+    while (optind < argc) {
+        opts->urls[i++] = argv[optind++];
+    }
+
+    return 0;
+}
+
+/* Set all options except for the URL. */
+int set_opts(CURL *curl, struct opts *opts, FILE *file)
+{
+    CURLcode c;
+
+    c = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);
+    if (c) {
+        fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) failed\n");
         return 1;
+    }
+
+    c = curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+    if (c) {
+        fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) failed\n");
+        return 1;
+    }
+
+    if (opts->local_port_start && opts->local_port_end) {
+        c = curl_easy_setopt(curl,
+                             CURLOPT_LOCALPORT,
+                             opts->local_port_start);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_LOCALPORT) failed\n");
+            return 1;
+        }
+
+        c = curl_easy_setopt(curl,
+                             CURLOPT_LOCALPORTRANGE,
+                             opts->local_port_end - opts->local_port_start);
+        if (c) {
+            fprintf(stderr,
+                    "curl_easy_setopt(CURLOPT_LOCALPORTRANGE) failed\n");
+            return 1;
+        }
+    }
+
+    if (opts->insecure) {
+        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYPEER) failed\n");
+            return 1;
+        }
+        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYHOST) failed\n");
+            return 1;
+        }
     }
 
     return 0;
@@ -114,6 +169,7 @@ int main(int argc, char *argv[])
     CURLcode c;
     CURL *curl = NULL;
     FILE *file;
+    int i;
 
     if (parse_opts(argc, argv, &opts)) {
         fprintf(stderr, "Invalid arguments\n");
@@ -143,60 +199,25 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    c = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);
-    if (c) {
-        fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) failed\n");
-        goto out;
-    }
-
-    c = curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    if (c) {
-        fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) failed\n");
-        goto out;
-    }
-
-    if (opts.local_port_start && opts.local_port_end) {
-        c = curl_easy_setopt(curl,
-                             CURLOPT_LOCALPORT,
-                             opts.local_port_start);
-        if (c) {
-            fprintf(stderr, "curl_easy_setopt(CURLOPT_LOCALPORT) failed\n");
+    for (i = 0; i <= MAX_URLS && opts.urls[i]; i++) {
+        if (set_opts(curl, &opts, file)) {
             goto out;
         }
 
-        c = curl_easy_setopt(curl,
-                             CURLOPT_LOCALPORTRANGE,
-                             opts.local_port_end - opts.local_port_start);
+        c = curl_easy_setopt(curl, CURLOPT_URL, opts.urls[i]);
         if (c) {
-            fprintf(stderr,
-                    "curl_easy_setopt(CURLOPT_LOCALPORTRANGE) failed\n");
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_URL) failed\n");
             goto out;
         }
-    }
 
-    if (opts.insecure) {
-        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        c = curl_easy_perform(curl);
         if (c) {
-            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYPEER) failed\n");
+            fprintf(stderr, "curl_easy_perform() failed\n");
             goto out;
         }
-        c = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-        if (c) {
-            fprintf(stderr, "curl_easy_setopt(CURLOPT_SSL_VERIFYHOST) failed\n");
-            goto out;
-        }
-    }
 
-    c = curl_easy_setopt(curl, CURLOPT_URL, opts.url);
-    if (c) {
-        fprintf(stderr, "curl_easy_setopt(CURLOPT_URL) failed\n");
-        goto out;
-    }
-
-    c = curl_easy_perform(curl);
-    if (c) {
-        fprintf(stderr, "curl_easy_perform() failed\n");
-        goto out;
+        /* Re-use the curl handle. */
+        curl_easy_reset(curl);
     }
 
     c = 0;
