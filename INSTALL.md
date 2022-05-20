@@ -10,7 +10,7 @@ There are two versions of `curl-impersonate` for technical reasons. The **chrome
 
 ## Native build
 
-### Linux (Ubuntu)
+### Ubuntu
 
 Install dependencies for building all the components:
 ```
@@ -63,6 +63,33 @@ or run directly with you own flags:
 curl-impersonate-ff https://www.wikipedia.org
 curl-impersonate-chrome https://www.wikipedia.org
 ```
+
+### Red Hat based (CentOS/Fedora/Amazon Linux)
+
+Install dependencies:
+```
+yum groupinstall "Development Tools"
+yum groupinstall "C Development Tools and Libraries" # Fedora only
+yum install cmake3 python3 python3-pip
+# Install Ninja. This may depend on your system.
+yum install ninja-build
+# OR
+pip3 install ninja
+```
+
+For the Firefox version, install NSS and gyp:
+```
+yum install nss nss-pem
+pip3 install gyp-next
+```
+
+For the Chrome version, install Go.
+You may need to follow the [Go installation instructions](https://go.dev/doc/install) if it's not packaged for your system:
+```
+yum install golang
+```
+
+Then follow the 'Ubuntu' instructions for the actual build.
 
 ### macOS
 Install dependencies for building all the components:

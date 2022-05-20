@@ -3,7 +3,7 @@
 
 SHELL := bash
 .ONESHELL:
-.SHELLFLAGS := -eu -o pipefail -c
+.SHELLFLAGS := -euc
 .DELETE_ON_ERROR:
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
@@ -150,8 +150,11 @@ $(brotli_static_libs): brotli-$(BROTLI_VERSION).tar.gz
 	cd brotli-$(BROTLI_VERSION)
 	mkdir -p out
 	cd out
-	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed ..
-	cmake --build . --config Release --target install
+	@cmake@ -DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_INSTALL_PREFIX=./installed \
+			-DCMAKE_INSTALL_LIBDIR=lib \
+			..
+	@cmake@ --build . --config Release --target install
 
 
 $(NSS_VERSION).tar.gz:
@@ -181,8 +184,14 @@ boringssl/.patched: $(srcdir)/chrome/patches/boringssl-*.patch
 $(boringssl_static_libs): boringssl.zip boringssl/.patched
 	mkdir -p $(boringssl_install_dir)
 	cd $(boringssl_install_dir)
-	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja ..
-	ninja
+	# The extra CMAKE_C_FLAGS are needed because otherwise boringssl fails to
+	# compile in release mode on some systems with gcc 12 (e.g. Fedora).
+	@cmake@ -DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_POSITION_INDEPENDENT_CODE=on \
+			-DCMAKE_C_FLAGS="-Wno-stringop-overflow -Wno-array-bounds" \
+			-GNinja \
+			..
+	@ninja@
 	# Fix the directory structure so that curl can compile against it.
 	# See https://everything.curl.dev/source/build/tls/boringssl
 	mkdir -p lib
@@ -197,7 +206,10 @@ $(NGHTTP2_VERSION).tar.bz2:
 $(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2
 	tar -xf $(NGHTTP2_VERSION).tar.bz2
 	cd $(NGHTTP2_VERSION)
-	./configure --prefix=$(nghttp2_install_dir) --with-pic --disable-shared
+	./configure --prefix=$(nghttp2_install_dir) \
+				--with-pic \
+				--disable-shared \
+				--disable-python-bindings
 	$(MAKE) MAKEFLAGS=
 	$(MAKE) install MAKEFLAGS=
 
