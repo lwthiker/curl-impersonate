@@ -69,7 +69,8 @@ curl-impersonate-chrome https://www.wikipedia.org
 Install dependencies:
 ```
 yum groupinstall "Development Tools"
-yum install cmake cmake3 python3 python3-pip
+yum groupinstall "C Development Tools and Libraries" # Fedora only
+yum install cmake3 python3 python3-pip
 # Install Ninja. This may depend on your system.
 yum install ninja-build
 # OR
