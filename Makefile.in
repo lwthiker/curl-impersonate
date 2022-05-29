@@ -186,9 +186,11 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 	cd $(boringssl_install_dir)
 	# The extra CMAKE_C_FLAGS are needed because otherwise boringssl fails to
 	# compile in release mode on some systems with gcc 12 (e.g. Fedora).
+	# In addition, guard these options with -Wno-unknown-warning-option to
+	# prevent clang from failing on them.
 	@cmake@ -DCMAKE_BUILD_TYPE=Release \
 			-DCMAKE_POSITION_INDEPENDENT_CODE=on \
-			-DCMAKE_C_FLAGS="-Wno-stringop-overflow -Wno-array-bounds" \
+			-DCMAKE_C_FLAGS="-Wno-unknown-warning-option -Wno-stringop-overflow -Wno-array-bounds" \
 			-GNinja \
 			..
 	@ninja@
