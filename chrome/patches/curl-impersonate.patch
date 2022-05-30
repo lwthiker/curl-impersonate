@@ -997,7 +997,7 @@ index b4aaba2a2..0d716640c 100644
  #else
    int unused; /* prevent a compiler warning */
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..b0e6674f2 100644
+index e74400a4c..aec67c975 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -41,6 +41,7 @@
@@ -1017,7 +1017,39 @@ index e74400a4c..b0e6674f2 100644
  
  #ifdef DEBUG_HTTP2
  #define H2BUGF(x) x
-@@ -1193,16 +1194,30 @@ static void populate_settings(struct Curl_easy *data,
+@@ -75,13 +76,20 @@ static int h2_process_pending_input(struct Curl_easy *data,
+                                     struct http_conn *httpc,
+                                     CURLcode *err);
+ 
++/*
++ * curl-impersonate: Use Chrome's default HTTP/2 stream weight.
++ */
++
++#define CHROME_DEFAULT_STREAM_WEIGHT    (256)
++
+ /*
+  * Curl_http2_init_state() is called when the easy handle is created and
+  * allows for HTTP/2 specific init of state.
+  */
+ void Curl_http2_init_state(struct UrlState *state)
+ {
+-  state->stream_weight = NGHTTP2_DEFAULT_WEIGHT;
++  state->stream_weight = CHROME_DEFAULT_STREAM_WEIGHT;
++  state->stream_depends_e = TRUE;
+ }
+ 
+ /*
+@@ -90,7 +98,8 @@ void Curl_http2_init_state(struct UrlState *state)
+  */
+ void Curl_http2_init_userset(struct UserDefined *set)
+ {
+-  set->stream_weight = NGHTTP2_DEFAULT_WEIGHT;
++  set->stream_weight = CHROME_DEFAULT_STREAM_WEIGHT;
++  set->stream_depends_e = TRUE;
+ }
+ 
+ static int http2_getsock(struct Curl_easy *data,
+@@ -1193,16 +1202,30 @@ static void populate_settings(struct Curl_easy *data,
  {
    nghttp2_settings_entry *iv = httpc->local_settings;
  
@@ -1026,21 +1058,21 @@ index e74400a4c..b0e6674f2 100644
 +  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
 +  iv[0].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
 +  iv[0].value = 0x10000;
- 
--  iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
--  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
++
 +  iv[1].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
 +  iv[1].value = Curl_multi_max_concurrent_streams(data->multi);
  
--  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
--  iv[2].value = data->multi->push_cb != NULL;
+-  iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
+-  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
 +  iv[2].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
 +  iv[2].value = 0x600000;
  
--  httpc->local_settings_num = 3;
+-  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+-  iv[2].value = data->multi->push_cb != NULL;
 +  iv[3].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
 +  iv[3].value = 0x40000;
-+
+ 
+-  httpc->local_settings_num = 3;
 +  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
 +  // iv[2].value = data->multi->push_cb != NULL;
 +  
@@ -1055,7 +1087,7 @@ index e74400a4c..b0e6674f2 100644
  }
  
  void Curl_http2_done(struct Curl_easy *data, bool premature)
-@@ -1816,10 +1831,6 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
+@@ -1816,10 +1839,6 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
    return -1;
  }
  
@@ -1066,7 +1098,7 @@ index e74400a4c..b0e6674f2 100644
  /* USHRT_MAX is 65535 == 0xffff */
  #define HEADER_OVERFLOW(x) \
    (x.namelen > 0xffff || x.valuelen > 0xffff - x.namelen)
-@@ -1890,6 +1901,53 @@ static header_instruction inspect_header(const char *name, size_t namelen,
+@@ -1890,6 +1909,53 @@ static header_instruction inspect_header(const char *name, size_t namelen,
    }
  }
  
@@ -1120,7 +1152,7 @@ index e74400a4c..b0e6674f2 100644
  static ssize_t http2_send(struct Curl_easy *data, int sockindex,
                            const void *mem, size_t len, CURLcode *err)
  {
-@@ -1905,6 +1963,7 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -1905,6 +1971,7 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    nghttp2_nv *nva = NULL;
    size_t nheader;
    size_t i;
@@ -1128,7 +1160,7 @@ index e74400a4c..b0e6674f2 100644
    size_t authority_idx;
    char *hdbuf = (char *)mem;
    char *end, *line_end;
-@@ -2010,12 +2069,21 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2010,12 +2077,21 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    end = memchr(hdbuf, ' ', line_end - hdbuf);
    if(!end || end == hdbuf)
      goto fail;
@@ -1156,7 +1188,7 @@ index e74400a4c..b0e6674f2 100644
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
-@@ -2032,25 +2100,35 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2032,25 +2108,35 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
    }
    if(!end || end == hdbuf)
      goto fail;
@@ -1205,7 +1237,7 @@ index e74400a4c..b0e6674f2 100644
      failf(data, "Failed sending HTTP request: Header overflow");
      goto fail;
    }
-@@ -2117,10 +2195,13 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
+@@ -2117,10 +2203,13 @@ static ssize_t http2_send(struct Curl_easy *data, int sockindex,
      ++i;
    }
  
