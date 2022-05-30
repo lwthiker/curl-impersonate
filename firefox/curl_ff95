@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Find the directory of this script
-dir=`echo "$0" | sed 's%/[^/]*$%%'`
+dir=${0%/*}
 
 # The list of ciphers can be obtained by looking at the Client Hello message in
 # Wireshark, then converting it using the cipherlist array at
