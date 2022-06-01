@@ -20,7 +20,7 @@ sudo apt install python3-pip libnss3
 pip install gyp-next
 export PATH="$PATH:~/.local/bin" # Add gyp to PATH
 # For the Chrome version only
-sudo apt install golang-go
+sudo apt install golang-go unzip
 ```
 
 Clone this repository:
