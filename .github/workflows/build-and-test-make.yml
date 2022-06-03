@@ -149,9 +149,16 @@ jobs:
           python_bin=$(which python3)
           sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp }}/install --capture-interface ${{ matrix.capture_interface }}
 
-       # If it's a tag, create a release and upload the binaries.
-       # For that we recompile curl-impersonate statically.
-      - name: Recompile statically for release assets
+       # Upload pre-compiled binaries to GitHub releases page.
+      - name: Create tar release files for libcurl-impersonate
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+            cd ${{ runner.temp }}/install/lib
+            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz libcurl-impersonate*
+            echo "release_file_lib=${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
+
+       # Recompile curl-impersonate statically.
+      - name: Recompile statically
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           ${{ matrix.make }} chrome-clean
@@ -166,15 +173,17 @@ jobs:
           ${{ matrix.make }} firefox-checkbuild
           ${{ matrix.make }} firefox-install-strip
 
-      - name: Create tar release files
+      - name: Create tar release files for curl-impersonate
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd ${{ runner.temp }}/install/bin
           tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
-          echo "release_file=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
+          echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload release files
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ env.release_file }}
+          files: |
+              ${{ env.release_file_lib }}
+              ${{ env.release_file_bin }}

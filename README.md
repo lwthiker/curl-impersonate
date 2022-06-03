@@ -59,7 +59,7 @@ Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub r
 * Red Hat/Fedora/CentOS - `yum install nss nss-pem`
 * macOS - `brew install nss`
 
-The pre-compiled binaries are statically compiled with libcurl(-impersonate) for ease of use. If you wish to use libcurl-impersonate, please build from source.
+The pre-compiled binaries contain libcurl-impersonate and a statically compiled curl-impersonate for ease of use.
 
 ### Building from source
 See [INSTALL.md](INSTALL.md).
