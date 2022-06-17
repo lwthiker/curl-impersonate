@@ -120,8 +120,8 @@ RUN ! (ldd ./out/curl-impersonate | grep -q -e nghttp2 -e brotli -e ssl -e crypt
 
 # Wrapper scripts
 COPY curl_ff* out/
-# Replace /bin/bash with /bin/ash
-RUN sed -i 's@/bin/bash@/bin/ash@' out/curl_*
+# Replace /usr/bin/env bash with /usr/bin/env ash
+RUN sed -i 's@/usr/bin/env bash@/usr/bin/env ash@' out/curl_*
 RUN chmod +x out/curl_*
 
 # When using alpine, create a final, minimal image with the compiled binaries
