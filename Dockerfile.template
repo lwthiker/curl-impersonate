@@ -219,8 +219,8 @@ COPY curl_ff* out/
 COPY curl_chrome* curl_edge* curl_safari* out/
 {{/chrome}}
 {{#alpine}}
-# Replace /bin/bash with /bin/ash
-RUN sed -i 's@/bin/bash@/bin/ash@' out/curl_*
+# Replace /usr/bin/env bash with /usr/bin/env ash
+RUN sed -i 's@/usr/bin/env bash@/usr/bin/env ash@' out/curl_*
 {{/alpine}}
 RUN chmod +x out/curl_*
 {{#alpine}}
