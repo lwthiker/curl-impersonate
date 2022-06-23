@@ -46,7 +46,7 @@ This list is also available in the [browsers.json](browsers.json) file.
 
 For each supported browser there is a wrapper script that launches `curl-impersonate` with all the needed headers and flags. For example:
 ```
-curl_chrome99 https://www.wikipedia.org
+curl_chrome101 https://www.wikipedia.org
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
@@ -89,7 +89,7 @@ It has an additional API function:
 ```c
 CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target);
 ```
-You can call it with the target names, e.g. `chrome98`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts. Specifically it sets:
+You can call it with the target names, e.g. `chrome101`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts. Specifically it sets:
 * `CURLOPT_HTTP_VERSION`
 * `CURLOPT_SSLVERSION`, `CURLOPT_SSL_CIPHER_LIST`, `CURLOPT_SSL_EC_CURVES`, `CURLOPT_SSL_ENABLE_NPN`, `CURLOPT_SSL_ENABLE_ALPN`
 * `CURLOPT_HTTPBASEHEADER`, `CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER` (non-standard HTTP options created for this project).
@@ -100,7 +100,7 @@ Note that if you call `curl_easy_setopt()` later with one of the above it will o
 ### Using CURL_IMPERSONATE env var
 *Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
-LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome98 my_app
+LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome101 my_app
 ```
 The `CURL_IMPERSONATE` env var has two effects:
 * `curl_easy_impersonate()` is called automatically for any new curl handle created by `curl_easy_init()`.
@@ -120,7 +120,6 @@ The layout is similar for both. For example, the Firefox directory contains:
 * [Dockerfile](firefox/Dockerfile) - Used to build `curl-impersonate` with all dependencies.
 * [curl_ff91esr](firefox/curl_ff91esr), [curl_ff95](firefox/curl_ff95), [curl_ff98](firefox/curl_ff98) - Wrapper scripts that launch `curl-impersonate` with the correct flags.
 * [curl-impersonate.patch](firefox/patches/curl-impersonate.patch) - The main patch that makes curl use the same TLS extensions as Firefox. Also makes curl compile statically with libnghttp2 and libnss.
-* [libnghttp2-pc.patch](firefox/patches/libnghttp2-pc.patch) - Patch to make libnghttp2 compile statically.
 
 Other files of interest:
 * [tests/signatures.yaml](tests/signatures.yaml) - YAML database of known browser signatures that can be impersonated.
