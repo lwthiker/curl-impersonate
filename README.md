@@ -40,6 +40,8 @@ The following browsers can be impersonated.
 | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 100 | 100.0 | Windows 10 | `ff100` | [curl_ff100](firefox/curl_ff100) |
 | ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 15.3 | 16612.4.9.1.8 | MacOS Big Sur | `safari15_3` | [curl_safari15_3](chrome/curl_safari15_3) |
 
+This list is also available in the [browsers.json](browsers.json) file.
+
 ## Basic usage
 
 For each supported browser there is a wrapper script that launches `curl-impersonate` with all the needed headers and flags. For example:
