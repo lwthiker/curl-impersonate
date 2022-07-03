@@ -148,6 +148,7 @@ class TestImpersonation:
         ("curl_ff95", None, None, "firefox_95.0.2_win10"),
         ("curl_ff98", None, None, "firefox_98.0_win10"),
         ("curl_ff100", None, None, "firefox_100.0_win10"),
+        ("curl_ff102", None, None, "firefox_102.0_win10"),
 
         # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
         # linked against the regular libcurl and setting the
@@ -239,6 +240,14 @@ class TestImpersonation:
             },
             "libcurl-impersonate-ff",
             "firefox_100.0_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "ff102"
+            },
+            "libcurl-impersonate-ff",
+            "firefox_102.0_win10"
         )
     ]
 
