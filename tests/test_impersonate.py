@@ -4,6 +4,7 @@ import re
 import sys
 import asyncio
 import logging
+import pathlib
 import subprocess
 import tempfile
 from typing import List
@@ -21,13 +22,16 @@ from signature import (
 
 @pytest.fixture
 def browser_signatures():
-    with open("signatures.yaml", "r") as f:
-        # Parse signatures.yaml database.
-        return {
-            doc["name"]: doc
-            for doc in yaml.safe_load_all(f.read())
-            if doc
-        }
+    docs = {}
+    for path in pathlib.Path("signatures").glob("**/*.yaml"):
+        with open(path, "r") as f:
+            # Parse signatures.yaml database.
+            docs.update({
+                doc["name"]: doc
+                for doc in yaml.safe_load_all(f.read())
+                if doc
+            })
+    return docs
 
 
 class TestSignatureModule:
