@@ -102,6 +102,16 @@
             "wrapper_script": "curl_ff100"
         },
         {
+            "name": "ff102",
+            "browser": {
+                "name": "firefox",
+                "version": "102.0",
+                "os": "win10"
+            },
+            "binary": "curl-impersonate-ff",
+            "wrapper_script": "curl_ff102"
+        },
+        {
             "name": "safari15_3",
             "browser": {
                 "name": "safari",
