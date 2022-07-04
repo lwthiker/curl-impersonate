@@ -129,3 +129,8 @@ Other files of interest:
 If you'd like to help, please check out the [open issues](https://github.com/lwthiker/curl-impersonate/issues). You can open a pull request with your changes.
 
 This repository contains the build process for `curl-impersonate`. The actual patches to `curl` are maintained in a [separate repository](https://github.com/lwthiker/curl) forked from the upstream curl. The changes are maintained in the [impersonate-firefox](https://github.com/lwthiker/curl/tree/impersonate-firefox)  and [impersonate-chrome](https://github.com/lwthiker/curl/tree/impersonate-chrome) branches.
+
+## Sponsors
+<a href="https://serpapi.com/">
+  <img src="https://i.imgur.com/CBOSxrm.png" alt="Logo"  width="165px" height="65px">
+</a>
