@@ -2,6 +2,7 @@ import os
 import io
 import re
 import sys
+import random
 import asyncio
 import logging
 import pathlib
@@ -131,7 +132,11 @@ class TestImpersonation:
 
     TEST_URLS = [
         "https://www.wikimedia.org",
-        "https://www.wikipedia.org"
+        "https://www.wikipedia.org",
+        "https://www.mozilla.org/en-US",
+        "https://www.apache.org",
+        "https://www.kernel.org",
+        "https://git-scm.com"
     ]
 
     # List of binaries and their expected signatures
@@ -144,6 +149,7 @@ class TestImpersonation:
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
         ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
         ("curl_safari15_3", None, None, "safari_15.3_macos11.6.4"),
+        ("curl_safari15_5", None, None, "safari_15.5_macos12.4"),
         ("curl_ff91esr", None, None, "firefox_91.6.0esr_win10"),
         ("curl_ff95", None, None, "firefox_95.0.2_win10"),
         ("curl_ff98", None, None, "firefox_98.0_win10"),
@@ -212,6 +218,14 @@ class TestImpersonation:
         (
             "minicurl",
             {
+                "CURL_IMPERSONATE": "safari15_5"
+            },
+            "libcurl-impersonate-chrome",
+            "safari_15.5_macos12.4"
+        ),
+        (
+            "minicurl",
+            {
                 "CURL_IMPERSONATE": "ff91esr"
             },
             "libcurl-impersonate-ff",
@@ -250,6 +264,11 @@ class TestImpersonation:
             "firefox_102.0_win10"
         )
     ]
+
+    @pytest.fixture
+    def test_urls(self):
+        # Shuffle TEST_URLS randomly
+        return random.sample(self.TEST_URLS, k=len(self.TEST_URLS))
 
     @pytest.fixture
     def tcpdump(self, pytestconfig):
@@ -368,7 +387,7 @@ class TestImpersonation:
         args.extend(urls)
 
         curl = subprocess.Popen(args, env=env)
-        return curl.wait(timeout=10)
+        return curl.wait(timeout=15)
 
     def _extract_client_hello(self, pcap: bytes) -> List[bytes]:
         """Find and return the Client Hello TLS record from a pcap.
@@ -448,7 +467,8 @@ class TestImpersonation:
                               env_vars,
                               ld_preload,
                               browser_signatures,
-                              expected_signature):
+                              expected_signature,
+                              test_urls):
         """
         Check that curl's TLS signature is identical to that of a
         real browser.
@@ -471,10 +491,11 @@ class TestImpersonation:
                 pytestconfig.getoption("install_dir"), "lib", ld_preload
             ))
 
+        test_urls = test_urls[0:2]
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=None,
-                             urls=self.TEST_URLS)
+                             urls=test_urls)
         assert ret == 0
 
         try:
@@ -494,7 +515,7 @@ class TestImpersonation:
 
         client_hellos = self._extract_client_hello(pcap)
         # A client hello message for each URL
-        assert len(client_hellos) == len(self.TEST_URLS)
+        assert len(client_hellos) == len(test_urls)
 
         logging.debug(f"Found {len(client_hellos)} Client Hello messages, "
                       f"comparing to signature '{expected_signature}'")
@@ -572,7 +593,8 @@ class TestImpersonation:
                               curl_binary,
                               env_vars,
                               ld_preload,
-                              expected_signature):
+                              expected_signature,
+                              test_urls):
         """
         Ensure the output of curl-impersonate is correct, i.e. that compressed
         responses are decoded correctly.
@@ -595,9 +617,14 @@ class TestImpersonation:
         ret = self._run_curl(curl_binary,
                              env_vars=env_vars,
                              extra_args=None,
-                             urls=[self.TEST_URLS[0]],
+                             urls=[test_urls[0]],
                              output=output)
         assert ret == 0
 
         with open(output, "r") as f:
-            assert "<!DOCTYPE html>" in f.read()
+            body = f.read()
+            assert (
+                "<!DOCTYPE html>" in body or
+                "<html>" in body or
+                "<!doctype html>" in body
+            )
