@@ -150,6 +150,7 @@ class TestImpersonation:
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
         ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
         ("curl_safari15_3", None, None, "safari_15.3_macos11.6.4"),
+        ("curl_safari15_5", None, None, "safari_15.5_macos12.4"),
         ("curl_ff91esr", None, None, "firefox_91.6.0esr_win10"),
         ("curl_ff95", None, None, "firefox_95.0.2_win10"),
         ("curl_ff98", None, None, "firefox_98.0_win10"),
@@ -214,6 +215,14 @@ class TestImpersonation:
             },
             "libcurl-impersonate-chrome",
             "safari_15.3_macos11.6.4"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "safari15_5"
+            },
+            "libcurl-impersonate-chrome",
+            "safari_15.5_macos12.4"
         ),
         (
             "minicurl",

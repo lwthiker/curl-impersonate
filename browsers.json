@@ -120,6 +120,16 @@
             },
             "binary": "curl-impersonate-chrome",
             "wrapper_script": "curl_safari15_3"
+        },
+        {
+            "name": "safari15_5",
+            "browser": {
+                "name": "safari",
+                "version": "15.5",
+                "os": "macos12.4"
+            },
+            "binary": "curl-impersonate-chrome",
+            "wrapper_script": "curl_safari15_5"
         }
     ]
 }
