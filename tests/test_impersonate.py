@@ -133,7 +133,6 @@ class TestImpersonation:
     TEST_URLS = [
         "https://www.wikimedia.org",
         "https://www.wikipedia.org",
-        "https://www.archive.org",
         "https://www.mozilla.org/en-US",
         "https://www.apache.org",
         "https://www.kernel.org",
