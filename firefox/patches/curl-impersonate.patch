@@ -1246,10 +1246,10 @@ index 8ac15d407..68d01b219 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index 397ba71b1..d2a8fc1f2 100644
+index 397ba71b1..e7fe93925 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
-@@ -74,7 +74,107 @@ if test "x$OPT_NSS" != xno; then
+@@ -74,7 +74,123 @@ if test "x$OPT_NSS" != xno; then
        # Without pkg-config, we'll kludge in some defaults
        AC_MSG_WARN([Using hard-wired libraries and compilation flags for NSS.])
        addld="-L$OPT_NSS/lib"
@@ -1327,38 +1327,54 @@ index 397ba71b1..d2a8fc1f2 100644
 +      # at runtime using dlopen. If it's not in a path findable by dlopen
 +      # we have to add that path explicitly using -rpath so it may find it.
 +      # On Ubuntu and Mac M1 it is in a non-standard location.
-+      AC_MSG_CHECKING([if libnssckbi is in a non-standard location])
-+      case $host_os in
-+        linux*)
-+          search_paths="/usr/lib/$host /usr/lib/$host/nss"
-+          search_paths="$search_paths /usr/lib/$host_cpu-$host_os"
-+          search_paths="$search_paths /usr/lib/$host_cpu-$host_os/nss"
-+          search_ext="so"
-+          ;;
-+        darwin*)
-+          search_paths="/opt/homebrew/lib"
-+          search_ext="dylib"
-+          ;;
-+      esac
++      AC_ARG_WITH(libnssckbi,
++        [AS_HELP_STRING([--with-libnssckbi=DIRECTORY],
++                       [Path where libnssckbi can be found when using NSS])],
++        [AS_IF(
++          [test x"$withval" = xyes],
++          [nssckbi_path="check"],
++          [nssckbi_path="$withval"])],
++        [nssckbi_path="check"])
 +
-+      found="no"
-+      for path in $search_paths; do
-+        if test -f "$path/libnssckbi.$search_ext"; then
-+          AC_MSG_RESULT([$path])
-+          addld="$addld -Wl,-rpath,$path"
-+          found="yes"
-+          break
-+        fi
-+      done
++      AS_IF(
++        [test "x$nssckbi_path" = xno],
++        [],
++        [test "x$nssckbi_path" != xcheck],
++        [addld="$addld -Wl,-rpath,$nssckbi_path"],
++        [
++          AC_MSG_CHECKING([if libnssckbi is in a non-standard location])
++          case $host_os in
++            linux*)
++              search_paths="/usr/lib/$host /usr/lib/$host/nss"
++              search_paths="$search_paths /usr/lib/$host_cpu-$host_os"
++              search_paths="$search_paths /usr/lib/$host_cpu-$host_os/nss"
++              search_ext="so"
++              ;;
++            darwin*)
++              search_paths="/opt/homebrew/lib"
++              search_ext="dylib"
++              ;;
++          esac
 +
-+      if test "$found" = "no"; then
-+        AC_MSG_RESULT([no])
-+      fi
++          found="no"
++          for path in $search_paths; do
++            if test -f "$path/libnssckbi.$search_ext"; then
++              AC_MSG_RESULT([$path])
++              addld="$addld -Wl,-rpath,$path"
++              found="yes"
++              break
++            fi
++          done
++
++          if test "$found" = "no"; then
++            AC_MSG_RESULT([no])
++          fi
++        ])
 +
        addcflags="-I$OPT_NSS/include"
        version="unknown"
        nssprefix=$OPT_NSS
-@@ -91,7 +191,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -91,7 +207,7 @@ if test "x$OPT_NSS" != xno; then
      fi
  
      dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
@@ -1367,7 +1383,7 @@ index 397ba71b1..d2a8fc1f2 100644
       [
       AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
       AC_SUBST(USE_NSS, [1])
-@@ -101,9 +201,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -101,9 +217,7 @@ if test "x$OPT_NSS" != xno; then
       test nss != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
       ],
       [
