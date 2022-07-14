@@ -90,7 +90,7 @@ jobs:
           cd zlib-1.2.12
           CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
           make
-          make intsall
+          make install
           # Make sure curl will link with libz.so.1 and not libz.so
           rm -f ${{ runner.temp }}/zlib/lib/libz.so
 
