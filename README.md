@@ -1,28 +1,32 @@
-# curl-impersonate
+# curl-impersonate ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari")
 [![Build and test](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-make.yml/badge.svg)](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-make.yml)
 [![Docker images](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-docker.yml/badge.svg)](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-docker.yml)
 
-A special compilation of [curl](https://github.com/curl/curl) that makes it impersonate real browsers. It can impersonate the four major browsers: Chrome, Edge, Safari & Firefox. This curl binary is able to perform a TLS handshake that is identical to that of a real browser.
+A special build of [curl](https://github.com/curl/curl) that can impersonate the four major browsers: Chrome, Edge, Safari & Firefox. curl-impersonate is able to perform TLS and HTTP handshakes that are identical to that of a real browser.
+
+curl-impersonate can be used either as a command line tool, similar to the regular curl, or as a library that can be integrated instead of the regular libcurl. See [Usage](#Basic-usage) below.
 
 ## Why?
-When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The Client Hello message that curl produces differs drastically from that of a real browser. Compare the following Wireshark capture. Left is a regular curl, right is Firefox.
-![curl-ff-before](https://user-images.githubusercontent.com/99899249/154530138-1cba5a23-53d7-4f1a-adc4-7c087e61deb5.png)
+When you use an HTTP client with a TLS website, it first performs a TLS handshake. The first message of that handshake is called Client Hello. The Client Hello message that most HTTP clients and libraries produce differs drastically from that of a real browser.
 
-Some web services therefore use the TLS handshake to fingerprint which HTTP client is accessing them. Notably, some bot protection platforms use this to identify curl and block it. With the modified curl in this repository, the Client Hello message looks *exactly* like that of a real browser. This tricks TLS fingerprinters to think that it is a real browser that is accessing them.
+If the server uses HTTP/2, then in addition to the TLS handshake there is also an HTTP/2 handshake where various settings are exchanged. The settings that most HTTP clients and libraries use differ as well from those of any real browsers.
+
+For these reasons, some web services use the TLS and HTTP handshakes to fingerprint which client is accessing them, and then present different content for different clients. These methods are known as [TLS fingerprinting](https://lwthiker.com/networks/2022/06/17/tls-fingerprinting.html) and [HTTP/2 fingerprinting](https://lwthiker.com/networks/2022/06/17/http2-fingerprinting.html) respectively. Their widespread use has led to the web becoming less open, less private and much more restrictive towards specific web clients
+
+With the modified curl in this repository, the TLS and HTTP handshakes look *exactly* like those of a real browser.
 
 ## How?
 
-The modifications that were needed to make this work:
-* Compiling curl with nss, the TLS library that Firefox uses, instead of OpenSSL. For the Chrome version, compiling with BoringSSL.
+To make this work, `curl` was patched significantly to resemble a browser. Specifically, The modifications that were needed to make this work:
+* Compiling curl with nss, the TLS library that Firefox uses, instead of OpenSSL. For the Chrome version, compiling with BoringSSL, Google's TLS library.
 * Modifying the way curl configures various TLS extensions and SSL options.
 * Adding support for new TLS extensions.
+* Changing the settings that curl uses for its HTTP/2 connections.
 * Running curl with some non-default flags, for example `--ciphers`, `--curves` and some `-H` headers.
 
-The resulting curl looks, from a network perspective, identical to a real browser. Compare: (left is `curl-impersonate`, right is Firefox):
+The resulting curl looks, from a network perspective, identical to a real browser.
 
-![curl-ff-after](https://user-images.githubusercontent.com/99899249/154556768-81bb9dbe-5c3d-4a1c-a0ab-f10a3cd69d9a.png)
-
-Read the full description in the blog post: [part a](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html), [part b](https://lwthiker.com/reversing/2022/02/20/impersonating-chrome-too.html).
+Read the full technical description in the blog posts: [part a](https://lwthiker.com/reversing/2022/02/17/curl-impersonate-firefox.html), [part b](https://lwthiker.com/reversing/2022/02/20/impersonating-chrome-too.html).
 
 ## Supported browsers
 The following browsers can be impersonated.
@@ -52,7 +56,9 @@ curl_chrome101 https://www.wikipedia.org
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
-See [Advanced usage](#Advanced-usage) for more options.
+Please note that the wrapper scripts use a default set of HTTP headers. If you want to change these headers, you may want to modify the wrapper scripts to fit your own purpose.
+
+See [Advanced usage](#Advanced-usage) for more options, including using `libcurl-impersonate` as a library.
 
 ## Installation
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
@@ -124,7 +130,7 @@ The layout is similar for both. For example, the Firefox directory contains:
 * [curl-impersonate.patch](firefox/patches/curl-impersonate.patch) - The main patch that makes curl use the same TLS extensions as Firefox. Also makes curl compile statically with libnghttp2 and libnss.
 
 Other files of interest:
-* [tests/signatures.yaml](tests/signatures.yaml) - YAML database of known browser signatures that can be impersonated.
+* [tests/signatures](tests/signatures) - YAML database of known browser signatures that can be impersonated.
 
 ## Contributing
 If you'd like to help, please check out the [open issues](https://github.com/lwthiker/curl-impersonate/issues). You can open a pull request with your changes.
@@ -132,6 +138,7 @@ If you'd like to help, please check out the [open issues](https://github.com/lwt
 This repository contains the build process for `curl-impersonate`. The actual patches to `curl` are maintained in a [separate repository](https://github.com/lwthiker/curl) forked from the upstream curl. The changes are maintained in the [impersonate-firefox](https://github.com/lwthiker/curl/tree/impersonate-firefox)  and [impersonate-chrome](https://github.com/lwthiker/curl/tree/impersonate-chrome) branches.
 
 ## Sponsors
+Sponsors help keep this project open and maintained. If you wish to become a sponsor, please contact me directly at: lwt at lwthiker dot com.
 <a href="https://serpapi.com/">
   <img src="https://i.imgur.com/CBOSxrm.png" alt="Logo"  width="165px" height="65px">
 </a>
