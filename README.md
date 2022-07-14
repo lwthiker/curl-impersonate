@@ -139,6 +139,7 @@ This repository contains the build process for `curl-impersonate`. The actual pa
 
 ## Sponsors
 Sponsors help keep this project open and maintained. If you wish to become a sponsor, please contact me directly at: lwt at lwthiker dot com.
+
 <a href="https://serpapi.com/">
   <img src="https://i.imgur.com/CBOSxrm.png" alt="Logo"  width="165px" height="65px">
 </a>
