@@ -53,6 +53,11 @@ jobs:
           # More dependencies for the tests
           sudo apt-get install tcpdump nghttp2-server libnss3
 
+      - name: Install Ubuntu dependencies (aarch64)
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
       - name: Install macOS dependencies
         if: matrix.os == 'macos-11'
         run: |
