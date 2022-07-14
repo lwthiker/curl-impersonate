@@ -29,11 +29,6 @@ git clone https://github.com/lwthiker/curl-impersonate.git
 cd curl-impersonate
 ```
 
-Generate the configure script:
-```
-autoconf
-```
-
 Configure and compile:
 ```
 mkdir build && cd build
@@ -100,11 +95,6 @@ brew install sqlite nss
 pip3 install gyp-next
 # For the Chrome version only
 brew install go
-```
-
-Generate the configure script:
-```
-autoconf
 ```
 
 Configure and compile:

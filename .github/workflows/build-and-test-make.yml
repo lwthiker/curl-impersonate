@@ -21,15 +21,23 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-11]
+        arch: [x86_64]
         include:
           - os: ubuntu-20.04
+            arch: x86_64
+            host: x86_64-linux-gnu
             capture_interface: eth0
             make: make
-            release_name: x86_64-linux-gnu
+          - os: ubuntu-20.04
+            arch: aarch64
+            host: aarch64-linux-gnu
+            capture_interface: eth0
+            make: make
           - os: macos-11
+            arch: x86_64
+            host: x86_64-macos
             capture_interface: en0
             make: gmake
-            release_name: x86_64-macos
     steps:
       - uses: actions/setup-python@v3
 
@@ -69,11 +77,36 @@ jobs:
         run: |
           pip3 install -r tests/requirements.txt
 
-      - name: Run configure script
+      # When cross compiling we need to build zlib first.
+      - name: Build zlib
         run: |
-          autoconf
+          curl -LO https://zlib.net/zlib-1.2.12.tar.gz
+          tar xf zlib-1.2.12.tar.gz
+          cd zlib-1.2.12
+          CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
+          make
+          # Make sure curl will link with libz.so.1 and not libz.so
+          rm -f libz.so
+
+      - name: Run configure script
+        if: matrix.arch == 'x86_64'
+        run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install
+
+      # When cross compiling a more complicated configuration is needed, since
+      # curl's configure script can't figure out where some files and libraries
+      # are located. The locations used here are the ones used by Ubuntu.
+      - name: Run configure script (cross compiling)
+        if: matrix.arch != 'x86_64'
+        run: |
+          mkdir ${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install \
+                      --host=${{ matrix.arch }} \
+                      --with-zlib=${{ runner.temp }}/zlib \
+                      --with-ca-path=/etc/ssl/certs \
+                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
 
       # Cache the build of BoringSSL, which is the longest part of the build
       # We must cache the .zip as well, otherwise the Makefile will
@@ -83,14 +116,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: boringssl.zip
-          key: ${{ runner.os }}-boring-source-${{ env.BORING_SSL_COMMIT }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-boring-source-${{ env.BORING_SSL_COMMIT }}
 
       - name: Cache BoringSSL build
         id: cache-boringssl
         uses: actions/cache@v3
         with:
           path: boringssl/build
-          key: ${{ runner.os }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
 
       # Trick the Makefile into skipping the BoringSSL build step
       # if it was found in the cache. See Makefile.in
@@ -114,14 +147,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.NSS_VERSION }}.tar.gz
-          key: ${{ runner.os }}-nss-source-${{ env.NSS_VERSION }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-nss-source-${{ env.NSS_VERSION }}
 
       - name: Cache NSS build
         id: cache-nss
         uses: actions/cache@v3
         with:
           path: ${{ env.NSS_VERSION }}/dist
-          key: ${{ runner.os }}-nss-build-${{ env.NSS_VERSION }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-nss-build-${{ env.NSS_VERSION }}
 
       # Trick the Makefile into skipping the NSS build step
       # if it was found in the cache.
@@ -138,11 +171,15 @@ jobs:
           ${{ matrix.make }} firefox-install
     
       - name: Prepare the tests
+        if: matrix.arch == 'x86_64'
         run: |
           # Compile 'minicurl' which is used by the tests
           gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
 
+      # For now we can only run the tests when not cross compiling, since the
+      # tests run the curl-impersonate binary locally.
       - name: Run the tests
+        if: matrix.arch == 'x86_64'
         run: |
           cd tests
           # sudo is needed for capturing packets
@@ -154,18 +191,38 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
             cd ${{ runner.temp }}/install/lib
-            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz libcurl-impersonate*
-            echo "release_file_lib=${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
+            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz libcurl-impersonate*
+            echo "release_file_lib=${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
 
-       # Recompile curl-impersonate statically.
-      - name: Recompile statically
+      - name: Clean build
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           ${{ matrix.make }} chrome-clean
           ${{ matrix.make }} firefox-clean
           rm -Rf ${{ runner.temp }}/install
           mkdir ${{ runner.temp }}/install
+
+       # Recompile curl-impersonate statically when doing a release.
+      - name: Reconfigure statically
+        if: startsWith(github.ref, 'refs/tags/') && matrix.arch == 'x86_64'
+        run: |
           ./configure --prefix=${{ runner.temp }}/install --enable-static
+
+      - name: Reconfigure statically (cross compiling)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.arch != 'x86_64'
+        run: |
+          mkdir ${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install \
+                      --enable-static \
+                      --host=${{ matrix.arch }} \
+                      --with-zlib=${{ runner.temp }}/zlib \
+                      --with-ca-path=/etc/ssl/certs \
+                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
+
+      - name: Rebuild statically
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
           ${{ matrix.make }} chrome-build
           ${{ matrix.make }} chrome-checkbuild
           ${{ matrix.make }} chrome-install-strip
@@ -177,8 +234,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd ${{ runner.temp }}/install/bin
-          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
-          echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.release_name }}.tar.gz" >> $GITHUB_ENV
+          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
+          echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload release files
         uses: softprops/action-gh-release@v1

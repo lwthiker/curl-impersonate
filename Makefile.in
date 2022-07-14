@@ -5,8 +5,8 @@ SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -euc
 .DELETE_ON_ERROR:
-MAKEFLAGS += --warn-undefined-variables
-MAKEFLAGS += --no-builtin-rules
+# MAKEFLAGS += --warn-undefined-variables
+# MAKEFLAGS += --no-builtin-rules
 
 BROTLI_VERSION := 1.0.9
  # In case this is changed, update build-and-test-make.yml as well
@@ -32,10 +32,30 @@ firefox_libs := $(brotli_static_libs) $(nss_static_libs) $(nghttp2_static_libs)
 # Dependencies needed to compile the Chrome version
 chrome_libs := $(brotli_static_libs) $(boringssl_static_libs) $(nghttp2_static_libs)
 
-# To be set by the configure script
+# The following variables will be set by the configure script.
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 srcdir = @abs_srcdir@
+host = @host@
+host_alias = @host_alias@
+host_cpu = @host_cpu@
+host_os = @host_os@
+build = @build@
+# Whether to link curl-impersonate with libcurl-impersonate statically.
+static_build = @static_build@
+# Whether the user provided a specific find for zlib
+with_zlib = @with_zlib@
+# Path to be passed to curl's --with-ca-bundle configure option.
+with_ca_bundle = @with_ca_bundle@
+# Path to be passed to curl's --with-ca-path configure option.
+with_ca_path = @with_ca_path@
+# Path to be passed to curl's --with-libnssckbi configure option (an option
+# added for curl-impersonate).
+with_libnssckbi = @with_libnssckbi@
+
+CC = @CC@
+CXX = @CXX@
+STRIP = @STRIP@
 
 # Auto-generate Makefile help.
 # Borrowed from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -51,6 +71,7 @@ firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-imp
 .PHONY: firefox-build
 
 firefox-checkbuild: ## Run basic checks on the built binary
+ifeq ($(host),$(build))
 	cd $(CURL_VERSION)
 	# Make sure all needed features were compiled in
 	./src/curl-impersonate-ff -V | grep -q zlib
@@ -58,6 +79,9 @@ firefox-checkbuild: ## Run basic checks on the built binary
 	./src/curl-impersonate-ff -V | grep -q nghttp2
 	./src/curl-impersonate-ff -V | grep -q NSS
 	$(info Build OK)
+else
+	$(info Cross compiling, skipping checkbuild)
+endif
 .PHONY: firefox-checkbuild
 
 firefox-install: ## Install the Firefox version of curl-impersonate after build
@@ -72,7 +96,7 @@ firefox-install-strip: ## Like 'firefox-install', but strip binaries for smaller
 	$(MAKE) install-exec MAKEFLAGS=
 	# We could have used 'install-strip' but then the docs would be installed as well.
 	# Instead strip manually.
-	strip @bindir@/curl-impersonate-ff
+	$(STRIP) @bindir@/curl-impersonate-ff
 	# Wrapper scripts for the Firefox version (e.g. 'curl_ff98')
 	install $(srcdir)/firefox/curl_ff* @bindir@
 .PHONY: firefox-install-strip
@@ -96,6 +120,7 @@ chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impers
 .PHONY: chrome-build
 
 chrome-checkbuild: ## Run basic checks on the built binary
+ifeq ($(host),$(build))
 	cd $(CURL_VERSION)
 	# Make sure all needed features were compiled in
 	./src/curl-impersonate-chrome -V | grep -q zlib
@@ -103,6 +128,9 @@ chrome-checkbuild: ## Run basic checks on the built binary
 	./src/curl-impersonate-chrome -V | grep -q nghttp2
 	./src/curl-impersonate-chrome -V | grep -q BoringSSL
 	$(info Build OK)
+else
+	$(info Cross compiling, skipping checkbuild)
+endif
 .PHONY: chrome-checkbuild
 
 chrome-install: ## Install the Chrome version of curl-impersonate after build
@@ -117,7 +145,7 @@ chrome-install-strip: ## Like 'chrome-install', but strip binaries for smaller s
 	$(MAKE) install-exec MAKEFLAGS=
 	# We could have used 'install-strip' but then the docs would be installed as well.
 	# Instead strip manually.
-	strip @bindir@/curl-impersonate-chrome
+	$(STRIP) @bindir@/curl-impersonate-chrome
 	# Wrapper scripts for the Chrome version (e.g. 'curl_chrome99')
 	install $(srcdir)/chrome/curl_chrome* $(srcdir)/chrome/curl_edge* $(srcdir)/chrome/curl_safari* @bindir@
 .PHONY: chrome-install-strip
@@ -150,10 +178,29 @@ $(brotli_static_libs): brotli-$(BROTLI_VERSION).tar.gz
 	cd brotli-$(BROTLI_VERSION)
 	mkdir -p out
 	cd out
+
+	# Convert autoconf style os name to CMake style os name.
+	case $(host_os) in           \
+	  linux*)                    \
+	    system_name=Linux        \
+	    ;;                       \
+	  darwin*)                   \
+	    system_name=Darwin       \
+	    ;;                       \
+	  *)                         \
+	    system_name=$(host_os)   \
+	    ;;                       \
+	esac
+
 	@cmake@ -DCMAKE_BUILD_TYPE=Release \
-			-DCMAKE_INSTALL_PREFIX=./installed \
-			-DCMAKE_INSTALL_LIBDIR=lib \
-			..
+	        -DCMAKE_INSTALL_PREFIX=./installed \
+	        -DCMAKE_INSTALL_LIBDIR=lib \
+	        -DCMAKE_CXX_COMPILER=$(CXX) \
+	        -DCMAKE_C_COMPILER=$(CC) \
+	        -DCMAKE_SYSTEM_NAME=$$system_name \
+	        -DCMAKE_SYSTEM_PROCESSOR=$(host_cpu) \
+	        ..
+
 	@cmake@ --build . --config Release --target install
 
 
@@ -162,8 +209,43 @@ $(NSS_VERSION).tar.gz:
 
 $(nss_static_libs): $(NSS_VERSION).tar.gz
 	tar xf $(NSS_VERSION).tar.gz
+
+ifeq ($(host),$(build))
+	# Native build, use NSS' build script.
 	cd $(NSS_VERSION)/nss
 	./build.sh -o --disable-tests --static --python=python3
+else
+	# We are cross compiling.
+	# Cross compiling NSS is not supported by its build script and is poorly
+	# documented. We need to compile NSPR manually and only then compile nss.
+	case $(host_cpu) in                        \
+	  *64*)                                    \
+	    use_64="1";                            \
+	    nspr_configure_flags="--enable-64bit"; \
+	    ;;                                     \
+	  *)                                       \
+	    use_64="0";                            \
+	    ;;                                     \
+	esac
+
+	# Cross-compile nspr separately
+	cd $(NSS_VERSION)/nspr
+	./configure --prefix=$(nss_install_dir) \
+	            --disable-debug --enable-optimize \
+	            --target=$(host_alias) \
+	            $$nspr_configure_flags
+	$(MAKE) MAKEFLAGS=
+	$(MAKE) install MAKEFLAGS=
+
+	# Now we can run ./build.sh with the already built nspr
+	cd ../nss
+	CC=$(CC) CXX=$(CXX) CCC=$(CXX) \
+	   ./build.sh -o --disable-tests --static --python=python3 \
+	   --with-nspr=$(nss_install_dir)/include/nspr:$(nss_install_dir)/lib \
+	   --target=$(host_cpu) \
+	   -Duse_system_zlib=0 \
+	   -Dsign_libs=0
+endif
 	# Hack for macOS: Remove dynamic libraries to force the linker to use the
 	# static ones when linking curl.
 	rm -Rf $(nss_install_dir)/lib/*.dylib
@@ -184,6 +266,20 @@ boringssl/.patched: $(srcdir)/chrome/patches/boringssl-*.patch
 $(boringssl_static_libs): boringssl.zip boringssl/.patched
 	mkdir -p $(boringssl_install_dir)
 	cd $(boringssl_install_dir)
+
+	# Convert autoconf style os name to CMake style os name.
+	case $(host_os) in      \
+	  linux*)               \
+	    system_name=Linux   \
+	    ;;                  \
+	  darwin*)              \
+	    system_name=Darwin  \
+	    ;;                  \
+	  *)                    \
+	    system_name=Linux   \
+	    ;;                  \
+	esac
+
 	# The extra CMAKE_C_FLAGS are needed because otherwise boringssl fails to
 	# compile in release mode on some systems with gcc 12 (e.g. Fedora).
 	# In addition, guard these options with -Wno-unknown-warning-option to
@@ -191,6 +287,10 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 	@cmake@ -DCMAKE_BUILD_TYPE=Release \
 			-DCMAKE_POSITION_INDEPENDENT_CODE=on \
 			-DCMAKE_C_FLAGS="-Wno-unknown-warning-option -Wno-stringop-overflow -Wno-array-bounds" \
+			-DCMAKE_CXX_COMPILER=$(CXX) \
+			-DCMAKE_C_COMPILER=$(CC) \
+			-DCMAKE_SYSTEM_NAME=$$system_name \
+			-DCMAKE_SYSTEM_PROCESSOR=$(host_cpu) \
 			-GNinja \
 			..
 	@ninja@
@@ -208,10 +308,20 @@ $(NGHTTP2_VERSION).tar.bz2:
 $(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2
 	tar -xf $(NGHTTP2_VERSION).tar.bz2
 	cd $(NGHTTP2_VERSION)
-	./configure --prefix=$(nghttp2_install_dir) \
-				--with-pic \
-				--disable-shared \
-				--disable-python-bindings
+
+	# Set up the configure flags to nghttp2.
+	# If the user provided the --host flag to our configure script
+	# (for cross compilation), then pass it on to nghttp2.
+	{ \
+	  config_flags="--prefix=$(nghttp2_install_dir)"; \
+	  config_flags="$$config_flags --with-pic --enable-lib-only"; \
+	  config_flags="$$config_flags --disable-shared --disable-python-bindings"; \
+	  if test -n "$(host_alias)"; then \
+	    config_flags="$$config_flags --host=$(host_alias)"; \
+	  fi; \
+	}
+
+	./configure $$config_flags
 	$(MAKE) MAKEFLAGS=
 	$(MAKE) install MAKEFLAGS=
 
@@ -244,13 +354,35 @@ $(CURL_VERSION)/.patched-chrome: $(srcdir)/chrome/patches/curl-*.patch
 # This is a small hack that flags that curl was patched and configured in the "firefox" version
 $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)/.patched-ff
 	cd $(CURL_VERSION)
-	./configure @curl_configure_options@ \
-				--prefix=@prefix@ \
-				--with-nghttp2=$(nghttp2_install_dir) \
-				--with-brotli=$(brotli_install_dir) \
-				--with-nss=$(nss_install_dir) \
-				USE_CURL_SSLKEYLOGFILE=true \
-				CFLAGS="-I$(nss_install_dir)/../public/nss -I$(nss_install_dir)/include/nspr"
+
+	# Set up the configure flags to curl.
+	# If the user provided the --host flag to our configure script
+	# (for cross compilation), then pass it on to curl.
+	{ \
+	  config_flags="--prefix=@prefix@"; \
+	  config_flags+=" --with-nghttp2=$(nghttp2_install_dir)"; \
+	  config_flags+=" --with-brotli=$(brotli_install_dir)"; \
+	  config_flags+=" --with-nss=$(nss_install_dir)"; \
+	  config_flags+=" USE_CURL_SSLKEYLOGFILE=true"; \
+	  if test "$(static_build)" = "yes"; then \
+	    config_flags+=" --enable-static --disable-shared"; \
+	  fi; \
+	  if test -n "$(host_alias)"; then \
+	    config_flags+=" --host=$(host_alias)"; \
+	  fi; \
+	  if test -n "$(with_zlib)"; then \
+	    config_flags+=" --with-zlib=$(with_zlib)"; \
+	  fi; \
+	  if test -n "$(with_libnssckbi)"; then \
+		config_flags+=" --with-libnssckbi=$(with_libnssckbi)"; \
+	  fi; \
+	  add_cflags="-I$(nss_install_dir)/../public/nss"; \
+	  add_cflags+=" -I$(nss_install_dir)/include/nspr"; \
+	}
+
+	echo "Configuring curl with: $$config_flags"
+
+	./configure $$config_flags CFLAGS="$$add_cflags"
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=
 	touch .firefox
@@ -260,14 +392,39 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 # This is a small hack that flags that curl was patched and configured in the "chrome" version
 $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.patched-chrome
 	cd $(CURL_VERSION)
-	./configure @curl_configure_options@ \
-				--prefix=@prefix@ \
-				--with-nghttp2=$(nghttp2_install_dir) \
-				--with-brotli=$(brotli_install_dir) \
-				--with-openssl=$(boringssl_install_dir) \
-				USE_CURL_SSLKEYLOGFILE=true \
-				LIBS="-pthread" \
-				CFLAGS="-I$(boringssl_install_dir)"
+
+	# Set up the configure flags to curl.
+	# If the user provided the --host flag to our configure script
+	# (for cross compilation), then pass it on to curl.
+	{ \
+	  config_flags="--prefix=@prefix@"; \
+	  config_flags="$$config_flags --with-nghttp2=$(nghttp2_install_dir)"; \
+	  config_flags="$$config_flags --with-brotli=$(brotli_install_dir)"; \
+	  config_flags="$$config_flags --with-openssl=$(boringssl_install_dir)"; \
+	  config_flags="$$config_flags USE_CURL_SSLKEYLOGFILE=true"; \
+	  if test "$(static_build)" = "yes"; then \
+	    config_flags="$$config_flags --enable-static --disable-shared";
+	  fi; \
+	  if test -n "$(host_alias)"; then \
+	    config_flags="$$config_flags --host=$(host_alias)"; \
+	  fi; \
+	  if test -n "$(with_zlib)"; then \
+	    config_flags="$$config_flags --with-zlib=$(with_zlib)"; \
+	  fi; \
+	  if test -n "$(with_ca_bundle)"; then \
+		config_flags="$$config_flags --with-ca-bundle=$(with_ca_bundle)"; \
+	  fi; \
+	  if test -n "$(with_ca_path)"; then \
+		config_flags="$$config_flags --with-ca-path=$(with_ca_path)"; \
+	  fi; \
+	  add_libs="-pthread"; \
+	  add_cflags="-I$(boringssl_install_dir)"; \
+	}
+
+	echo "Configuring curl with: $$config_flags"
+
+	./configure $$config_flags CFLAGS="$$add_cflags" LIBS="$$add_libs"
+
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=
 	touch .chrome
