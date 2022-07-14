@@ -372,6 +372,8 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	  fi; \
 	  if test -n "$(with_zlib)"; then \
 	    config_flags+=" --with-zlib=$(with_zlib)"; \
+	  else \
+	    config_flags+=" --with-zlib"; \
 	  fi; \
 	  if test -n "$(with_libnssckbi)"; then \
 		config_flags+=" --with-libnssckbi=$(with_libnssckbi)"; \
@@ -410,6 +412,8 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 	  fi; \
 	  if test -n "$(with_zlib)"; then \
 	    config_flags="$$config_flags --with-zlib=$(with_zlib)"; \
+	  else \
+	    config_flags+=" --with-zlib"; \
 	  fi; \
 	  if test -n "$(with_ca_bundle)"; then \
 		config_flags="$$config_flags --with-ca-bundle=$(with_ca_bundle)"; \

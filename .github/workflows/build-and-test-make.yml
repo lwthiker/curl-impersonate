@@ -90,8 +90,9 @@ jobs:
           cd zlib-1.2.12
           CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
           make
+          make intsall
           # Make sure curl will link with libz.so.1 and not libz.so
-          rm -f libz.so
+          rm -f ${{ runner.temp }}/zlib/lib/libz.so
 
       - name: Run configure script
         if: matrix.arch == 'x86_64'
