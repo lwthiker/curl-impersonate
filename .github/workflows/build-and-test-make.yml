@@ -107,7 +107,7 @@ jobs:
         run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install \
-                      --host=${{ matrix.arch }} \
+                      --host=${{ matrix.host }} \
                       --with-zlib=${{ runner.temp }}/zlib \
                       --with-ca-path=/etc/ssl/certs \
                       --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
@@ -219,7 +219,7 @@ jobs:
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install \
                       --enable-static \
-                      --host=${{ matrix.arch }} \
+                      --host=${{ matrix.host }} \
                       --with-zlib=${{ runner.temp }}/zlib \
                       --with-ca-path=/etc/ssl/certs \
                       --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \

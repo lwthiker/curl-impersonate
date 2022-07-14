@@ -257,7 +257,7 @@ boringssl.zip:
 
 # Patch boringssl and use a dummy '.patched' file to mark it patched
 boringssl/.patched: $(srcdir)/chrome/patches/boringssl-*.patch
-	unzip -o boringssl.zip
+	unzip -q -o boringssl.zip
 	mv boringssl-$(BORING_SSL_COMMIT) boringssl
 	cd boringssl/
 	for p in $^; do patch -p1 < $$p; done
