@@ -216,7 +216,6 @@ jobs:
       - name: Reconfigure statically (cross compiling)
         if: startsWith(github.ref, 'refs/tags/') && matrix.arch != 'x86_64'
         run: |
-          mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install \
                       --enable-static \
                       --host=${{ matrix.host }} \
