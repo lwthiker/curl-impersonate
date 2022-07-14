@@ -2,9 +2,10 @@
 
 This guide shows how to compile and install curl-impersonate and libcurl-impersonate from source.
 The build process takes care of downloading dependencies, patching them, compiling them and finally compiling curl itself with the needed patches.
-There are currently two build options depending on your use case:
-* Native build using Makefile
-* Docker container build
+There are currently three build options depending on your use case:
+* [Native build](#Native-build) using an autotools-based Makefile
+* [Cross compiling](#Cross-compiling) using an autotools-based Makefile
+* [Docker container build](#Docker-build)
 
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
@@ -124,6 +125,32 @@ curl: (60) Peer's Certificate issuer is not recognized
 Make sure that NSS is installed (see above).
 If the issue persists it might be that NSS is installed in a non-standard location on your system.
 Please open an issue in that case.
+
+## Cross compiling
+
+There is some basic support for cross compiling curl-impersonate.
+It is currently being used to build curl-impersonate for ARM64 (aarch64) systems from x86-64 systems.
+Cross compiling is similar to the usual build but a bit trickier:
+* You'd have to build zlib for the target architecture so that curl can link with it.
+* Some paths have to be specified manually since curl's own build system can't determine their location.
+
+An example build for aarch64 on Ubuntu x86_64:
+```
+sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+./configure --host=aarch64-linux-gnu \
+            --with-zlib=/path/to/compiled/zlib \
+            --with-ca-path=/etc/ssl/certs \
+            --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+            --with-libnssckbi=/usr/lib/aarch64-linux-gnu/nss
+
+make chrome-build
+make firefox-build
+```
+The flags mean as follows:
+`--with-zlib` is the location of a compiled zlib library for the target architecture.
+`--with-ca-path` and `--with-ca-bundle` will be passed to curl's configure script as is.
+`--with-libnssckbi` indicates the location of libnssckbi.so on the target system. This file contains the certificates needed by curl. This must be supplied if NSS is not installed in a standard location (i.e. not in `/usr/lib`).
 
 ## Docker build
 The Docker build is a bit more reproducible and serves as the reference implementation. It creates a Debian-based Docker image with the binaries.
