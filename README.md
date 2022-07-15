@@ -71,6 +71,11 @@ Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub r
 
 The pre-compiled binaries contain libcurl-impersonate and a statically compiled curl-impersonate for ease of use.
 
+The pre-compiled Linux binaries are built for Ubuntu systems. On other distributions if you have errors with certificate verification you may have to tell curl where to find the CA certificates. For example:
+```
+curl_chrome101 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
+```
+
 ### Building from source
 See [INSTALL.md](INSTALL.md).
 
