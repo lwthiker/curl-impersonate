@@ -67,6 +67,7 @@ There are two versions of `curl-impersonate` for technical reasons. The **chrome
 Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page. Before you use them you need to install nss (Firefox's TLS library):
 * Ubuntu - `sudo apt install libnss3`
 * Red Hat/Fedora/CentOS - `yum install nss nss-pem`
+* Archlinux - `pacman -S nss`
 * macOS - `brew install nss`
 
 The pre-compiled binaries contain libcurl-impersonate and a statically compiled curl-impersonate for ease of use.
@@ -92,8 +93,9 @@ docker run --rm lwthiker/curl-impersonate:0.5-chrome curl_chrome101 https://www.
 ```
 
 ### Distro packages
-
-AUR packages are available to Arch users: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
+AUR packages are available to Archlinux users:
+* Pre-compiled package: [curl-impersonate-bin](https://aur.archlinux.org/packages/curl-impersonate-bin), [libcurl-impersonate-bin](https://aur.archlinux.org/packages/libcurl-impersonate-bin).
+* Build from source code: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
 
 ## Advanced usage
 ### libcurl-impersonate
