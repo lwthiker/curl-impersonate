@@ -16,7 +16,7 @@ NSS_URL := https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_77_RTM/src/ns
 BORING_SSL_COMMIT := 3a667d10e94186fd503966f5638e134fe9fb4080
 NGHTTP2_VERSION := nghttp2-1.46.0
 NGHTTP2_URL := https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
-CURL_VERSION := curl-7.81.0
+CURL_VERSION := curl-7.84.0
 
 brotli_install_dir := $(abspath brotli-$(BROTLI_VERSION)/out/installed)
 brotli_static_libs := $(brotli_install_dir)/lib/libbrotlicommon-static.a $(brotli_install_dir)/lib/libbrotlidec-static.a
@@ -362,7 +362,7 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	  config_flags="--prefix=@prefix@"; \
 	  config_flags+=" --with-nghttp2=$(nghttp2_install_dir)"; \
 	  config_flags+=" --with-brotli=$(brotli_install_dir)"; \
-	  config_flags+=" --with-nss=$(nss_install_dir)"; \
+	  config_flags+=" --with-nss=$(nss_install_dir) --with-nss-deprecated"; \
 	  config_flags+=" USE_CURL_SSLKEYLOGFILE=true"; \
 	  if test "$(static_build)" = "yes"; then \
 	    config_flags+=" --enable-static --disable-shared"; \

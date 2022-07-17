@@ -63,7 +63,7 @@ RUN cd ${NGHTTP2_VERSION} && \
     make && make install
 
 # Download curl.
-ARG CURL_VERSION=curl-7.81.0
+ARG CURL_VERSION=curl-7.84.0
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
 RUN tar xf ${CURL_VERSION}.tar.xz
 
@@ -82,6 +82,7 @@ RUN cd ${CURL_VERSION} && \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
+                --with-nss-deprecated \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make && make install
@@ -108,6 +109,7 @@ RUN cd ${CURL_VERSION} && \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
+                --with-nss-deprecated \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make clean && make && make install
@@ -115,7 +117,7 @@ RUN cd ${CURL_VERSION} && \
 # Copy libcurl-impersonate and symbolic links
 RUN cp -d /build/install/lib/libcurl-impersonate* /build/out
 
-RUN ver=$(readlink -f curl-7.81.0/lib/.libs/libcurl-impersonate-ff.so | sed 's/.*so\.//') && \
+RUN ver=$(readlink -f ${CURL_VERSION}/lib/.libs/libcurl-impersonate-ff.so | sed 's/.*so\.//') && \
     major=$(echo -n $ver | cut -d'.' -f1) && \
     ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate.so.$ver" && \
     ln -s "libcurl-impersonate.so.$ver" "out/libcurl-impersonate.so" && \
