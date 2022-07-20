@@ -375,7 +375,7 @@ index c99f135ff..d70ff8c51 100644
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
 diff --git a/lib/h2h3.c b/lib/h2h3.c
-index 9453cf55b..2f2dbd544 100644
+index 9453cf55b..ba9433cb9 100644
 --- a/lib/h2h3.c
 +++ b/lib/h2h3.c
 @@ -43,7 +43,8 @@
@@ -388,6 +388,16 @@ index 9453cf55b..2f2dbd544 100644
  
  /* USHRT_MAX is 65535 == 0xffff */
  #define HEADER_OVERFLOW(x) \
+@@ -258,9 +259,6 @@ CURLcode Curl_pseudo_headers(struct Curl_easy *data,
+       nva[i].valuelen = (end - hdbuf);
+     }
+ 
+-    nva[i].value = hdbuf;
+-    nva[i].valuelen = (end - hdbuf);
+-
+     ++i;
+   }
+ 
 diff --git a/lib/http.c b/lib/http.c
 index 258722a60..b8990121d 100644
 --- a/lib/http.c

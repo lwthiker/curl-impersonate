@@ -481,7 +481,7 @@ index c99f135ff..f3ebffa3e 100644
  }
  #endif
 diff --git a/lib/h2h3.c b/lib/h2h3.c
-index 9453cf55b..cfedb3a46 100644
+index 9453cf55b..01f8918ea 100644
 --- a/lib/h2h3.c
 +++ b/lib/h2h3.c
 @@ -41,10 +41,6 @@
@@ -631,7 +631,13 @@ index 9453cf55b..cfedb3a46 100644
  
    authority_idx = 0;
    i = 3;
-@@ -264,10 +327,13 @@ CURLcode Curl_pseudo_headers(struct Curl_easy *data,
+@@ -258,16 +321,16 @@ CURLcode Curl_pseudo_headers(struct Curl_easy *data,
+       nva[i].valuelen = (end - hdbuf);
+     }
+ 
+-    nva[i].value = hdbuf;
+-    nva[i].valuelen = (end - hdbuf);
+-
      ++i;
    }
  
