@@ -1,10 +1,10 @@
 diff --git a/Makefile.am b/Makefile.am
-index 3e55230ee..90b504b5c 100644
+index 40771ed38..5de6f11b6 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -192,13 +192,13 @@ CLEANFILES = $(VC6_LIBDSP) $(VC6_SRCDSP) $(VC7_LIBVCPROJ) $(VC7_SRCVCPROJ) \
-  $(VC11_LIBVCXPROJ) $(VC11_SRCVCXPROJ) $(VC12_LIBVCXPROJ) $(VC12_SRCVCXPROJ) \
-  $(VC14_LIBVCXPROJ) $(VC14_SRCVCXPROJ) $(VC15_LIBVCXPROJ) $(VC15_SRCVCXPROJ)
+@@ -155,13 +155,13 @@ CLEANFILES = $(VC10_LIBVCXPROJ) $(VC10_SRCVCXPROJ) $(VC11_LIBVCXPROJ)        \
+  $(VC14_SRCVCXPROJ) $(VC14_10_LIBVCXPROJ) $(VC14_10_SRCVCXPROJ)              \
+  $(VC14_30_LIBVCXPROJ) $(VC14_30_SRCVCXPROJ)
  
 -bin_SCRIPTS = curl-config
 +bin_SCRIPTS = curl-impersonate-ff-config
@@ -19,7 +19,7 @@ index 3e55230ee..90b504b5c 100644
  # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
  include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index 63e320236..40f67f137 100644
+index de2dee5a4..d2cbe4ee1 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1331,7 +1331,8 @@ if test X"$OPT_BROTLI" != Xno; then
@@ -45,26 +45,7 @@ index 63e320236..40f67f137 100644
  
    AC_CHECK_HEADERS(brotli/decode.h,
      curl_brotli_msg="enabled (libbrotlidec)"
-@@ -2573,15 +2578,15 @@ if test X"$want_nghttp2" != Xno; then
- 
-   if test "$PKGCONFIG" != "no" ; then
-     LIB_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
--      $PKGCONFIG --libs-only-l libnghttp2`
-+      $PKGCONFIG --static --libs-only-l libnghttp2`
-     AC_MSG_NOTICE([-l is $LIB_H2])
- 
-     CPP_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path]) dnl
--      $PKGCONFIG --cflags-only-I libnghttp2`
-+      $PKGCONFIG --static --cflags-only-I libnghttp2`
-     AC_MSG_NOTICE([-I is $CPP_H2])
- 
-     LD_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
--      $PKGCONFIG --libs-only-L libnghttp2`
-+      $PKGCONFIG --static --libs-only-L libnghttp2`
-     AC_MSG_NOTICE([-L is $LD_H2])
- 
-     LDFLAGS="$LDFLAGS $LD_H2"
-@@ -4255,8 +4260,8 @@ AC_CONFIG_FILES([Makefile \
+@@ -4426,8 +4431,8 @@ AC_CONFIG_FILES([Makefile \
             tests/unit/Makefile \
             packages/Makefile \
             packages/vms/Makefile \
@@ -76,10 +57,10 @@ index 63e320236..40f67f137 100644
  AC_OUTPUT
  
 diff --git a/curl-config.in b/curl-config.in
-index 8b4a29a9a..2c8b888d8 100644
+index aaf2b8a43..47eff151b 100644
 --- a/curl-config.in
 +++ b/curl-config.in
-@@ -161,9 +161,9 @@ while test $# -gt 0; do
+@@ -163,9 +163,9 @@ while test $# -gt 0; do
             CURLLIBDIR=""
          fi
          if test "X@ENABLE_SHARED@" = "Xno"; then
@@ -91,7 +72,7 @@ index 8b4a29a9a..2c8b888d8 100644
          fi
          ;;
      --ssl-backends)
-@@ -172,7 +172,7 @@ while test $# -gt 0; do
+@@ -174,7 +174,7 @@ while test $# -gt 0; do
  
      --static-libs)
          if test "X@ENABLE_STATIC@" != "Xno" ; then
@@ -101,25 +82,25 @@ index 8b4a29a9a..2c8b888d8 100644
            echo "curl was built with static libraries disabled" >&2
            exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index 7b69ce2d6..fe4bb36b9 100644
+index b00648e79..eefa36f2e 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2135,6 +2135,10 @@ typedef enum {
-   /* Set MIME option flags. */
-   CURLOPT(CURLOPT_MIME_OPTIONS, CURLOPTTYPE_LONG, 315),
+@@ -2143,6 +2143,10 @@ typedef enum {
+   /* set the SSH host key callback custom pointer */
+   CURLOPT(CURLOPT_SSH_HOSTKEYDATA, CURLOPTTYPE_CBPOINT, 317),
  
 +  /* curl-impersonate: A list of headers used by the impersonated browser.
 +   * If given, merged with CURLOPT_HTTPHEADER. */
-+  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 316),
++  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 318),
 +
    CURLOPT_LASTENTRY /* the last unused */
  } CURLoption;
  
 diff --git a/include/curl/easy.h b/include/curl/easy.h
-index 2dbfb26b5..e0bf86169 100644
+index 9c7e63ada..d93353c69 100644
 --- a/include/curl/easy.h
 +++ b/include/curl/easy.h
-@@ -41,6 +41,15 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
+@@ -43,6 +43,15 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
  CURL_EXTERN CURLcode curl_easy_perform(CURL *curl);
  CURL_EXTERN void curl_easy_cleanup(CURL *curl);
  
@@ -136,19 +117,19 @@ index 2dbfb26b5..e0bf86169 100644
   * NAME curl_easy_getinfo()
   *
 diff --git a/lib/Makefile.am b/lib/Makefile.am
-index 769363941..6e2f1b829 100644
+index 18ce47ea9..ea403a105 100644
 --- a/lib/Makefile.am
 +++ b/lib/Makefile.am
-@@ -32,7 +32,7 @@ EXTRA_DIST = Makefile.m32 config-win32.h config-win32ce.h           \
-  firefox-db2pem.sh config-vxworks.h Makefile.vxworks checksrc.pl    \
-  setup-win32.h .checksrc
+@@ -30,7 +30,7 @@ EXTRA_DIST = Makefile.m32 config-win32.h config-win32ce.h config-plan9.h   \
+  libcurl.plist libcurl.rc config-amigaos.h makefile.amiga config-win32ce.h \
+  config-os400.h setup-os400.h $(CMAKE_DIST) setup-win32.h .checksrc
  
 -lib_LTLIBRARIES = libcurl.la
 +lib_LTLIBRARIES = libcurl-impersonate-ff.la
  
  if BUILD_UNITTESTS
  noinst_LTLIBRARIES = libcurlu.la
-@@ -84,43 +84,43 @@ AM_CPPFLAGS += -DBUILDING_LIBCURL
+@@ -75,43 +75,43 @@ AM_CPPFLAGS += -DBUILDING_LIBCURL
  AM_LDFLAGS =
  AM_CFLAGS =
  
@@ -206,7 +187,7 @@ index 769363941..6e2f1b829 100644
  
  libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS
  libcurlu_la_LDFLAGS = $(AM_LDFLAGS) -static $(LIBCURL_LIBS)
-@@ -129,7 +129,7 @@ libcurlu_la_CFLAGS = $(AM_CFLAGS)
+@@ -120,7 +120,7 @@ libcurlu_la_CFLAGS = $(AM_CFLAGS)
  # Makefile.inc provides the CSOURCES and HHEADERS defines
  include Makefile.inc
  
@@ -216,10 +197,10 @@ index 769363941..6e2f1b829 100644
  
  CHECKSRC = $(CS_$(V))
 diff --git a/lib/Makefile.inc b/lib/Makefile.inc
-index 3e9ddec12..fb883832d 100644
+index 9bd8e324b..bfd5e90e2 100644
 --- a/lib/Makefile.inc
 +++ b/lib/Makefile.inc
-@@ -157,6 +157,7 @@ LIB_CFILES =         \
+@@ -165,6 +165,7 @@ LIB_CFILES =         \
    idn_win32.c        \
    if2ip.c            \
    imap.c             \
@@ -228,10 +209,10 @@ index 3e9ddec12..fb883832d 100644
    inet_pton.c        \
    krb5.c             \
 diff --git a/lib/easy.c b/lib/easy.c
-index 20293a710..88484d5af 100644
+index 704a59df6..03d710757 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
-@@ -80,6 +80,8 @@
+@@ -81,6 +81,8 @@
  #include "dynbuf.h"
  #include "altsvc.h"
  #include "hsts.h"
@@ -240,8 +221,8 @@ index 20293a710..88484d5af 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -282,6 +284,73 @@ void curl_global_cleanup(void)
-   init_flags  = 0;
+@@ -332,6 +334,73 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
+   return rc;
  }
  
 +/*
@@ -314,15 +295,15 @@ index 20293a710..88484d5af 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -290,6 +359,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -340,6 +409,7 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
 +  char *target;
  
    /* Make sure we inited the global SSL stuff */
-   if(!initialized) {
-@@ -308,6 +378,22 @@ struct Curl_easy *curl_easy_init(void)
+   global_init_lock();
+@@ -362,6 +432,22 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -345,7 +326,7 @@ index 20293a710..88484d5af 100644
    return data;
  }
  
-@@ -878,6 +964,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -936,6 +1022,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -359,7 +340,7 @@ index 20293a710..88484d5af 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -967,6 +1060,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -1025,6 +1118,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
@@ -368,7 +349,7 @@ index 20293a710..88484d5af 100644
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -991,6 +1086,12 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -1049,6 +1144,12 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
@@ -382,10 +363,10 @@ index 20293a710..88484d5af 100644
  
  /*
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index 04871ad1e..cd5998146 100644
+index c99f135ff..d70ff8c51 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
-@@ -130,6 +130,7 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -132,6 +132,7 @@ struct curl_easyoption Curl_easyopts[] = {
    {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
    {"HTTPAUTH", CURLOPT_HTTPAUTH, CURLOT_VALUES, 0},
    {"HTTPGET", CURLOPT_HTTPGET, CURLOT_LONG, 0},
@@ -393,11 +374,35 @@ index 04871ad1e..cd5998146 100644
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
+diff --git a/lib/h2h3.c b/lib/h2h3.c
+index 9453cf55b..ba9433cb9 100644
+--- a/lib/h2h3.c
++++ b/lib/h2h3.c
+@@ -43,7 +43,8 @@
+ 
+ /* Index where :authority header field will appear in request header
+    field list. */
+-#define AUTHORITY_DST_IDX 3
++/* curl-impersonate: Put the ":authority" header in the second place. */
++#define AUTHORITY_DST_IDX 2
+ 
+ /* USHRT_MAX is 65535 == 0xffff */
+ #define HEADER_OVERFLOW(x) \
+@@ -258,9 +259,6 @@ CURLcode Curl_pseudo_headers(struct Curl_easy *data,
+       nva[i].valuelen = (end - hdbuf);
+     }
+ 
+-    nva[i].value = hdbuf;
+-    nva[i].valuelen = (end - hdbuf);
+-
+     ++i;
+   }
+ 
 diff --git a/lib/http.c b/lib/http.c
-index f08a343e3..2bbce4b23 100644
+index 258722a60..b8990121d 100644
 --- a/lib/http.c
 +++ b/lib/http.c
-@@ -84,6 +84,7 @@
+@@ -85,6 +85,7 @@
  #include "altsvc.h"
  #include "hsts.h"
  #include "c-hyper.h"
@@ -405,7 +410,7 @@ index f08a343e3..2bbce4b23 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -1795,6 +1796,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1804,6 +1805,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
    int numlists = 1; /* by default */
    int i;
  
@@ -421,7 +426,7 @@ index f08a343e3..2bbce4b23 100644
  #ifndef CURL_DISABLE_PROXY
    enum proxy_use proxy;
  
-@@ -1806,10 +1816,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1815,10 +1825,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
  
    switch(proxy) {
    case HEADER_SERVER:
@@ -434,7 +439,7 @@ index f08a343e3..2bbce4b23 100644
      if(data->set.sep_headers) {
        h[1] = data->set.proxyheaders;
        numlists++;
-@@ -1819,12 +1829,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1828,12 +1838,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
      if(data->set.sep_headers)
        h[0] = data->set.proxyheaders;
      else
@@ -449,7 +454,7 @@ index f08a343e3..2bbce4b23 100644
  #endif
  
    /* loop through one or two lists */
-@@ -2059,6 +2069,92 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
+@@ -2069,6 +2079,92 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
    *reqp = httpreq;
  }
  
@@ -542,7 +547,7 @@ index f08a343e3..2bbce4b23 100644
  CURLcode Curl_http_useragent(struct Curl_easy *data)
  {
    /* The User-Agent string might have been allocated in url.c already, because
-@@ -3063,6 +3159,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+@@ -3088,6 +3184,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
    http = data->req.p.http;
    DEBUGASSERT(http);
  
@@ -555,10 +560,10 @@ index f08a343e3..2bbce4b23 100644
    if(result)
      return result;
 diff --git a/lib/http2.c b/lib/http2.c
-index e74400a4c..1dd2593a5 100644
+index f6364d0e0..b5cb05e7e 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
-@@ -56,7 +56,7 @@
+@@ -61,7 +61,7 @@
  #define NGHTTP2_HAS_SET_LOCAL_WINDOW_SIZE 1
  #endif
  
@@ -567,7 +572,7 @@ index e74400a4c..1dd2593a5 100644
  
  #ifdef DEBUG_HTTP2
  #define H2BUGF(x) x
-@@ -75,13 +75,20 @@ static int h2_process_pending_input(struct Curl_easy *data,
+@@ -79,13 +79,20 @@ static int h2_process_pending_input(struct Curl_easy *data,
                                      struct http_conn *httpc,
                                      CURLcode *err);
  
@@ -589,7 +594,7 @@ index e74400a4c..1dd2593a5 100644
  }
  
  /*
-@@ -90,7 +97,7 @@ void Curl_http2_init_state(struct UrlState *state)
+@@ -94,7 +101,7 @@ void Curl_http2_init_state(struct UrlState *state)
   */
  void Curl_http2_init_userset(struct UserDefined *set)
  {
@@ -598,7 +603,7 @@ index e74400a4c..1dd2593a5 100644
  }
  
  static int http2_getsock(struct Curl_easy *data,
-@@ -1193,14 +1200,18 @@ static void populate_settings(struct Curl_easy *data,
+@@ -1212,14 +1219,18 @@ static void populate_settings(struct Curl_easy *data,
  {
    nghttp2_settings_entry *iv = httpc->local_settings;
  
@@ -622,7 +627,7 @@ index e74400a4c..1dd2593a5 100644
  
    httpc->local_settings_num = 3;
  }
-@@ -1566,12 +1577,18 @@ static ssize_t http2_handle_stream_close(struct connectdata *conn,
+@@ -1586,12 +1597,18 @@ static ssize_t http2_handle_stream_close(struct connectdata *conn,
   * struct.
   */
  
@@ -642,17 +647,7 @@ index e74400a4c..1dd2593a5 100644
    nghttp2_priority_spec_init(pri_spec, depstream_id, data->set.stream_weight,
                               data->set.stream_depends_e);
    data->state.stream_weight = data->set.stream_weight;
-@@ -1818,7 +1835,8 @@ static ssize_t http2_recv(struct Curl_easy *data, int sockindex,
- 
- /* Index where :authority header field will appear in request header
-    field list. */
--#define AUTHORITY_DST_IDX 3
-+/* curl-impersonate: Put the ":authority" header in the second place. */
-+#define AUTHORITY_DST_IDX 2
- 
- /* USHRT_MAX is 65535 == 0xffff */
- #define HEADER_OVERFLOW(x) \
-@@ -2276,6 +2294,73 @@ CURLcode Curl_http2_setup(struct Curl_easy *data,
+@@ -2068,6 +2085,73 @@ CURLcode Curl_http2_setup(struct Curl_easy *data,
    return CURLE_OK;
  }
  
@@ -726,7 +721,7 @@ index e74400a4c..1dd2593a5 100644
  CURLcode Curl_http2_switched(struct Curl_easy *data,
                               const char *mem, size_t nread)
  {
-@@ -2284,6 +2369,7 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
+@@ -2076,6 +2160,7 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
    struct http_conn *httpc = &conn->proto.httpc;
    int rv;
    struct HTTP *stream = data->req.p.http;
@@ -734,7 +729,7 @@ index e74400a4c..1dd2593a5 100644
  
    result = Curl_http2_setup(data, conn);
    if(result)
-@@ -2338,6 +2424,13 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
+@@ -2130,6 +2215,13 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
      return CURLE_HTTP2;
    }
  
@@ -972,10 +967,10 @@ index 000000000..964b81f2e
 +
 +#endif /* HEADER_CURL_IMPERSONATE_H */
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 599ed5d99..1baa48e70 100644
+index 6b16e1c7c..a83d69917 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
-@@ -48,6 +48,7 @@
+@@ -50,6 +50,7 @@
  #include "multiif.h"
  #include "altsvc.h"
  #include "hsts.h"
@@ -983,7 +978,7 @@ index 599ed5d99..1baa48e70 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -688,6 +689,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -674,6 +675,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
                              va_arg(param, char *));
      break;
  
@@ -1008,10 +1003,10 @@ index 599ed5d99..1baa48e70 100644
      /*
       * Set a list with HTTP headers to use (or replace internals with)
 diff --git a/lib/transfer.c b/lib/transfer.c
-index 22704fa15..1e100140c 100644
+index 1720b24b1..dcae3c143 100644
 --- a/lib/transfer.c
 +++ b/lib/transfer.c
-@@ -102,7 +102,15 @@ char *Curl_checkheaders(const struct Curl_easy *data,
+@@ -104,7 +104,15 @@ char *Curl_checkheaders(const struct Curl_easy *data,
    DEBUGASSERT(thislen);
    DEBUGASSERT(thisheader[thislen-1] != ':');
  
@@ -1029,10 +1024,10 @@ index 22704fa15..1e100140c 100644
         Curl_headersep(head->data[thislen]) )
        return head->data;
 diff --git a/lib/url.c b/lib/url.c
-index 9f1013554..f0f266797 100644
+index 1114c6c12..89e29be62 100644
 --- a/lib/url.c
 +++ b/lib/url.c
-@@ -469,6 +469,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
+@@ -465,6 +465,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
    Curl_safefree(data->state.aptr.proxyuser);
    Curl_safefree(data->state.aptr.proxypasswd);
  
@@ -1045,10 +1040,10 @@ index 9f1013554..f0f266797 100644
    if(data->req.doh) {
      Curl_dyn_free(&data->req.doh->probe[0].serverdoh);
 diff --git a/lib/urldata.h b/lib/urldata.h
-index cc9c88870..a35a20e10 100644
+index bcb4d460c..148cd1927 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -1421,6 +1421,19 @@ struct UrlState {
+@@ -1453,6 +1453,19 @@ struct UrlState {
    CURLcode hresult; /* used to pass return codes back from hyper callbacks */
  #endif
  
@@ -1069,10 +1064,10 @@ index cc9c88870..a35a20e10 100644
       killed. */
    struct dynamically_allocated_data {
 diff --git a/lib/vtls/nss.c b/lib/vtls/nss.c
-index 2b44f0512..eec2bf76f 100644
+index 9d3a8584c..8ffd68171 100644
 --- a/lib/vtls/nss.c
 +++ b/lib/vtls/nss.c
-@@ -143,6 +143,7 @@ static const struct cipher_s cipherlist[] = {
+@@ -145,6 +145,7 @@ static const struct cipher_s cipherlist[] = {
    {"dhe_dss_3des_sha",           SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA},
    {"dhe_rsa_des_sha",            SSL_DHE_RSA_WITH_DES_CBC_SHA},
    {"dhe_dss_des_sha",            SSL_DHE_DSS_WITH_DES_CBC_SHA},
@@ -1080,7 +1075,7 @@ index 2b44f0512..eec2bf76f 100644
    /* TLS 1.0: Exportable 56-bit Cipher Suites. */
    {"rsa_des_56_sha",             TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA},
    {"rsa_rc4_56_sha",             TLS_RSA_EXPORT1024_WITH_RC4_56_SHA},
-@@ -378,6 +379,95 @@ static SECStatus set_ciphers(struct Curl_easy *data, PRFileDesc *model,
+@@ -380,6 +381,95 @@ static SECStatus set_ciphers(struct Curl_easy *data, PRFileDesc *model,
    return SECSuccess;
  }
  
@@ -1176,7 +1171,7 @@ index 2b44f0512..eec2bf76f 100644
  /*
   * Return true if at least one cipher-suite is enabled. Used to determine
   * if we need to call NSS_SetDomesticPolicy() to enable the default ciphers.
-@@ -1320,6 +1410,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
+@@ -1347,6 +1437,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
  
    if(module)
      SECMOD_DestroyModule(module);
@@ -1184,7 +1179,7 @@ index 2b44f0512..eec2bf76f 100644
    return CURLE_FAILED_INIT;
  }
  
-@@ -1921,6 +2012,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1970,6 +2061,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
    if(SSL_OptionSet(model, SSL_NO_CACHE, ssl_no_cache) != SECSuccess)
      goto error;
  
@@ -1197,7 +1192,7 @@ index 2b44f0512..eec2bf76f 100644
    /* enable/disable the requested SSL version(s) */
    if(nss_init_sslver(&sslver, data, conn) != CURLE_OK)
      goto error;
-@@ -1960,6 +2057,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2009,6 +2106,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      }
    }
  
@@ -1210,9 +1205,9 @@ index 2b44f0512..eec2bf76f 100644
 +  }
 +
    if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
-     infof(data, "warning: ignoring value of ssl.verifyhost");
+     infof(data, "WARNING: ignoring value of ssl.verifyhost");
  
-@@ -2113,6 +2218,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2165,6 +2270,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
      int cur = 0;
      unsigned char protocols[128];
  
@@ -1223,7 +1218,7 @@ index 2b44f0512..eec2bf76f 100644
  #ifdef USE_HTTP2
      if(data->state.httpwant >= CURL_HTTP_VERSION_2
  #ifndef CURL_DISABLE_PROXY
-@@ -2124,9 +2233,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -2176,9 +2285,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
        cur += ALPN_H2_LENGTH;
      }
  #endif
@@ -1234,10 +1229,10 @@ index 2b44f0512..eec2bf76f 100644
      if(SSL_SetNextProtoNego(backend->handle, protocols, cur) != SECSuccess)
        goto error;
 diff --git a/libcurl.pc.in b/libcurl.pc.in
-index 8ac15d407..68d01b219 100644
+index 49485f192..7c2ea437c 100644
 --- a/libcurl.pc.in
 +++ b/libcurl.pc.in
-@@ -34,6 +34,6 @@ Name: libcurl
+@@ -36,6 +36,6 @@ Name: libcurl
  URL: https://curl.se/
  Description: Library to transfer files with ftp, http, etc.
  Version: @CURLVERSION@
@@ -1246,10 +1241,10 @@ index 8ac15d407..68d01b219 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index 397ba71b1..e7fe93925 100644
+index cb162755d..13ee571aa 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
-@@ -74,7 +74,123 @@ if test "x$OPT_NSS" != xno; then
+@@ -76,7 +76,123 @@ if test "x$OPT_NSS" != xno; then
        # Without pkg-config, we'll kludge in some defaults
        AC_MSG_WARN([Using hard-wired libraries and compilation flags for NSS.])
        addld="-L$OPT_NSS/lib"
@@ -1374,7 +1369,7 @@ index 397ba71b1..e7fe93925 100644
        addcflags="-I$OPT_NSS/include"
        version="unknown"
        nssprefix=$OPT_NSS
-@@ -91,7 +207,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -93,7 +209,7 @@ if test "x$OPT_NSS" != xno; then
      fi
  
      dnl The function SSL_VersionRangeSet() is needed to enable TLS > 1.0
@@ -1383,7 +1378,7 @@ index 397ba71b1..e7fe93925 100644
       [
       AC_DEFINE(USE_NSS, 1, [if NSS is enabled])
       AC_SUBST(USE_NSS, [1])
-@@ -101,9 +217,7 @@ if test "x$OPT_NSS" != xno; then
+@@ -103,9 +219,7 @@ if test "x$OPT_NSS" != xno; then
       test nss != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
       ],
       [
@@ -1395,10 +1390,10 @@ index 397ba71b1..e7fe93925 100644
  
      if test "x$USE_NSS" = "xyes"; then
 diff --git a/src/Makefile.am b/src/Makefile.am
-index c8abc93b1..fcecb10d0 100644
+index 706f0aac3..0ad94622e 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
-@@ -41,7 +41,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
+@@ -43,7 +43,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
                -I$(top_srcdir)/lib            \
                -I$(top_srcdir)/src
  
@@ -1407,7 +1402,7 @@ index c8abc93b1..fcecb10d0 100644
  
  SUBDIRS = ../docs
  
-@@ -52,7 +52,7 @@ endif
+@@ -54,7 +54,7 @@ endif
  include Makefile.inc
  
  # CURL_FILES comes from Makefile.inc
@@ -1416,7 +1411,7 @@ index c8abc93b1..fcecb10d0 100644
  
  # This might hold -Werror
  CFLAGS += @CURL_CFLAG_EXTRAS@
-@@ -61,9 +61,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
+@@ -63,9 +63,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
  LIBS = $(BLANK_AT_MAKETIME)
  
  if USE_EXPLICIT_LIB_DEPS
