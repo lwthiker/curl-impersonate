@@ -122,7 +122,11 @@ If you get the error:
 ```
 curl: (60) Peer's Certificate issuer is not recognized
 ```
-Make sure that NSS is installed (see above).
+or
+```
+curl: (77) Problem with the SSL CA cert (path? access rights?)
+```
+, make sure that NSS is installed (see above).
 If the issue persists it might be that NSS is installed in a non-standard location on your system.
 Please open an issue in that case.
 
@@ -163,7 +167,7 @@ docker build -t curl-impersonate-chrome chrome/
 The resulting image contains a `/build/out` directory with the following:
 * `curl-impersonate-chrome`, `curl-impersonate` - The curl binary that can impersonate Chrome/Edge/Safari. It is compiled statically against libcurl, BoringSSL, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
 * `curl_chrome98`, `curl_chrome99`, `...` - Wrapper scripts that launch `curl-impersonate` with all the needed flags.
-* `libcurl-impersonate-chrome.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](#libcurl-impersonate) below for more details.
+* `libcurl-impersonate-chrome.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](README.md#libcurl-impersonate) for more details.
 
 You can use them inside the docker, copy them out using `docker cp` or use them in a multi-stage docker build.
 
@@ -175,7 +179,7 @@ docker build -t curl-impersonate-ff firefox/
 The resulting image contains a `/build/out` directory with the following:
 * `curl-impersonate-ff`, `curl-impersonate` - The curl binary that can impersonate Firefox. It is compiled statically against libcurl, nss, and libnghttp2 so that it won't conflict with any existing libraries on your system. You can use it from the container or copy it out. Tested to work on Ubuntu 20.04.
 * `curl_ff91esr`, `curl_ff95`, `...` - Wrapper scripts that launch `curl-impersonate` with all the needed flags.
-* `libcurl-impersonate-ff.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](#libcurl-impersonate) below for more details.
+* `libcurl-impersonate-ff.so`, `libcurl-impersonate.so` - libcurl compiled with impersonation support. See [libcurl-impersonate](README.md#libcurl-impersonate) for more details.
 
 If you use it outside the container, install the following dependency:
 * `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
