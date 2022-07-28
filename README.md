@@ -77,6 +77,8 @@ The pre-compiled Linux binaries are built for Ubuntu systems. On other distribut
 curl_chrome101 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
 ```
 
+Also make sure to read [Notes on Dependencies](#notes-on-dependencies).
+
 ### Building from source
 See [INSTALL.md](INSTALL.md).
 
@@ -124,6 +126,11 @@ The `CURL_IMPERSONATE` env var has two effects:
 This means that all the options needed for impersonation will be automatically set for any curl handle.
 
 Note that the above will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
+
+### Notes on dependencies 
+
+If you intend to copy the self-compiled artifacts to another system, or use the [Pre-compiled binaries](#pre-compiled-binaries) provided by the project, make sure that all the additional dependencies are met on the target system as well. 
+In particular, see the [note about the Firefox version](INSTALL.md#a-note-about-the-firefox-version).
 
 ## Contents
 
