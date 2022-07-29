@@ -213,6 +213,7 @@ int main(int argc, char *argv[])
         file = fopen(opts.outfile, "w");
         if (!file) {
             fprintf(stderr, "Failed opening %s for writing\n", opts.outfile);
+            c = 1;
             goto out_clean_opts;
         }
     } else {
