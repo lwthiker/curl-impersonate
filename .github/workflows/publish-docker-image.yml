@@ -21,8 +21,8 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata (tags, labels) for Docker (chrome)
-        id: meta_chrome
+      - name: Extract metadata (tags, labels) for Docker (chrome, alpine)
+        id: meta_chrome_alpine
         uses: docker/metadata-action@v3
         with:
           images: lwthiker/curl-impersonate
@@ -38,11 +38,11 @@ jobs:
           push: true
           context: chrome/
           file: chrome/Dockerfile.alpine
-          tags: ${{ steps.meta_chrome.outputs.tags }}
-          labels: ${{ steps.meta_chrome.outputs.labels }}
+          tags: ${{ steps.meta_chrome_alpine.outputs.tags }}
+          labels: ${{ steps.meta_chrome_alpine.outputs.labels }}
 
-      - name: Extract metadata (tags, labels) for Docker (firefox)
-        id: meta_firefox
+      - name: Extract metadata (tags, labels) for Docker (firefox, alpine)
+        id: meta_ff_alpine
         uses: docker/metadata-action@v3
         with:
           images: lwthiker/curl-impersonate
@@ -58,5 +58,41 @@ jobs:
           push: true
           context: firefox/
           file: firefox/Dockerfile.alpine
-          tags: ${{ steps.meta_firefox.outputs.tags }}
-          labels: ${{ steps.meta_firefox.outputs.labels }}
+          tags: ${{ steps.meta_ff_alpine.outputs.tags }}
+          labels: ${{ steps.meta_ff_alpine.outputs.labels }}
+
+      - name: Extract metadata (tags, labels) for Docker (chrome, debian)
+        id: meta_chrome_debian
+        uses: docker/metadata-action@v3
+        with:
+          images: lwthiker/curl-impersonate
+          tags: |
+            type=semver,pattern={{version}},suffix=-chrome-slim-buster
+            type=semver,pattern={{major}}.{{minor}},suffix=-chrome-slim-buster
+
+      - name: Build and push the Chrome version of curl-impersonate
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: chrome/
+          file: chrome/Dockerfile
+          tags: ${{ steps.meta_chrome_debian.outputs.tags }}
+          labels: ${{ steps.meta_chrome_debian.outputs.labels }}
+
+      - name: Extract metadata (tags, labels) for Docker (firefox, debian)
+        id: meta_ff_debian
+        uses: docker/metadata-action@v3
+        with:
+          images: lwthiker/curl-impersonate
+          tags: |
+            type=semver,pattern={{version}},suffix=-ff-slim-buster
+            type=semver,pattern={{major}}.{{minor}},suffix=-ff-slim-buster
+
+      - name: Build and push the Firefox version of curl-impersonate
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: firefox/
+          file: firefox/Dockerfile
+          tags: ${{ steps.meta_ff_debian.outputs.tags }}
+          labels: ${{ steps.meta_ff_debian.outputs.labels }}
