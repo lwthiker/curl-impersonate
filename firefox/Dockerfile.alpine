@@ -126,7 +126,7 @@ COPY curl_ff* out/
 RUN sed -i 's@/usr/bin/env bash@/usr/bin/env ash@' out/curl_*
 RUN chmod +x out/curl_*
 
-# When using alpine, create a final, minimal image with the compiled binaries
+# Create a final, minimal image with the compiled binaries
 # only.
 FROM alpine:3.15.0
 # curl tries to load the CA certificates for libnss.
