@@ -249,6 +249,8 @@ RUN apt-get update && apt-get install -y libnss3 nss-plugin-pem
 
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
+# Update the loader's cache
+RUN ldconfig
 {{#debian}}
 # Copy to /build/out as well for backward compatibility with previous versions.
 COPY --from=builder /build/out /build/out

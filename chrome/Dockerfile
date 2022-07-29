@@ -141,6 +141,8 @@ FROM debian:buster-slim
 
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
+# Update the loader's cache
+RUN ldconfig
 # Copy to /build/out as well for backward compatibility with previous versions.
 COPY --from=builder /build/out /build/out
 # Wrapper scripts

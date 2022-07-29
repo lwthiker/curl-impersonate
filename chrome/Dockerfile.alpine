@@ -140,5 +140,7 @@ FROM alpine:3.15.0
 
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
+# Update the loader's cache
+RUN ldconfig
 # Wrapper scripts
 COPY --from=builder /build/out/curl_* /usr/local/bin/
