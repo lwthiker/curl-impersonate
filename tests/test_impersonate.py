@@ -8,6 +8,7 @@ import logging
 import pathlib
 import subprocess
 import tempfile
+import itertools
 from typing import List
 
 import yaml
@@ -628,3 +629,75 @@ class TestImpersonation:
                 "<html>" in body or
                 "<!doctype html>" in body
             )
+
+    @pytest.mark.parametrize(
+        "curl_binary, env_vars, ld_preload",
+        [
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "chrome101",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-chrome"
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "ff102",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-ff",
+            )
+        ]
+    )
+    async def test_no_builtin_headers(self,
+                                      pytestconfig,
+                                      nghttpd,
+                                      curl_binary,
+                                      env_vars,
+                                      ld_preload):
+        """
+        Ensure the built-in headers of libcurl-impersonate are not added when
+        the CURL_IMPERSONATE_HEADERS environment variable is set to "no".
+        """
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+
+        if not sys.platform.startswith("linux"):
+            pytest.skip()
+
+        self._set_ld_preload(env_vars, os.path.join(
+            pytestconfig.getoption("install_dir"), "lib", ld_preload
+        ))
+
+        # Use some custom headers with a specific order.
+        # We will test that the headers are sent in the exact given order, as
+        # it is important for users to be able to control the exact headers
+        # content and order.
+        headers = [
+            "X-Hello: World",
+            "Accept: application/json",
+            "X-Goodbye: World",
+            "Accept-Encoding: deflate, gzip, br"
+            "X-Foo: Bar",
+            "User-Agent: curl-impersonate"
+        ]
+        header_args = list(itertools.chain(*[
+            ["-H", header]
+            for header in  headers
+        ]))
+
+        ret = self._run_curl(curl_binary,
+                             env_vars=env_vars,
+                             extra_args=["-k"] + header_args,
+                             urls=["https://localhost:8443"])
+        assert ret == 0
+
+        output = await self._read_proc_output(nghttpd, timeout=2)
+
+        assert len(output) > 0
+        _, output_headers = self._parse_nghttpd2_output(output)
+        for i, header in enumerate(output_headers):
+            assert header.lower() == headers[i].lower()
