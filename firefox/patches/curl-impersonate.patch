@@ -423,7 +423,7 @@ index 9453cf55b..ba9433cb9 100644
    }
  
 diff --git a/lib/http.c b/lib/http.c
-index 258722a60..b8990121d 100644
+index 258722a60..9a06e281a 100644
 --- a/lib/http.c
 +++ b/lib/http.c
 @@ -85,6 +85,7 @@
@@ -478,7 +478,7 @@ index 258722a60..b8990121d 100644
  #endif
  
    /* loop through one or two lists */
-@@ -2069,6 +2079,92 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
+@@ -2069,6 +2079,108 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
    *reqp = httpreq;
  }
  
@@ -498,6 +498,7 @@ index 258722a60..b8990121d 100644
 +  struct curl_slist *head;
 +  struct curl_slist *dup = NULL;
 +  struct curl_slist *new_list = NULL;
++  char *uagent;
 +
 +  if (!data->state.base_headers)
 +    return CURLE_OK;
@@ -532,6 +533,21 @@ index 258722a60..b8990121d 100644
 +        found = TRUE;
 +        break;
 +      }
++    }
++
++    /* If the user agent was set with CURLOPT_USERAGENT, but not with
++     * CURLOPT_HTTPHEADER, take it from there instead. */
++    if(!found &&
++       strncasecompare(head->data, "User-Agent", prefix_len) &&
++       data->set.str[STRING_USERAGENT] &&
++       *data->set.str[STRING_USERAGENT]) {
++      uagent = aprintf("User-Agent: %s", data->set.str[STRING_USERAGENT]);
++      if(!uagent) {
++        ret = CURLE_OUT_OF_MEMORY;
++        goto fail;
++      }
++      new_list = Curl_slist_append_nodup(new_list, uagent);
++      found = TRUE;
 +    }
 +
 +    if (!found) {
@@ -571,7 +587,7 @@ index 258722a60..b8990121d 100644
  CURLcode Curl_http_useragent(struct Curl_easy *data)
  {
    /* The User-Agent string might have been allocated in url.c already, because
-@@ -3088,6 +3184,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+@@ -3088,6 +3200,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
    http = data->req.p.http;
    DEBUGASSERT(http);
  

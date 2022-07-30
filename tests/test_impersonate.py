@@ -701,3 +701,166 @@ class TestImpersonation:
         _, output_headers = self._parse_nghttpd2_output(output)
         for i, header in enumerate(output_headers):
             assert header.lower() == headers[i].lower()
+
+    @pytest.mark.parametrize(
+        "curl_binary, env_vars, ld_preload",
+        [
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "chrome101"
+                },
+                "libcurl-impersonate-chrome",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "chrome101",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-chrome",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "ff102"
+                },
+                "libcurl-impersonate-ff",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "ff102",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-ff",
+            )
+        ]
+    )
+    async def test_user_agent(
+        self,
+        pytestconfig,
+        nghttpd,
+        curl_binary,
+        env_vars,
+        ld_preload
+    ):
+        """
+        Ensure that any user-agent set with CURLOPT_HTTPHEADER will override
+        the one set by libcurl-impersonate.
+        """
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+
+        if not sys.platform.startswith("linux"):
+            pytest.skip()
+
+        self._set_ld_preload(env_vars, os.path.join(
+            pytestconfig.getoption("install_dir"), "lib", ld_preload
+        ))
+
+        user_agent = "My-User-Agent"
+
+        ret = self._run_curl(curl_binary,
+                             env_vars=env_vars,
+                             extra_args=[
+                                "-k",
+                                "-H",
+                                f"User-Agent: {user_agent}"
+                             ],
+                             urls=["https://localhost:8443"])
+        assert ret == 0
+
+        output = await self._read_proc_output(nghttpd, timeout=2)
+
+        assert len(output) > 0
+
+        _, headers = self._parse_nghttpd2_output(output)
+        assert any([
+            header.lower().startswith("user-agent:") for header in headers
+        ])
+
+        for header in headers:
+            if header.lower().startswith("user-agent:"):
+                assert header[len("user-agent:"):].strip() == user_agent
+
+    @pytest.mark.parametrize(
+        "curl_binary, env_vars, ld_preload",
+        [
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "chrome101"
+                },
+                "libcurl-impersonate-chrome",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "chrome101",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-chrome",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "ff102"
+                },
+                "libcurl-impersonate-ff",
+            ),
+            (
+                "minicurl",
+                {
+                    "CURL_IMPERSONATE": "ff102",
+                    "CURL_IMPERSONATE_HEADERS": "no"
+                },
+                "libcurl-impersonate-ff",
+            )
+        ]
+    )
+    async def test_user_agent_curlopt_useragent(
+        self,
+        pytestconfig,
+        nghttpd,
+        curl_binary,
+        env_vars,
+        ld_preload
+    ):
+        """
+        Ensure that any user-agent set with CURLOPT_USERAGENT will override
+        the one set by libcurl-impersonate. See:
+        https://github.com/lwthiker/curl-impersonate/issues/51
+        """
+        curl_binary = os.path.join(
+            pytestconfig.getoption("install_dir"), "bin", curl_binary
+        )
+
+        if not sys.platform.startswith("linux"):
+            pytest.skip()
+
+        self._set_ld_preload(env_vars, os.path.join(
+            pytestconfig.getoption("install_dir"), "lib", ld_preload
+        ))
+
+        user_agent = "My-User-Agent"
+
+        ret = self._run_curl(curl_binary,
+                             env_vars=env_vars,
+                             extra_args=["-k", "-A", user_agent],
+                             urls=["https://localhost:8443"])
+        assert ret == 0
+
+        output = await self._read_proc_output(nghttpd, timeout=2)
+
+        assert len(output) > 0
+
+        _, headers = self._parse_nghttpd2_output(output)
+        assert any([
+            header.lower().startswith("user-agent:") for header in headers
+        ])
+
+        for header in headers:
+            if header.lower().startswith("user-agent:"):
+                assert header[len("user-agent:"):].strip() == user_agent
