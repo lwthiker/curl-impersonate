@@ -134,11 +134,11 @@ RUN chmod +x out/curl_*
 # Create a final, minimal image with the compiled binaries
 # only.
 FROM debian:buster-slim
+RUN apt-get update && apt-get install -y ca-certificates
 # curl tries to load the CA certificates for libnss.
 # It loads them from /usr/lib/libnssckbi.so and /usr/lib/libnsspem.so,
 # which are supplied by 'libnss3' and 'nss-plugin-pem' on debian.
-RUN apt-get update && apt-get install -y libnss3 nss-plugin-pem
-
+RUN apt-get install -y libnss3 nss-plugin-pem
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Update the loader's cache

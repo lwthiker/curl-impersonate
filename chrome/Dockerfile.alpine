@@ -137,7 +137,6 @@ RUN chmod +x out/curl_*
 # Create a final, minimal image with the compiled binaries
 # only.
 FROM alpine:3.15.0
-
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Wrapper scripts

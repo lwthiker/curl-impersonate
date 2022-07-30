@@ -133,7 +133,6 @@ FROM alpine:3.15.0
 # It loads them from /usr/lib/libnssckbi.so,
 # which is supplied by 'nss' on alpine.
 RUN apk add --no-cache nss
-
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Wrapper scripts

@@ -138,7 +138,7 @@ RUN chmod +x out/curl_*
 # Create a final, minimal image with the compiled binaries
 # only.
 FROM debian:buster-slim
-
+RUN apt-get update && apt-get install -y ca-certificates
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Update the loader's cache
