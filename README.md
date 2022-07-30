@@ -81,13 +81,13 @@ curl_chrome101 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
 See [INSTALL.md](INSTALL.md).
 
 ### Docker images
-Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
+Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
-# Firefox version
+# Firefox version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-ff
 docker run --rm lwthiker/curl-impersonate:0.5-ff curl_ff100 https://www.wikipedia.org
 
-# Chrome version
+# Chrome version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-chrome
 docker run --rm lwthiker/curl-impersonate:0.5-chrome curl_chrome101 https://www.wikipedia.org
 ```
