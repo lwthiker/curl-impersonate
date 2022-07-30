@@ -26,6 +26,7 @@ struct opts {
     uint16_t local_port_end;
     bool insecure;
     char *urls[MAX_URLS];
+    char *user_agent;
     struct curl_slist *headers;
 };
 
@@ -76,15 +77,19 @@ int parse_opts(int argc, char **argv, struct opts *opts)
         static struct option long_options[] = {
             {"header", required_argument, NULL, 'H'},
             {"local-port", required_argument, NULL, 'l'},
+            {"user-agent", required_argument, NULL, 'A'},
             {0, 0, NULL, 0}
         };
 
-        c = getopt_long(argc, argv, "o:kH:", long_options, &option_index);
+        c = getopt_long(argc, argv, "o:kH:A:", long_options, &option_index);
         if (c == -1) {
             break;
         }
 
         switch (c) {
+        case 'A':
+            opts->user_agent = optarg;
+            break;
         case 'l':
             r = parse_ports_range(optarg,
                                   &opts->local_port_start,
@@ -185,6 +190,14 @@ int set_opts(CURL *curl, struct opts *opts, FILE *file)
         }
     }
 
+    if (opts->user_agent) {
+        c = curl_easy_setopt(curl, CURLOPT_USERAGENT, opts->user_agent);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_USERAGENT) failed\n");
+            return 1;
+        }
+    }
+
     if (opts->headers) {
         c = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, opts->headers);
         if (c) {
@@ -246,7 +259,9 @@ int main(int argc, char *argv[])
 
         c = curl_easy_perform(curl);
         if (c) {
-            fprintf(stderr, "curl_easy_perform() failed\n");
+            fprintf(stderr,
+                    "curl_easy_perform() failed: %d (%s)\n",
+                    c, curl_easy_strerror(c));
             goto out;
         }
 
