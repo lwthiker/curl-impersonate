@@ -7,7 +7,7 @@
 
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-buster
+FROM python:3.10.1-slim-buster as builder
 
 WORKDIR /build
 
@@ -134,3 +134,16 @@ RUN ! (ldd ./out/curl-impersonate | grep -q -e nghttp2 -e brotli -e ssl -e crypt
 # Wrapper scripts
 COPY curl_chrome* curl_edge* curl_safari* out/
 RUN chmod +x out/curl_*
+
+# Create a final, minimal image with the compiled binaries
+# only.
+FROM debian:buster-slim
+RUN apt-get update && apt-get install -y ca-certificates
+# Copy curl-impersonate from the builder image
+COPY --from=builder /build/install /usr/local
+# Update the loader's cache
+RUN ldconfig
+# Copy to /build/out as well for backward compatibility with previous versions.
+COPY --from=builder /build/out /build/out
+# Wrapper scripts
+COPY --from=builder /build/out/curl_* /usr/local/bin/

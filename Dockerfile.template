@@ -8,7 +8,7 @@
 {{#debian}}
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-buster
+FROM python:3.10.1-slim-buster as builder
 {{/debian}}
 {{#alpine}}
 FROM alpine:3.15.0 as builder
@@ -225,10 +225,10 @@ COPY curl_chrome* curl_edge* curl_safari* out/
 RUN sed -i 's@/usr/bin/env bash@/usr/bin/env ash@' out/curl_*
 {{/alpine}}
 RUN chmod +x out/curl_*
-{{#alpine}}
 
-# When using alpine, create a final, minimal image with the compiled binaries
+# Create a final, minimal image with the compiled binaries
 # only.
+{{#alpine}}
 FROM alpine:3.15.0
 {{#firefox}}
 # curl tries to load the CA certificates for libnss.
@@ -236,9 +236,24 @@ FROM alpine:3.15.0
 # which is supplied by 'nss' on alpine.
 RUN apk add --no-cache nss
 {{/firefox}}
-
+{{/alpine}}
+{{#debian}}
+FROM debian:buster-slim
+RUN apt-get update && apt-get install -y ca-certificates
+{{#firefox}}
+# curl tries to load the CA certificates for libnss.
+# It loads them from /usr/lib/libnssckbi.so and /usr/lib/libnsspem.so,
+# which are supplied by 'libnss3' and 'nss-plugin-pem' on debian.
+RUN apt-get install -y libnss3 nss-plugin-pem
+{{/firefox}}
+{{/debian}}
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
+{{#debian}}
+# Update the loader's cache
+RUN ldconfig
+# Copy to /build/out as well for backward compatibility with previous versions.
+COPY --from=builder /build/out /build/out
+{{/debian}}
 # Wrapper scripts
 COPY --from=builder /build/out/curl_* /usr/local/bin/
-{{/alpine}}
