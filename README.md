@@ -64,11 +64,11 @@ See [Advanced usage](#Advanced-usage) for more options, including using `libcurl
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
 ### Pre-compiled binaries
-Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page. Before you use them you need to install nss (Firefox's TLS library):
-* Ubuntu - `sudo apt install libnss3`
-* Red Hat/Fedora/CentOS - `yum install nss nss-pem`
-* Archlinux - `pacman -S nss`
-* macOS - `brew install nss`
+Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page. Before you use them you need to install nss (Firefox's TLS library) and CA certificates:
+* Ubuntu - `sudo apt install libnss3 nss-plugin-pem ca-certificates`
+* Red Hat/Fedora/CentOS - `yum install nss nss-pem ca-certificates`
+* Archlinux - `pacman -S nss ca-certificates`
+* macOS - `brew install nss ca-certificates`
 
 The pre-compiled binaries contain libcurl-impersonate and a statically compiled curl-impersonate for ease of use.
 
