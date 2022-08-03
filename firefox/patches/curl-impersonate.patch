@@ -97,10 +97,10 @@ index b00648e79..eefa36f2e 100644
  } CURLoption;
  
 diff --git a/include/curl/easy.h b/include/curl/easy.h
-index 9c7e63ada..d93353c69 100644
+index 9c7e63ada..a3c54c4af 100644
 --- a/include/curl/easy.h
 +++ b/include/curl/easy.h
-@@ -43,6 +43,15 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
+@@ -43,6 +43,16 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
  CURL_EXTERN CURLcode curl_easy_perform(CURL *curl);
  CURL_EXTERN void curl_easy_cleanup(CURL *curl);
  
@@ -111,7 +111,8 @@ index 9c7e63ada..d93353c69 100644
 + * created as a separate API function and not just as another option to
 + * curl_easy_setopt().
 + */
-+CURL_EXTERN CURLcode curl_easy_impersonate(CURL *curl, const char *target);
++CURL_EXTERN CURLcode curl_easy_impersonate(CURL *curl, const char *target,
++                                           int default_headers);
 +
  /*
   * NAME curl_easy_getinfo()
@@ -209,7 +210,7 @@ index 9bd8e324b..bfd5e90e2 100644
    inet_pton.c        \
    krb5.c             \
 diff --git a/lib/easy.c b/lib/easy.c
-index 704a59df6..03d710757 100644
+index 704a59df6..349d03933 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -81,6 +81,8 @@
@@ -221,7 +222,7 @@ index 704a59df6..03d710757 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -332,6 +334,73 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
+@@ -332,6 +334,76 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
    return rc;
  }
  
@@ -230,7 +231,8 @@ index 704a59df6..03d710757 100644
 + * Call curl_easy_setopt() with all the needed options as defined in the
 + * 'impersonations' array.
 + * */
-+CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target)
++CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
++                               int default_headers)
 +{
 +  int i;
 +  int ret;
@@ -267,21 +269,23 @@ index 704a59df6..03d710757 100644
 +      return ret;
 +  }
 +
-+  /* Build a linked list out of the static array of headers. */
-+  for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
-+    if(opts->http_headers[i]) {
-+      headers = curl_slist_append(headers, opts->http_headers[i]);
-+      if(!headers) {
-+        return CURLE_OUT_OF_MEMORY;
++  if(default_headers) {
++    /* Build a linked list out of the static array of headers. */
++    for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
++      if(opts->http_headers[i]) {
++        headers = curl_slist_append(headers, opts->http_headers[i]);
++        if(!headers) {
++          return CURLE_OUT_OF_MEMORY;
++        }
 +      }
 +    }
-+  }
 +
-+  if(headers) {
-+    ret = curl_easy_setopt(data, CURLOPT_HTTPBASEHEADER, headers);
-+    curl_slist_free_all(headers);
-+    if(ret)
-+      return ret;
++    if(headers) {
++      ret = curl_easy_setopt(data, CURLOPT_HTTPBASEHEADER, headers);
++      curl_slist_free_all(headers);
++      if(ret)
++        return ret;
++    }
 +  }
 +
 +  /* Always enable all supported compressions. */
@@ -295,15 +299,16 @@ index 704a59df6..03d710757 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -340,6 +409,7 @@ struct Curl_easy *curl_easy_init(void)
+@@ -340,6 +412,8 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
-+  char *target;
++  char *env_target;
++  char *env_headers;
  
    /* Make sure we inited the global SSL stuff */
    global_init_lock();
-@@ -362,6 +432,22 @@ struct Curl_easy *curl_easy_init(void)
+@@ -362,6 +436,29 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -313,10 +318,17 @@ index 704a59df6..03d710757 100644
 +   * This is a bit hacky but allows seamless integration of libcurl-impersonate
 +   * without code modifications to the app.
 +   */
-+  target = curl_getenv("CURL_IMPERSONATE");
-+  if(target) {
-+    result = curl_easy_impersonate(data, target);
-+    free(target);
++  env_target = curl_getenv("CURL_IMPERSONATE");
++  if(env_target) {
++    env_headers = curl_getenv("CURL_IMPERSONATE_HEADERS");
++    if(env_headers) {
++      result = curl_easy_impersonate(data, env_target,
++                                     !Curl_strcasecompare(env_headers, "no"));
++      free(env_headers);
++    } else {
++      result = curl_easy_impersonate(data, env_target, true);
++    }
++    free(env_target);
 +    if(result) {
 +      Curl_close(&data);
 +      return NULL;
@@ -326,7 +338,7 @@ index 704a59df6..03d710757 100644
    return data;
  }
  
-@@ -936,6 +1022,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -936,6 +1033,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -340,24 +352,36 @@ index 704a59df6..03d710757 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -1025,6 +1118,8 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -1025,6 +1129,9 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
-+  char *target;
++  char *env_target;
++  char *env_headers;
 +
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -1049,6 +1144,12 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -1049,6 +1156,23 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
 +
-+  target = curl_getenv("CURL_IMPERSONATE");
-+  if(target) {
-+    curl_easy_impersonate(data, target);
-+    free(target);
++  /*
++   * curl-impersonate: Hook into curl_easy_reset() to set the required options
++   * from an environment variable, just like in curl_easy_init().
++   */
++  env_target = curl_getenv("CURL_IMPERSONATE");
++  if(env_target) {
++    env_headers = curl_getenv("CURL_IMPERSONATE_HEADERS");
++    if(env_headers) {
++      curl_easy_impersonate(data, env_target,
++                            !Curl_strcasecompare(env_headers, "no"));
++      free(env_headers);
++    } else {
++      curl_easy_impersonate(data, env_target, true);
++    }
++    free(env_target);
 +  }
  }
  
@@ -399,7 +423,7 @@ index 9453cf55b..ba9433cb9 100644
    }
  
 diff --git a/lib/http.c b/lib/http.c
-index 258722a60..b8990121d 100644
+index 258722a60..9a06e281a 100644
 --- a/lib/http.c
 +++ b/lib/http.c
 @@ -85,6 +85,7 @@
@@ -454,7 +478,7 @@ index 258722a60..b8990121d 100644
  #endif
  
    /* loop through one or two lists */
-@@ -2069,6 +2079,92 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
+@@ -2069,6 +2079,108 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
    *reqp = httpreq;
  }
  
@@ -474,6 +498,7 @@ index 258722a60..b8990121d 100644
 +  struct curl_slist *head;
 +  struct curl_slist *dup = NULL;
 +  struct curl_slist *new_list = NULL;
++  char *uagent;
 +
 +  if (!data->state.base_headers)
 +    return CURLE_OK;
@@ -508,6 +533,21 @@ index 258722a60..b8990121d 100644
 +        found = TRUE;
 +        break;
 +      }
++    }
++
++    /* If the user agent was set with CURLOPT_USERAGENT, but not with
++     * CURLOPT_HTTPHEADER, take it from there instead. */
++    if(!found &&
++       strncasecompare(head->data, "User-Agent", prefix_len) &&
++       data->set.str[STRING_USERAGENT] &&
++       *data->set.str[STRING_USERAGENT]) {
++      uagent = aprintf("User-Agent: %s", data->set.str[STRING_USERAGENT]);
++      if(!uagent) {
++        ret = CURLE_OUT_OF_MEMORY;
++        goto fail;
++      }
++      new_list = Curl_slist_append_nodup(new_list, uagent);
++      found = TRUE;
 +    }
 +
 +    if (!found) {
@@ -547,7 +587,7 @@ index 258722a60..b8990121d 100644
  CURLcode Curl_http_useragent(struct Curl_easy *data)
  {
    /* The User-Agent string might have been allocated in url.c already, because
-@@ -3088,6 +3184,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+@@ -3088,6 +3200,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
    http = data->req.p.http;
    DEBUGASSERT(http);
  

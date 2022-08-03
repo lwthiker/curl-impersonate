@@ -18,6 +18,7 @@
 
 /* Support up to 16 URLs */
 #define MAX_URLS 16
+
 /* Command line options. */
 struct opts {
     char *outfile;
@@ -25,6 +26,8 @@ struct opts {
     uint16_t local_port_end;
     bool insecure;
     char *urls[MAX_URLS];
+    char *user_agent;
+    struct curl_slist *headers;
 };
 
 int parse_ports_range(char *str, uint16_t *start, uint16_t *end)
@@ -63,6 +66,7 @@ int parse_opts(int argc, char **argv, struct opts *opts)
     int c;
     int r;
     int i;
+    struct curl_slist *tmp;
 
     memset(opts, 0, sizeof(*opts));
 
@@ -71,15 +75,21 @@ int parse_opts(int argc, char **argv, struct opts *opts)
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {
-            {"local-port", required_argument, NULL, 'l'}
+            {"header", required_argument, NULL, 'H'},
+            {"local-port", required_argument, NULL, 'l'},
+            {"user-agent", required_argument, NULL, 'A'},
+            {0, 0, NULL, 0}
         };
 
-        c = getopt_long(argc, argv, "o:k", long_options, &option_index);
+        c = getopt_long(argc, argv, "o:kH:A:", long_options, &option_index);
         if (c == -1) {
             break;
         }
 
         switch (c) {
+        case 'A':
+            opts->user_agent = optarg;
+            break;
         case 'l':
             r = parse_ports_range(optarg,
                                   &opts->local_port_start,
@@ -94,21 +104,41 @@ int parse_opts(int argc, char **argv, struct opts *opts)
         case 'k':
             opts->insecure = true;
             break;
+        case 'H':
+            tmp = curl_slist_append(opts->headers, optarg);
+            if (!tmp) {
+                fprintf(stderr, "curl_slist_append() failed\n");
+                if (opts->headers) {
+                    curl_slist_free_all(opts->headers);
+                }
+                return 1;
+            }
+            opts->headers = tmp;
+            break;
+        case '?':
+            break;
         }
     }
 
     /* No URL supplied. */
+    i = 0;
     if (optind >= argc) {
         return 1;
     }
 
     /* The rest of the options are URLs */
-    i = 0;
     while (optind < argc) {
         opts->urls[i++] = argv[optind++];
     }
 
     return 0;
+}
+
+void clean_opts(struct opts *opts)
+{
+    if (opts->headers) {
+        curl_slist_free_all(opts->headers);
+    }
 }
 
 /* Set all options except for the URL. */
@@ -160,6 +190,22 @@ int set_opts(CURL *curl, struct opts *opts, FILE *file)
         }
     }
 
+    if (opts->user_agent) {
+        c = curl_easy_setopt(curl, CURLOPT_USERAGENT, opts->user_agent);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_USERAGENT) failed\n");
+            return 1;
+        }
+    }
+
+    if (opts->headers) {
+        c = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, opts->headers);
+        if (c) {
+            fprintf(stderr, "curl_easy_setopt(CURLOPT_HTTPHEADER) failed\n");
+            return 1;
+        }
+    }
+
     return 0;
 }
 
@@ -180,7 +226,8 @@ int main(int argc, char *argv[])
         file = fopen(opts.outfile, "w");
         if (!file) {
             fprintf(stderr, "Failed opening %s for writing\n", opts.outfile);
-            exit(1);
+            c = 1;
+            goto out_clean_opts;
         }
     } else {
         file = stdout;
@@ -212,7 +259,9 @@ int main(int argc, char *argv[])
 
         c = curl_easy_perform(curl);
         if (c) {
-            fprintf(stderr, "curl_easy_perform() failed\n");
+            fprintf(stderr,
+                    "curl_easy_perform() failed: %d (%s)\n",
+                    c, curl_easy_strerror(c));
             goto out;
         }
 
@@ -231,5 +280,7 @@ out_close:
     if (file) {
         fclose(file);
     }
+out_clean_opts:
+    clean_opts(&opts);
     return c;
 }

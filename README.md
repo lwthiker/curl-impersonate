@@ -83,13 +83,13 @@ Also make sure to read [Notes on Dependencies](#notes-on-dependencies).
 See [INSTALL.md](INSTALL.md).
 
 ### Docker images
-Docker images based on Alpine Linux with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
+Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
-# Firefox version
+# Firefox version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-ff
 docker run --rm lwthiker/curl-impersonate:0.5-ff curl_ff100 https://www.wikipedia.org
 
-# Chrome version
+# Chrome version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-chrome
 docker run --rm lwthiker/curl-impersonate:0.5-chrome curl_chrome101 https://www.wikipedia.org
 ```
@@ -104,18 +104,23 @@ AUR packages are available to Archlinux users:
 `libcurl-impersonate.so` is libcurl compiled with the same changes as the command line `curl-impersonate`.
 It has an additional API function:
 ```c
-CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target);
+CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
+                               int default_headers);
 ```
-You can call it with the target names, e.g. `chrome101`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts. Specifically it sets:
+You can call it with the target names, e.g. `chrome101`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts.
+If `default_headers` is set to 0, the built-in list of  HTTP headers will not be set, and the user is expected to provide them instead using the regular [`CURLOPT_HTTPHEADER`](https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html) libcurl option.
+
+Calling the above function sets the following libcurl options:
 * `CURLOPT_HTTP_VERSION`
 * `CURLOPT_SSLVERSION`, `CURLOPT_SSL_CIPHER_LIST`, `CURLOPT_SSL_EC_CURVES`, `CURLOPT_SSL_ENABLE_NPN`, `CURLOPT_SSL_ENABLE_ALPN`
-* `CURLOPT_HTTPBASEHEADER`, `CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER` (non-standard HTTP options created for this project).
+* `CURLOPT_HTTPBASEHEADER`, if `default_headers` is non-zero (this is a non-standard HTTP option created for this project).
+* `CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER` (non-standard HTTP/2 option created for this project).
 * `CURLOPT_SSL_ENABLE_ALPS`, `CURLOPT_SSL_SIG_HASH_ALGS`, `CURLOPT_SSL_CERT_COMPRESSION`, `CURLOPT_SSL_ENABLE_TICKET` (non-standard TLS options created for this project).
 
 Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
 
 ### Using CURL_IMPERSONATE env var
-*Experimental*: If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
+If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
 LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome101 my_app
 ```
@@ -125,7 +130,12 @@ The `CURL_IMPERSONATE` env var has two effects:
 
 This means that all the options needed for impersonation will be automatically set for any curl handle.
 
-Note that the above will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
+If you need precise control over the HTTP headers, set `CURL_IMPERSONATE_HEADERS=no` to disable the built-in list of HTTP headers, then set them yourself with `curl_easy_setopt()`. For example:
+```bash
+LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome101 CURL_IMPERSONATE_HEADERS=no my_app
+```
+
+Note that the `LD_PRELOAD` method will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
 
 ### Notes on dependencies 
 
