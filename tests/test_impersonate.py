@@ -146,6 +146,7 @@ class TestImpersonation:
         ("curl_chrome99", None, None, "chrome_99.0.4844.51_win10"),
         ("curl_chrome100", None, None, "chrome_100.0.4896.127_win10"),
         ("curl_chrome101", None, None, "chrome_101.0.4951.67_win10"),
+        ("curl_chrome104", None, None, "chrome_104.0.5112.81_win10"),
         ("curl_chrome99_android", None, None, "chrome_99.0.4844.73_android12-pixel6"),
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
         ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
@@ -183,6 +184,14 @@ class TestImpersonation:
             },
             "libcurl-impersonate-chrome",
             "chrome_101.0.4951.67_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "chrome104"
+            },
+            "libcurl-impersonate-chrome",
+            "chrome_104.0.5112.81_win10"
         ),
         (
             "minicurl",
