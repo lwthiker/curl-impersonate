@@ -61,6 +61,10 @@ Please note that the wrapper scripts use a default set of HTTP headers. If you w
 
 See [Advanced usage](#Advanced-usage) for more options, including using `libcurl-impersonate` as a library.
 
+## Documentation
+
+More documentation is available in the [docs/](docs/README.md) directory.
+
 ## Installation
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
