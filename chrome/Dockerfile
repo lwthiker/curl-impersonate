@@ -7,7 +7,7 @@
 
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-buster as builder
+FROM python:3.10.1-slim-bullseye as builder
 
 WORKDIR /build
 
@@ -137,7 +137,7 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y ca-certificates
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local

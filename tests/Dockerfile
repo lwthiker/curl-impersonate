@@ -4,7 +4,7 @@ ARG CHROME_IMAGE=curl-impersonate-chrome
 FROM ${FIREFOX_IMAGE} as ff
 FROM ${CHROME_IMAGE} as chrome
 
-FROM python:3.10.1-slim-buster
+FROM python:3.10.1-slim-bullseye
 
 WORKDIR /tests
 
