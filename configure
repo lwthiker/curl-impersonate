@@ -4101,7 +4101,7 @@ fi
 # Check whether --enable-static was given.
 if test ${enable_static+y}
 then :
-  enableval=$enable_static; static_build="yes"
+  enableval=$enable_static; static_build="$enableval"
 
 else $as_nop
   static_build="no"
