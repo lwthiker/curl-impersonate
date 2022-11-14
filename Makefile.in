@@ -213,7 +213,7 @@ $(nss_static_libs): $(NSS_VERSION).tar.gz
 ifeq ($(host),$(build))
 	# Native build, use NSS' build script.
 	cd $(NSS_VERSION)/nss
-	./build.sh -o --disable-tests --static --python=python3
+	./build.sh -o -v --disable-tests --static --python=python3
 else
 	# We are cross compiling.
 	# Cross compiling NSS is not supported by its build script and is poorly
