@@ -39,7 +39,9 @@ jobs:
             capture_interface: en0
             make: gmake
     steps:
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-20.04'
@@ -85,9 +87,9 @@ jobs:
       # When cross compiling we need to build zlib first.
       - name: Build zlib
         run: |
-          curl -LO https://zlib.net/zlib-1.2.12.tar.gz
-          tar xf zlib-1.2.12.tar.gz
-          cd zlib-1.2.12
+          curl -LO https://zlib.net/zlib-1.2.13.tar.gz
+          tar xf zlib-1.2.13.tar.gz
+          cd zlib-1.2.13
           CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
           make
           make install
