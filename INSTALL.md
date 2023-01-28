@@ -183,3 +183,4 @@ The resulting binaries and libraries are in the `/usr/local` directory, which co
 
 If you use it outside the container, install the following dependency:
 * `sudo apt install libnss3`.  Even though nss is statically compiled into `curl-impersonate`, it is still necessary to install libnss3 because curl dynamically loads `libnssckbi.so`, a file containing Mozilla's list of trusted root certificates. Alternatively, use `curl -k` to disable certificate verification.
+Thanks
