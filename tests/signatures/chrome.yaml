@@ -563,7 +563,7 @@ signature:
             - ':scheme'
             - ':path'
         headers:
-            - 'sec-ch-ua: "Google Chrome";v="107", "Chromium";v="107", "Not=A?Brand";v="24"'
+            - 'sec-ch-ua: "Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"'
             - 'sec-ch-ua-mobile: ?0'
             - 'sec-ch-ua-platform: "Windows"'
             - 'upgrade-insecure-requests: 1'
