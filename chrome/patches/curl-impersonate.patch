@@ -82,10 +82,10 @@ index aaf2b8a43..ccfa52985 100644
            echo "curl was built with static libraries disabled" >&2
            exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index b00648e79..b64234932 100644
+index b00648e79..a8edd2e2d 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2143,6 +2143,49 @@ typedef enum {
+@@ -2143,6 +2143,50 @@ typedef enum {
    /* set the SSH host key callback custom pointer */
    CURLOPT(CURLOPT_SSH_HOSTKEYDATA, CURLOPTTYPE_CBPOINT, 317),
  
@@ -127,7 +127,8 @@ index b00648e79..b64234932 100644
 +   */
 +  CURLOPT(CURLOPT_HTTP2_NO_SERVER_PUSH, CURLOPTTYPE_LONG, 324),
 +
-+  /* curl-impersonate: Whether to enable Boringssl permute extensions
++  /* 
++   * curl-impersonate: Whether to enable Boringssl permute extensions
 +   * See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_set_permute_extensions.
 +   */
 +  CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 325),
@@ -249,7 +250,7 @@ index 9bd8e324b..bfd5e90e2 100644
    inet_pton.c        \
    krb5.c             \
 diff --git a/lib/easy.c b/lib/easy.c
-index 704a59df6..bc4d33b47 100644
+index 704a59df6..f486362c0 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -81,6 +81,8 @@
@@ -261,7 +262,7 @@ index 704a59df6..bc4d33b47 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -332,6 +334,136 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
+@@ -332,6 +334,134 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
    return rc;
  }
  
@@ -338,6 +339,12 @@ index 704a59df6..bc4d33b47 100644
 +  if(ret)
 +    return ret;
 +
++  if(opts->tls_permute_extensions) {
++    ret = curl_easy_setopt(data, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1);
++    if(ret)
++      return ret;
++  }
++
 +  if(opts->cert_compression) {
 +    ret = curl_easy_setopt(data,
 +                           CURLOPT_SSL_CERT_COMPRESSION,
@@ -373,14 +380,6 @@ index 704a59df6..bc4d33b47 100644
 +      return ret;
 +  }
 +
-+  if(opts->tls_permute_extensions) {
-+    ret = curl_easy_setopt(data,
-+                           CURLOPT_SSL_PERMUTE_EXTENSIONS,
-+                           opts->tls_permute_extensions ? 1 : 0);
-+    if(ret)
-+      return ret;
-+  }
-+
 +  if(opts->http2_no_server_push) {
 +    ret = curl_easy_setopt(data, CURLOPT_HTTP2_NO_SERVER_PUSH, 1L);
 +    if(ret)
@@ -398,7 +397,7 @@ index 704a59df6..bc4d33b47 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -340,6 +472,8 @@ struct Curl_easy *curl_easy_init(void)
+@@ -340,6 +470,8 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -407,7 +406,7 @@ index 704a59df6..bc4d33b47 100644
  
    /* Make sure we inited the global SSL stuff */
    global_init_lock();
-@@ -362,6 +496,29 @@ struct Curl_easy *curl_easy_init(void)
+@@ -362,6 +494,29 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -437,7 +436,7 @@ index 704a59df6..bc4d33b47 100644
    return data;
  }
  
-@@ -936,6 +1093,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -936,6 +1091,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -451,7 +450,7 @@ index 704a59df6..bc4d33b47 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -1025,6 +1189,9 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -1025,6 +1187,9 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
@@ -461,7 +460,7 @@ index 704a59df6..bc4d33b47 100644
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -1049,6 +1216,23 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -1049,6 +1214,23 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
@@ -1018,7 +1017,7 @@ index f0390596c..cf9b7a9d5 100644
   * Store nghttp2 version info in this buffer.
 diff --git a/lib/impersonate.c b/lib/impersonate.c
 new file mode 100644
-index 000000000..21d6e2409
+index 000000000..025bd58ef
 --- /dev/null
 +++ b/lib/impersonate.c
 @@ -0,0 +1,480 @@
@@ -1229,7 +1228,7 @@ index 000000000..21d6e2409
 +    .http2_no_server_push = true
 +  },
 +  {
-+      .target = "chrome109",
++      .target = "chrome110",
 +      .httpversion = CURL_HTTP_VERSION_2_0,
 +      .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
 +      .ciphers =
@@ -1255,12 +1254,12 @@ index 000000000..21d6e2409
 +      .tls_session_ticket = true,
 +      .cert_compression = "brotli",
 +      .http_headers = {
-+              "sec-ch-ua: \"\"Not=A?Brand\";v=\"99\", Google Chrome\";v=\"109\", \"Chromium\";v=\"109\"",
++              "sec-ch-ua: \"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\"",
 +              "sec-ch-ua-mobile: ?0",
 +              "sec-ch-ua-platform: \"Windows\"",
 +              "Upgrade-Insecure-Requests: 1",
-+              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-+              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
++              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
++              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
 +              "Sec-Fetch-Site: none",
 +              "Sec-Fetch-Mode: navigate",
 +              "Sec-Fetch-User: ?1",
@@ -1805,7 +1804,7 @@ index bcb4d460c..01e015706 100644
  
  struct Names {
 diff --git a/lib/vtls/openssl.c b/lib/vtls/openssl.c
-index 78aacd022..1d18fac7e 100644
+index 78aacd022..9f66af846 100644
 --- a/lib/vtls/openssl.c
 +++ b/lib/vtls/openssl.c
 @@ -78,6 +78,13 @@
@@ -2140,7 +2139,7 @@ index 78aacd022..1d18fac7e 100644
  #ifdef USE_OPENSSL_SRP
    if((ssl_authtype == CURL_TLSAUTH_SRP) &&
       Curl_allow_auth_to_host(data)) {
-@@ -2933,6 +3228,24 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+@@ -2933,6 +3228,28 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
    }
  #endif
  
@@ -2153,6 +2152,10 @@ index 78aacd022..1d18fac7e 100644
 +  /* Enable TLS GREASE. */
 +  SSL_CTX_set_grease_enabled(backend->ctx, 1);
 +
++  /*
++   * curl-impersonate: Enable TLS extension permutation, enabled by default
++   * since Chrome 110.
++   */
 +  if(conn->bits.tls_permute_extensions) {
 +    SSL_CTX_set_permute_extensions(backend->ctx, 1);
 +  }
@@ -2165,7 +2168,7 @@ index 78aacd022..1d18fac7e 100644
  
  #if defined(USE_WIN32_CRYPTO)
    /* Import certificates from the Windows root certificate store if requested.
-@@ -3232,6 +3545,33 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
+@@ -3232,6 +3549,33 @@ static CURLcode ossl_connect_step1(struct Curl_easy *data,
  
    SSL_set_connect_state(backend->handle);
  

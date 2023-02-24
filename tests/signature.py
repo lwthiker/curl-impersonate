@@ -45,6 +45,7 @@ class TLSExtensionType(enum.Enum):
     record_size_limit = 28
     delegated_credentials = 34
     session_ticket = 35
+    pre_shared_key = 41
     supported_versions = 43
     psk_key_exchange_modes = 45
     keyshare = 51
@@ -648,7 +649,20 @@ class TLSClientHelloSignature():
     def extension_list(self):
         return list(map(lambda ext: ext.ext_type, self.extensions))
 
-    def _compare_extensions(self, other: 'TLSClientHelloSignature'):
+    def _is_permuted_extension(self, ext: TLSExtensionSignature):
+        # Chrome permutes all TLS extensions except for GREASE and pre_shared_key
+        # (and the trailing padding)
+        return ext.ext_type not in [
+            TLSExtensionType.GREASE,
+            TLSExtensionType.pre_shared_key,
+            TLSExtensionType.padding
+        ]
+
+    def _compare_extensions(
+        self,
+        other: 'TLSClientHelloSignature',
+        allow_tls_permutation: bool = False
+    ):
         """Compare the TLS extensions of two Client Hello messages."""
         # Check that the extension lists are identical in content.
         if set(self.extension_list) != set(other.extension_list):
@@ -658,15 +672,23 @@ class TLSClientHelloSignature():
             return False, (f"TLS extension lists differ: "
                            f"Symmatric difference {symdiff}")
 
-        if self.extension_list != other.extension_list:
+        if not allow_tls_permutation and self.extension_list != other.extension_list:
             return False, "TLS extension lists identical but differ in order"
 
         # Check the extensions' parameters.
         for i, ext in enumerate(self.extensions):
-            if not ext.equals(other.extensions[i]):
+            if allow_tls_permutation and self._is_permuted_extension(ext):
+                # If TLS extension permutation is enabled, locate this extension
+                # in the other signature by type.
+                other_ext = next(
+                    e for e in other.extensions if e.ext_type == ext.ext_type
+                )
+            else:
+                other_ext = other.extensions[i]
+            if not ext.equals(other_ext):
                 ours = ext.to_dict()
                 ours.pop("type")
-                theirs = other.extensions[i].to_dict()
+                theirs = other_ext.to_dict()
                 theirs.pop("type")
                 msg = (f"TLS extension {ext.ext_type.name} is different. "
                        f"{ours} != {theirs}")
@@ -674,7 +696,11 @@ class TLSClientHelloSignature():
 
         return True, None
 
-    def _equals(self, other: 'TLSClientHelloSignature', reason: bool = False):
+    def _equals(
+        self,
+        other: 'TLSClientHelloSignature',
+        allow_tls_permutation: bool = False
+    ):
         """Check if another TLSClientHelloSignature is identical."""
         if self.record_version != other.record_version:
             msg = (f"TLS record versions differ: "
@@ -700,20 +726,32 @@ class TLSClientHelloSignature():
             msg = f"TLS compression methods differ in contents or order. "
             return False, msg
 
-        return self._compare_extensions(other)
+        return self._compare_extensions(other, allow_tls_permutation)
 
-    def equals(self, other: 'TLSClientHelloSignature', reason: bool = False):
+    def equals(
+        self,
+        other: 'TLSClientHelloSignature',
+        allow_tls_permutation: bool = False,
+        reason: bool = False
+    ):
         """Checks whether two Client Hello messages have the same signature.
 
         Parameters
         ----------
         other : TLSClientHelloSignature
             The signature of the other Client Hello message.
+        allow_tls_permutation : bool
+            Allow TLS extension permutations. If set to True, and the TLS
+            extensions are identical between the signatures but differ in
+            order, the signatures will be considered equal.
         reason : bool
             If True, returns an additional string describing the reason of the
             difference in case of a difference, and None otherwise.
         """
-        equal, msg = self._equals(other)
+        equal, msg = self._equals(
+            other,
+            allow_tls_permutation=allow_tls_permutation
+        )
         if reason:
             return equal, msg
         else:
