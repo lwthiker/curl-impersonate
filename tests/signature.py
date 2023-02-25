@@ -1,7 +1,7 @@
 import enum
 import struct
 import collections
-from typing import List, Any
+from typing import List, Dict, Any
 
 import yaml
 
@@ -977,13 +977,17 @@ class BrowserSignature:
     http2 : HTTP2Signature
         The HTTP/2 signature of the browser.
         Can be None, in which case it is ignored.
+    options: dict
+        Optional parameters specifying how to
     """
 
     def __init__(self,
                  tls_client_hello: TLSClientHelloSignature = None,
-                 http2: HTTP2Signature = None):
+                 http2: HTTP2Signature = None,
+                 options: Dict = None):
         self.tls_client_hello = tls_client_hello
         self.http2 = http2
+        self.options = options
 
     def _equals(self, other: 'BrowserSignature'):
         # If one is None, so must be the other
@@ -1005,6 +1009,14 @@ class BrowserSignature:
             equal, msg = self.http2.equals(other.http2, reason=True)
             if not equal:
                 return equal, msg
+
+        if (self.options is None) != (other.options is None):
+            return False, "Options present in one signature but not the other"
+
+        if self.options is not None:
+            if self.options != other.options:
+                msg = (f"Options differ: {self.options} != {other.options}")
+                return False, msg
 
         return True, None
 
@@ -1028,6 +1040,8 @@ class BrowserSignature:
     def to_dict(self):
         """Serialize to a dict object."""
         d = {}
+        if self.options is not None:
+            d["options"] = self.options
         if self.tls_client_hello is not None:
             d["tls_client_hello"] = self.tls_client_hello.to_dict()
         if self.http2 is not None:
@@ -1049,4 +1063,8 @@ class BrowserSignature:
         else:
             http2 = None
 
-        return BrowserSignature(tls_client_hello=tls_client_hello, http2=http2)
+        return BrowserSignature(
+            tls_client_hello=tls_client_hello,
+            http2=http2,
+            options=d.get("options")
+        )

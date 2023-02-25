@@ -572,7 +572,8 @@ class TestImpersonation:
             equals, msg = sig.equals(
                 expected_sig,
                 allow_tls_permutation=allow_tls_permutation,
-                reason=True)
+                reason=True
+            )
             assert equals, msg
 
     @pytest.mark.asyncio

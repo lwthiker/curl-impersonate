@@ -588,7 +588,6 @@ signature:
   tls_client_hello:
     record_version: 'TLS_VERSION_1_0'
     handshake_version: 'TLS_VERSION_1_2'
-    permute_extension: true
     session_id_length: 32
     ciphersuites: [
       'GREASE',
