@@ -51,6 +51,16 @@
             "wrapper_script": "curl_chrome107"
         },
         {
+            "name": "chrome110",
+            "browser": {
+                "name": "chrome",
+                "version": "110.0.5481.177",
+                "os": "win10"
+            },
+            "binary": "curl-impersonate-chrome",
+            "wrapper_script": "curl_chrome110"
+        },
+        {
             "name": "chrome99_android",
             "browser": {
                 "name": "chrome",
