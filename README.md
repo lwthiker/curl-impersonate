@@ -56,7 +56,7 @@ This list is also available in the [browsers.json](browsers.json) file.
 
 For each supported browser there is a wrapper script that launches `curl-impersonate` with all the needed headers and flags. For example:
 ```
-curl_chrome101 https://www.wikipedia.org
+curl_chrome110 https://www.wikipedia.org
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
@@ -82,7 +82,7 @@ The pre-compiled binaries contain libcurl-impersonate and a statically compiled 
 
 The pre-compiled Linux binaries are built for Ubuntu systems. On other distributions if you have errors with certificate verification you may have to tell curl where to find the CA certificates. For example:
 ```
-curl_chrome101 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
+curl_chrome110 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
 ```
 
 Also make sure to read [Notes on Dependencies](#notes-on-dependencies).
@@ -95,11 +95,11 @@ Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled 
 ```bash
 # Firefox version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-ff
-docker run --rm lwthiker/curl-impersonate:0.5-ff curl_ff100 https://www.wikipedia.org
+docker run --rm lwthiker/curl-impersonate:0.5-ff curl_ff109 https://www.wikipedia.org
 
 # Chrome version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.5-chrome
-docker run --rm lwthiker/curl-impersonate:0.5-chrome curl_chrome101 https://www.wikipedia.org
+docker run --rm lwthiker/curl-impersonate:0.5-chrome curl_chrome110 https://www.wikipedia.org
 ```
 
 ### Distro packages
@@ -115,7 +115,7 @@ It has an additional API function:
 CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
                                int default_headers);
 ```
-You can call it with the target names, e.g. `chrome101`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts.
+You can call it with the target names, e.g. `chrome110`, and it will internally set all the options and headers that are otherwise set by the wrapper scripts.
 If `default_headers` is set to 0, the built-in list of  HTTP headers will not be set, and the user is expected to provide them instead using the regular [`CURLOPT_HTTPHEADER`](https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html) libcurl option.
 
 Calling the above function sets the following libcurl options:
@@ -130,7 +130,7 @@ Note that if you call `curl_easy_setopt()` later with one of the above it will o
 ### Using CURL_IMPERSONATE env var
 If your application uses `libcurl` already, you can replace the existing library at runtime with `LD_PRELOAD` (Linux only). You can then set the `CURL_IMPERSONATE` env var. For example:
 ```bash
-LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome101 my_app
+LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome110 my_app
 ```
 The `CURL_IMPERSONATE` env var has two effects:
 * `curl_easy_impersonate()` is called automatically for any new curl handle created by `curl_easy_init()`.
@@ -140,7 +140,7 @@ This means that all the options needed for impersonation will be automatically s
 
 If you need precise control over the HTTP headers, set `CURL_IMPERSONATE_HEADERS=no` to disable the built-in list of HTTP headers, then set them yourself with `curl_easy_setopt()`. For example:
 ```bash
-LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome101 CURL_IMPERSONATE_HEADERS=no my_app
+LD_PRELOAD=/path/to/libcurl-impersonate.so CURL_IMPERSONATE=chrome110 CURL_IMPERSONATE_HEADERS=no my_app
 ```
 
 Note that the `LD_PRELOAD` method will NOT WORK for `curl` itself because the curl tool overrides the TLS settings. Use the wrapper scripts instead.
