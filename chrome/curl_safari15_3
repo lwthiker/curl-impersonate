@@ -15,6 +15,6 @@ dir=${0%/*}
     -H 'Accept-Language: en-us' \
     -H 'Accept-Encoding: gzip, deflate, br' \
     --http2 --false-start --compressed \
-    --tlsv1.0 --no-npn --no-tls-session-ticket \
+    --tlsv1.0 --no-tls-session-ticket \
     --http2-pseudo-headers-order 'mspa' \
     "$@"
