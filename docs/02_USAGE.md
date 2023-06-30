@@ -5,12 +5,12 @@ Since it is just a modified curl build, all the original flags and command line 
 
 For example, the Firefox version can be run as follows:
 ```bash
-curl-impersonate-ff -v -L httsp://wikipedia.org
+curl-impersonate-ff -v -L https://wikipedia.org
 ```
 
 and the Chrome version:
 ```bash
-curl-impersonate-chrome -v -L httsp://wikipedia.org
+curl-impersonate-chrome -v -L https://wikipedia.org
 ```
 
 However, by default, running the binaries as above will not prdouce the same TLS and HTTP/2 signatures as the impersonated browsers. Rather, this project provides additional *wrapper scripts* that launch these binaries with the correct set of command line flags to produce the desired signatures. For example:
