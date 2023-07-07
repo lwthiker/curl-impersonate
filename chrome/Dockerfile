@@ -1,13 +1,14 @@
 #
 # NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
-# "generate-dockerfiles.sh".
+# `./generate_dockerfiles.sh`
 #
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-bullseye as builder
+FROM python:3.11-slim-bookworm as builder
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /build
 
@@ -137,8 +138,9 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y ca-certificates
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Update the loader's cache
