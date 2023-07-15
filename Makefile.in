@@ -381,16 +381,11 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	  fi; \
 	  add_cflags="-I$(nss_install_dir)/../public/nss"; \
 	  add_cflags+=" -I$(nss_install_dir)/include/nspr"; \
-	  if test "$(host_cpu)" = "arm"; then \
-	    add_libs="-L$(nss_install_dir)/lib -l:libgcm-aes-arm32-neon_c_lib.a"; \
-	  else \
-	    add_libs=""; \
-	  fi; \
 	}
 
 	echo "Configuring curl with: $$config_flags"
 
-	./configure $$config_flags CFLAGS="$$add_cflags" LIBS="$$add_libs"
+	./configure $$config_flags CFLAGS="$$add_cflags"
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=
 	touch .firefox

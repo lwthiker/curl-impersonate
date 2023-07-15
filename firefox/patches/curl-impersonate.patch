@@ -1354,7 +1354,7 @@ index cb162755d..13ee571aa 100644
 +
 +      case $host_cpu in
 +        arm)
-+          addlib="$addlib -larmv8_c_lib"
++          addlib="$addlib -larmv8_c_lib -l:libgcm-aes-arm32-neon_c_lib.a"
 +          ;;
 +        aarch64)
 +          addlib="$addlib -larmv8_c_lib -lgcm-aes-aarch64_c_lib"
