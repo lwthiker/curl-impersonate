@@ -225,6 +225,7 @@ else
 	    ;;                                     \
 	  *)                                       \
 	    use_64="0";                            \
+	    nspr_configure_flags="";               \
 	    ;;                                     \
 	esac
 
