@@ -8,7 +8,6 @@
 # Python is needed for building libnss.
 # Use it as a common base.
 FROM python:3.11-slim-bookworm as builder
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /build
 
