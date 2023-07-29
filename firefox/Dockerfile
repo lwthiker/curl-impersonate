@@ -50,6 +50,9 @@ RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
     ./build.sh -o --disable-tests --static --python=python3
 
+# Dependencies for downloading and building nghttp2
+RUN apt-get install -y bzip2
+
 ARG NGHTTP2_VERSION=nghttp2-1.46.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
 
@@ -61,6 +64,9 @@ RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 RUN cd ${NGHTTP2_VERSION} && \
     ./configure --prefix=/build/${NGHTTP2_VERSION}/installed --with-pic --disable-shared && \
     make && make install
+
+# Dependencies for downloading and building curl
+RUN apt-get install -y xz-utils
 
 # Download curl.
 ARG CURL_VERSION=curl-7.84.0
