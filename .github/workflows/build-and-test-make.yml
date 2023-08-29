@@ -92,9 +92,9 @@ jobs:
       # When cross compiling we need to build zlib first.
       - name: Build zlib
         run: |
-          curl -LO https://zlib.net/zlib-1.2.13.tar.gz
-          tar xf zlib-1.2.13.tar.gz
-          cd zlib-1.2.13
+          curl -LO https://zlib.net/zlib-1.3.tar.gz
+          tar xf zlib-1.3.tar.gz
+          cd zlib-1.3
           CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
           make
           make install
