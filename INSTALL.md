@@ -98,6 +98,12 @@ pip3 install gyp-next
 brew install go
 ```
 
+Clone this repository:
+```
+git clone https://github.com/lwthiker/curl-impersonate.git
+cd curl-impersonate
+```
+
 Configure and compile:
 ```
 mkdir build && cd build
