@@ -423,7 +423,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 		config_flags="$$config_flags --with-ca-path=$(with_ca_path)"; \
 	  fi; \
 	  add_libs="-pthread"; \
-	  add_cflags="-I$(boringssl_install_dir)"; \
+	  add_cflags="-I$(boringssl_install_dir)/include"; \
 	}
 
 	echo "Configuring curl with: $$config_flags"
