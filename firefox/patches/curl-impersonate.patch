@@ -1565,7 +1565,7 @@ index 9db6b0f89..9e2f19af9 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index 2916c3613..9da97ff3c 100644
+index 2916c3613..3b43b2dfc 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
 @@ -76,7 +76,123 @@ if test "x$OPT_NSS" != xno; then
@@ -1603,7 +1603,7 @@ index 2916c3613..9da97ff3c 100644
 +
 +      case $host_cpu in
 +        arm)
-+          addlib="$addlib -larmv8_c_lib"
++          addlib="$addlib -larmv8_c_lib -llibgcm-aes-arm32-neon_c_lib"
 +          ;;
 +        aarch64)
 +          addlib="$addlib -larmv8_c_lib -lgcm-aes-aarch64_c_lib"
