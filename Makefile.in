@@ -346,7 +346,7 @@ $(CURL_VERSION)/.patched-chrome: $(srcdir)/chrome/patches/curl-*.patch
 	rm -Rf $(CURL_VERSION)
 	tar -xf $(CURL_VERSION).tar.xz
 	cd $(CURL_VERSION)
-	for p in $^; do echo "Applying patch $$p."; md5sum $$p; patch -p1 < $$p; done
+	for p in $^; do patch -p1 < $$p; done
 	# Re-generate the configure script
 	autoreconf -fi
 	touch .patched-chrome
