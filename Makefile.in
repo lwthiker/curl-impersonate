@@ -14,8 +14,8 @@ NSS_VERSION := nss-3.87
 NSS_URL := https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_87_RTM/src/nss-3.87-with-nspr-4.35.tar.gz
  # In case this is changed, update build-and-test-make.yml as well
 BORING_SSL_COMMIT := 3a667d10e94186fd503966f5638e134fe9fb4080
-NGHTTP2_VERSION := nghttp2-1.46.0
-NGHTTP2_URL := https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
+NGHTTP2_VERSION := nghttp2-1.56.0
+NGHTTP2_URL := https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 CURL_VERSION := curl-8.1.1
 
 brotli_install_dir := $(abspath brotli-$(BROTLI_VERSION)/out/installed)
@@ -427,7 +427,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 
 	echo "Configuring curl with: $$config_flags"
 
-	./configure $$config_flags LIBS="$$add_libs"
+	./configure $$config_flags CFLAGS="-g -ggdb" LIBS="$$add_libs"
 
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=

@@ -54,8 +54,8 @@ RUN mkdir boringssl/build/lib && \
     ln -s ../ssl/libssl.a boringssl/build/lib/libssl.a && \
     cp -R boringssl/include boringssl/build
 
-ARG NGHTTP2_VERSION=nghttp2-1.46.0
-ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
+ARG NGHTTP2_VERSION=nghttp2-1.56.0
+ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 
 # Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
