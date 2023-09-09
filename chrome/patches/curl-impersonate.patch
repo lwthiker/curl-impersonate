@@ -2313,6 +2313,101 @@ index 9db6b0f89..14c2f23e0 100644
 +Libs: -L${libdir} -lcurl-impersonate-chrome @LIBCURL_NO_SHARED@
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
+diff --git a/m4/curl-compilers.m4 b/m4/curl-compilers.m4
+index caa2b14cb..0a0af4361 100644
+--- a/m4/curl-compilers.m4
++++ b/m4/curl-compilers.m4
+@@ -373,42 +373,55 @@ AC_DEFUN([CURL_CONVERT_INCLUDE_TO_ISYSTEM], [
+   AC_REQUIRE([CURL_SHFUNC_SQUEEZE])dnl
+   AC_REQUIRE([CURL_CHECK_COMPILER])dnl
+   AC_MSG_CHECKING([convert -I options to -isystem])
+-  if test "$compiler_id" = "GNU_C" ||
+-    test "$compiler_id" = "CLANG"; then
+-    AC_MSG_RESULT([yes])
+-    tmp_has_include="no"
+-    tmp_chg_FLAGS="$CFLAGS"
+-    for word1 in $tmp_chg_FLAGS; do
+-      case "$word1" in
+-        -I*)
+-          tmp_has_include="yes"
+-          ;;
+-      esac
+-    done
+-    if test "$tmp_has_include" = "yes"; then
+-      tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/^-I/ -isystem /g'`
+-      tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/ -I/ -isystem /g'`
+-      CFLAGS="$tmp_chg_FLAGS"
+-      squeeze CFLAGS
+-    fi
+-    tmp_has_include="no"
+-    tmp_chg_FLAGS="$CPPFLAGS"
+-    for word1 in $tmp_chg_FLAGS; do
+-      case "$word1" in
+-        -I*)
+-          tmp_has_include="yes"
+-          ;;
+-      esac
+-    done
+-    if test "$tmp_has_include" = "yes"; then
+-      tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/^-I/ -isystem /g'`
+-      tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/ -I/ -isystem /g'`
+-      CPPFLAGS="$tmp_chg_FLAGS"
+-      squeeze CPPFLAGS
+-    fi
+-  else
++  case $host_os in
++  darwin*)
++    dnl curl-impersonate: On macos, clang gives priority to /usr/local/include
++    dnl over locations specified with -isystem for some unknown reason. In turn
++    dnl this causes clang to use the system's openssl, which conflicts with
++    dnl curl-impersonate's boringssl headers.
++    dnl To prevent that, disable curl's automatic conversion of -I flags to
++    dnl -isystem.
+     AC_MSG_RESULT([no])
+-  fi
++    ;;
++  *)
++    if test "$compiler_id" = "GNU_C" ||
++      test "$compiler_id" = "CLANG"; then
++      AC_MSG_RESULT([yes])
++      tmp_has_include="no"
++      tmp_chg_FLAGS="$CFLAGS"
++      for word1 in $tmp_chg_FLAGS; do
++        case "$word1" in
++          -I*)
++            tmp_has_include="yes"
++            ;;
++        esac
++      done
++      if test "$tmp_has_include" = "yes"; then
++        tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/^-I/ -isystem /g'`
++        tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/ -I/ -isystem /g'`
++        CFLAGS="$tmp_chg_FLAGS"
++        squeeze CFLAGS
++      fi
++      tmp_has_include="no"
++      tmp_chg_FLAGS="$CPPFLAGS"
++      for word1 in $tmp_chg_FLAGS; do
++        case "$word1" in
++          -I*)
++            tmp_has_include="yes"
++            ;;
++        esac
++      done
++      if test "$tmp_has_include" = "yes"; then
++        tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/^-I/ -isystem /g'`
++        tmp_chg_FLAGS=`echo "$tmp_chg_FLAGS" | "$SED" 's/ -I/ -isystem /g'`
++        CPPFLAGS="$tmp_chg_FLAGS"
++        squeeze CPPFLAGS
++      fi
++    else
++      AC_MSG_RESULT([no])
++    fi
++    ;;
++  esac
+ ])
+ 
+ 
 diff --git a/src/Makefile.am b/src/Makefile.am
 index f24cb6924..30b4fdb0a 100644
 --- a/src/Makefile.am
