@@ -527,3 +527,91 @@ signature:
             - 'sec-fetch-site: none'
             - 'sec-fetch-user: ?1'
             - 'te: trailers'
+---
+name: firefox_117.0.1_win10
+browser:
+    name: firefox
+    version: 117.0.1
+    os: win10
+    mode: regular
+signature:
+    tls_client_hello:
+        record_version: 'TLS_VERSION_1_0'
+        handshake_version: 'TLS_VERSION_1_2'
+        session_id_length: 32
+        ciphersuites: [
+            0x1301, 0x1303, 0x1302, 0xc02b, 0xc02f, 0xcca9, 0xcca8, 0xc02c,
+            0xc030, 0xc00a, 0xc009, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f,
+            0x0035
+        ]
+        comp_methods: [0x00]
+        extensions:
+            - type: server_name
+            - type: extended_master_secret
+              length: 0
+            - type: renegotiation_info
+              length: 1
+            - type: supported_groups
+              length: 14
+              supported_groups: [
+                  0x1d, 0x017, 0x18, 0x19, 0x0100, 0x0101
+              ]
+            - type: ec_point_formats
+              length: 2
+              ec_point_formats: [0]
+            - type: session_ticket
+              length: 0
+            - type: application_layer_protocol_negotiation
+              length: 14
+              alpn_list: ['h2', 'http/1.1']
+            - type: status_request
+              length: 5
+              status_request_type: 0x01
+            - type: delegated_credentials
+              length: 10
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0203
+              ]
+            - type: keyshare
+              length: 107
+              key_shares:
+                  - group: 29
+                    length: 32
+                  - group: 23
+                    length: 65
+            - type: supported_versions
+              length: 5
+              supported_versions: [
+                  'TLS_VERSION_1_3', 'TLS_VERSION_1_2'
+              ]
+            - type: signature_algorithms
+              length: 24
+              sig_hash_algs: [
+                  0x0403, 0x0503, 0x0603, 0x0804,
+                  0x0805, 0x0806, 0x0401, 0x0501,
+                  0x0601, 0x0203, 0x0201
+              ]
+            - type: psk_key_exchange_modes
+              length: 2
+              psk_ke_mode: 1
+            - type: record_size_limit
+              length: 2
+              record_size_limit: 16385
+            - type: padding
+    http2:
+        pseudo_headers:
+            - ':method'
+            - ':path'
+            - ':authority'
+            - ':scheme'
+        headers:
+            - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0'
+            - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+            - 'accept-language: en-US,en;q=0.5'
+            - 'accept-encoding: gzip, deflate, br'
+            - 'upgrade-insecure-requests: 1'
+            - 'sec-fetch-dest: document'
+            - 'sec-fetch-mode: navigate'
+            - 'sec-fetch-site: none'
+            - 'sec-fetch-user: ?1'
+            - 'te: trailers'
