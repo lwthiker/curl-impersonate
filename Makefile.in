@@ -427,7 +427,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 
 	echo "Configuring curl with: $$config_flags"
 
-	./configure $$config_flags CFLAGS="-g -ggdb" LIBS="$$add_libs"
+	./configure $$config_flags LIBS="$$add_libs"
 
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=
