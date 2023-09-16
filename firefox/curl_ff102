@@ -18,5 +18,5 @@ dir=${0%/*}
     -H 'Sec-Fetch-Site: none' \
     -H 'Sec-Fetch-User: ?1' \
     -H 'TE: Trailers' \
-    --http2 --false-start --compressed \
+    --http2 --compressed \
     "$@"
