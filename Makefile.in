@@ -364,6 +364,7 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	  config_flags+=" --with-nghttp2=$(nghttp2_install_dir)"; \
 	  config_flags+=" --with-brotli=$(brotli_install_dir)"; \
 	  config_flags+=" --with-nss=$(nss_install_dir) --with-nss-deprecated"; \
+	  config_flags+=" --enable-websockets"; \
 	  config_flags+=" USE_CURL_SSLKEYLOGFILE=true"; \
 	  if test "$(static_build)" = "yes"; then \
 	    config_flags+=" --enable-static --disable-shared"; \
@@ -404,6 +405,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 	  config_flags="$$config_flags --with-nghttp2=$(nghttp2_install_dir)"; \
 	  config_flags="$$config_flags --with-brotli=$(brotli_install_dir)"; \
 	  config_flags="$$config_flags --with-openssl=$(boringssl_install_dir)"; \
+	  config_flags="$$config_flags --enable-websockets"; \
 	  config_flags="$$config_flags USE_CURL_SSLKEYLOGFILE=true"; \
 	  if test "$(static_build)" = "yes"; then \
 	    config_flags="$$config_flags --enable-static --disable-shared";
