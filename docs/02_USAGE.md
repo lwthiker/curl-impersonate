@@ -50,7 +50,7 @@ The important part of the script is:
     -H 'Sec-Fetch-Dest: document' \
     -H 'Accept-Encoding: gzip, deflate, br' \
     -H 'Accept-Language: en-US,en;q=0.9' \
-    --http2 --false-start --compressed \
+    --http2 --compressed \
     --tlsv1.2 --no-npn --alps \
     --cert-compression brotli \
     "$@"
