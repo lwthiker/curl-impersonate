@@ -61,6 +61,16 @@
             "wrapper_script": "curl_chrome110"
         },
         {
+            "name": "chrome116",
+            "browser": {
+                "name": "chrome",
+                "version": "116.0.5845.180",
+                "os": "win10"
+            },
+            "binary": "curl-impersonate-chrome",
+            "wrapper_script": "curl_chrome116"
+        },
+        {
             "name": "chrome99_android",
             "browser": {
                 "name": "chrome",
@@ -150,6 +160,16 @@
             },
             "binary": "curl-impersonate-ff",
             "wrapper_script": "curl_ff109"
+        },
+        {
+            "name": "ff117",
+            "browser": {
+                "name": "firefox",
+                "version": "117.0.1",
+                "os": "win10"
+            },
+            "binary": "curl-impersonate-ff",
+            "wrapper_script": "curl_ff117"
         },
         {
             "name": "safari15_3",

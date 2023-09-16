@@ -59,8 +59,8 @@ RUN mkdir boringssl/build/lib && \
 # Dependencies for downloading and building nghttp2
 RUN apt-get install -y bzip2
 
-ARG NGHTTP2_VERSION=nghttp2-1.46.0
-ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
+ARG NGHTTP2_VERSION=nghttp2-1.56.0
+ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 
 # Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
@@ -75,7 +75,7 @@ RUN cd ${NGHTTP2_VERSION} && \
 RUN apt-get install -y xz-utils
 
 # Download curl.
-ARG CURL_VERSION=curl-7.84.0
+ARG CURL_VERSION=curl-8.1.1
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
 RUN tar xf ${CURL_VERSION}.tar.xz
 

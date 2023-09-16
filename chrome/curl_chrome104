@@ -20,7 +20,7 @@ dir=${0%/*}
     -H 'Sec-Fetch-Dest: document' \
     -H 'Accept-Encoding: gzip, deflate, br' \
     -H 'Accept-Language: en-US,en;q=0.9' \
-    --http2 --false-start --compressed \
-    --tlsv1.2 --no-npn --alps \
+    --http2 --compressed \
+    --tlsv1.2 --alps \
     --cert-compression brotli \
     "$@"

@@ -5,12 +5,12 @@ Since it is just a modified curl build, all the original flags and command line 
 
 For example, the Firefox version can be run as follows:
 ```bash
-curl-impersonate-ff -v -L httsp://wikipedia.org
+curl-impersonate-ff -v -L https://wikipedia.org
 ```
 
 and the Chrome version:
 ```bash
-curl-impersonate-chrome -v -L httsp://wikipedia.org
+curl-impersonate-chrome -v -L https://wikipedia.org
 ```
 
 However, by default, running the binaries as above will not prdouce the same TLS and HTTP/2 signatures as the impersonated browsers. Rather, this project provides additional *wrapper scripts* that launch these binaries with the correct set of command line flags to produce the desired signatures. For example:
@@ -50,7 +50,7 @@ The important part of the script is:
     -H 'Sec-Fetch-Dest: document' \
     -H 'Accept-Encoding: gzip, deflate, br' \
     -H 'Accept-Language: en-US,en;q=0.9' \
-    --http2 --false-start --compressed \
+    --http2 --compressed \
     --tlsv1.2 --no-npn --alps \
     --cert-compression brotli \
     "$@"
@@ -62,11 +62,11 @@ The important flags are as follows:
 * `--tlsv1.2` sets the minimal TLS version, which is part of the TLS client hello message, to TLS1.2.
 * `--no-npn` disables to NPN TLS extension.
 * `--alps` enables the ALPS TLS extension. This flag was added for this project.
-* `--cert-compression` enables TLS certificate compression used by Chrome. This flag was added for this project. 
+* `--cert-compression` enables TLS certificate compression used by Chrome. This flag was added for this project.
 
 ## Flags that modify the TLS signature
 
 The following flags are known to affect the TLS signature of curl.
 Using them in addition to the flags in the wrapper scripts may produce a signature that does not match the browser.
 
-`--ciphers`, `--curves`, `--no-npn`, `--no-alpn`, `--tls-max`, `--tls13-ciphers`, `--tlsv1.0`, `--tlsv1.1`, `--tlsv1.2`, `--tlsv1.3`, `--tlsv1` 
+`--ciphers`, `--curves`, `--no-npn`, `--no-alpn`, `--tls-max`, `--tls13-ciphers`, `--tlsv1.0`, `--tlsv1.1`, `--tlsv1.2`, `--tlsv1.3`, `--tlsv1`

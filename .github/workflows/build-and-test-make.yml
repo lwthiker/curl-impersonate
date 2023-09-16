@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-11]
+        os: [ubuntu-20.04, macos-12]
         arch: [x86_64]
         include:
           - os: ubuntu-20.04
@@ -33,7 +33,12 @@ jobs:
             host: aarch64-linux-gnu
             capture_interface: eth0
             make: make
-          - os: macos-11
+          - os: ubuntu-20.04
+            arch: arm
+            host: arm-linux-gnueabihf
+            capture_interface: eth0
+            make: make
+          - os: macos-12
             arch: x86_64
             host: x86_64-macos
             capture_interface: en0
@@ -55,13 +60,13 @@ jobs:
           # More dependencies for the tests
           sudo apt-get install tcpdump nghttp2-server libnss3
 
-      - name: Install Ubuntu dependencies (aarch64)
-        if: matrix.arch == 'aarch64'
+      - name: Install Ubuntu cross-compile dependencies (${{ matrix.arch }})
+        if: matrix.os == 'ubuntu-20.04' && matrix.arch != 'x86_64'
         run: |
-          sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install gcc-${{ matrix.host }} g++-${{ matrix.host }}
 
       - name: Install macOS dependencies
-        if: matrix.os == 'macos-11'
+        if: matrix.os == 'macos-12'
         run: |
           brew install pkg-config make cmake ninja autoconf automake libtool
           # Chrome version dependencies
@@ -87,9 +92,9 @@ jobs:
       # When cross compiling we need to build zlib first.
       - name: Build zlib
         run: |
-          curl -LO https://zlib.net/zlib-1.2.13.tar.gz
-          tar xf zlib-1.2.13.tar.gz
-          cd zlib-1.2.13
+          curl -LO https://zlib.net/zlib-1.3.tar.gz
+          tar xf zlib-1.3.tar.gz
+          cd zlib-1.3
           CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
           make
           make install
@@ -177,7 +182,7 @@ jobs:
           ${{ matrix.make }} firefox-build
           ${{ matrix.make }} firefox-checkbuild
           ${{ matrix.make }} firefox-install
-    
+
       - name: Prepare the tests
         if: matrix.arch == 'x86_64'
         run: |

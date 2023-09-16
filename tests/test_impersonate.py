@@ -149,6 +149,7 @@ class TestImpersonation:
         ("curl_chrome104", None, None, "chrome_104.0.5112.81_win10"),
         ("curl_chrome107", None, None, "chrome_107.0.5304.107_win10"),
         ("curl_chrome110", None, None, "chrome_110.0.5481.177_win10"),
+        ("curl_chrome116", None, None, "chrome_116.0.5845.180_win10"),
         ("curl_chrome99_android", None, None, "chrome_99.0.4844.73_android12-pixel6"),
         ("curl_edge99", None, None, "edge_99.0.1150.30_win10"),
         ("curl_edge101", None, None, "edge_101.0.1210.47_win10"),
@@ -160,6 +161,7 @@ class TestImpersonation:
         ("curl_ff100", None, None, "firefox_100.0_win10"),
         ("curl_ff102", None, None, "firefox_102.0_win10"),
         ("curl_ff109", None, None, "firefox_109.0_win10"),
+        ("curl_ff117", None, None, "firefox_117.0.1_win10"),
 
         # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
         # linked against the regular libcurl and setting the
@@ -211,6 +213,14 @@ class TestImpersonation:
             },
             "libcurl-impersonate-chrome",
             "chrome_110.0.5481.177_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "chrome116"
+            },
+            "libcurl-impersonate-chrome",
+            "chrome_116.0.5845.180_win10"
         ),
         (
             "minicurl",
@@ -299,6 +309,14 @@ class TestImpersonation:
             },
             "libcurl-impersonate-ff",
             "firefox_109.0_win10"
+        ),
+        (
+            "minicurl",
+            {
+                "CURL_IMPERSONATE": "ff117"
+            },
+            "libcurl-impersonate-ff",
+            "firefox_117.0.1_win10"
         )
     ]
 

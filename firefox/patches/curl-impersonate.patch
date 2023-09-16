@@ -1,8 +1,8 @@
 diff --git a/Makefile.am b/Makefile.am
-index 40771ed38..5de6f11b6 100644
+index f25e4e2f0..9a8026915 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -155,13 +155,13 @@ CLEANFILES = $(VC10_LIBVCXPROJ) $(VC10_SRCVCXPROJ) $(VC11_LIBVCXPROJ)        \
+@@ -156,13 +156,13 @@ CLEANFILES = $(VC10_LIBVCXPROJ) $(VC10_SRCVCXPROJ) $(VC11_LIBVCXPROJ)        \
   $(VC14_SRCVCXPROJ) $(VC14_10_LIBVCXPROJ) $(VC14_10_SRCVCXPROJ)              \
   $(VC14_30_LIBVCXPROJ) $(VC14_30_SRCVCXPROJ)
  
@@ -19,10 +19,10 @@ index 40771ed38..5de6f11b6 100644
  # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
  include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index de2dee5a4..d2cbe4ee1 100644
+index 75a882b12..9310059b9 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1331,7 +1331,8 @@ if test X"$OPT_BROTLI" != Xno; then
+@@ -1493,7 +1493,8 @@ if test X"$OPT_BROTLI" != Xno; then
  
    dnl if given with a prefix, we set -L and -I based on that
    if test -n "$PREFIX_BROTLI"; then
@@ -32,7 +32,7 @@ index de2dee5a4..d2cbe4ee1 100644
      LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
      CPP_BROTLI=-I${PREFIX_BROTLI}/include
      DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
-@@ -1341,7 +1342,11 @@ if test X"$OPT_BROTLI" != Xno; then
+@@ -1503,7 +1504,11 @@ if test X"$OPT_BROTLI" != Xno; then
    CPPFLAGS="$CPPFLAGS $CPP_BROTLI"
    LIBS="$LIB_BROTLI $LIBS"
  
@@ -45,8 +45,8 @@ index de2dee5a4..d2cbe4ee1 100644
  
    AC_CHECK_HEADERS(brotli/decode.h,
      curl_brotli_msg="enabled (libbrotlidec)"
-@@ -4426,8 +4431,8 @@ AC_CONFIG_FILES([Makefile \
-            tests/unit/Makefile \
+@@ -4706,8 +4711,8 @@ AC_CONFIG_FILES([Makefile \
+            tests/http/clients/Makefile \
             packages/Makefile \
             packages/vms/Makefile \
 -           curl-config \
@@ -57,7 +57,7 @@ index de2dee5a4..d2cbe4ee1 100644
  AC_OUTPUT
  
 diff --git a/curl-config.in b/curl-config.in
-index aaf2b8a43..47eff151b 100644
+index 54f92d931..531bec977 100644
 --- a/curl-config.in
 +++ b/curl-config.in
 @@ -163,9 +163,9 @@ while test $# -gt 0; do
@@ -76,28 +76,28 @@ index aaf2b8a43..47eff151b 100644
  
      --static-libs)
          if test "X@ENABLE_STATIC@" != "Xno" ; then
--          echo @libdir@/libcurl.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
-+          echo @libdir@/libcurl-impersonate-ff.@libext@ @LDFLAGS@ @LIBCURL_LIBS@
+-          echo "@libdir@/libcurl.@libext@" @LDFLAGS@ @LIBCURL_LIBS@
++          echo "@libdir@/libcurl-impersonate-ff.@libext@" @LDFLAGS@ @LIBCURL_LIBS@
          else
            echo "curl was built with static libraries disabled" >&2
            exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index b00648e79..eefa36f2e 100644
+index 944352421..07d08a0bb 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2143,6 +2143,10 @@ typedef enum {
-   /* set the SSH host key callback custom pointer */
-   CURLOPT(CURLOPT_SSH_HOSTKEYDATA, CURLOPTTYPE_CBPOINT, 317),
+@@ -2207,6 +2207,10 @@ typedef enum {
+   /* Can leak things, gonna exit() soon */
+   CURLOPT(CURLOPT_QUICK_EXIT, CURLOPTTYPE_LONG, 322),
  
 +  /* curl-impersonate: A list of headers used by the impersonated browser.
 +   * If given, merged with CURLOPT_HTTPHEADER. */
-+  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 318),
++  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 323),
 +
    CURLOPT_LASTENTRY /* the last unused */
  } CURLoption;
  
 diff --git a/include/curl/easy.h b/include/curl/easy.h
-index 9c7e63ada..a3c54c4af 100644
+index 1285101c5..c620065dc 100644
 --- a/include/curl/easy.h
 +++ b/include/curl/easy.h
 @@ -43,6 +43,16 @@ CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
@@ -118,21 +118,26 @@ index 9c7e63ada..a3c54c4af 100644
   * NAME curl_easy_getinfo()
   *
 diff --git a/lib/Makefile.am b/lib/Makefile.am
-index 18ce47ea9..ea403a105 100644
+index 3c0a70912..e4a77a0e8 100644
 --- a/lib/Makefile.am
 +++ b/lib/Makefile.am
-@@ -30,7 +30,7 @@ EXTRA_DIST = Makefile.m32 config-win32.h config-win32ce.h config-plan9.h   \
-  libcurl.plist libcurl.rc config-amigaos.h makefile.amiga config-win32ce.h \
-  config-os400.h setup-os400.h $(CMAKE_DIST) setup-win32.h .checksrc
+@@ -31,7 +31,7 @@ EXTRA_DIST = Makefile.mk config-win32.h config-win32ce.h config-plan9.h    \
+  config-os400.h setup-os400.h $(CMAKE_DIST) setup-win32.h .checksrc \
+  Makefile.soname
  
 -lib_LTLIBRARIES = libcurl.la
 +lib_LTLIBRARIES = libcurl-impersonate-ff.la
  
  if BUILD_UNITTESTS
  noinst_LTLIBRARIES = libcurlu.la
-@@ -75,43 +75,43 @@ AM_CPPFLAGS += -DBUILDING_LIBCURL
- AM_LDFLAGS =
- AM_CFLAGS =
+@@ -67,51 +67,51 @@ AM_CFLAGS =
+ # Makefile.inc provides the CSOURCES and HHEADERS defines
+ include Makefile.inc
+ 
+-libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
+-libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
++libcurl_impersonate_ff_la_SOURCES = $(CSOURCES) $(HHEADERS)
++libcurlu_impersonate_ff_la_SOURCES = $(CSOURCES) $(HHEADERS)
  
 -libcurl_la_CPPFLAGS_EXTRA =
 -libcurl_la_LDFLAGS_EXTRA =
@@ -170,6 +175,12 @@ index 18ce47ea9..ea403a105 100644
  if USE_CPPFLAG_CURL_STATICLIB
 -libcurl_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
 +libcurl_impersonate_ff_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
+ else
+ if HAVE_WINDRES
+-libcurl_la_SOURCES += $(LIB_RCFILES)
++libcurl_impersonate_ff_la_SOURCES += $(LIB_RCFILES)
+ $(LIB_RCFILES): $(top_srcdir)/include/curl/curlver.h
+ endif
  endif
  
  if DOING_CURL_SYMBOL_HIDING
@@ -188,41 +199,83 @@ index 18ce47ea9..ea403a105 100644
  
  libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS
  libcurlu_la_LDFLAGS = $(AM_LDFLAGS) -static $(LIBCURL_LIBS)
-@@ -120,7 +120,7 @@ libcurlu_la_CFLAGS = $(AM_CFLAGS)
- # Makefile.inc provides the CSOURCES and HHEADERS defines
- include Makefile.inc
- 
--libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
-+libcurl_impersonate_ff_la_SOURCES = $(CSOURCES) $(HHEADERS)
- libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
- 
- CHECKSRC = $(CS_$(V))
 diff --git a/lib/Makefile.inc b/lib/Makefile.inc
-index 9bd8e324b..bfd5e90e2 100644
+index f815170a7..9d9417edc 100644
 --- a/lib/Makefile.inc
 +++ b/lib/Makefile.inc
-@@ -165,6 +165,7 @@ LIB_CFILES =         \
-   idn_win32.c        \
+@@ -174,6 +174,7 @@ LIB_CFILES =         \
+   idn.c              \
    if2ip.c            \
    imap.c             \
 +  impersonate.c      \
    inet_ntop.c        \
    inet_pton.c        \
    krb5.c             \
+diff --git a/lib/dynhds.c b/lib/dynhds.c
+index b325e0060..4c8a73bab 100644
+--- a/lib/dynhds.c
++++ b/lib/dynhds.c
+@@ -52,6 +52,8 @@ entry_new(const char *name, size_t namelen,
+   e->valuelen = valuelen;
+   if(opts & DYNHDS_OPT_LOWERCASE)
+     Curl_strntolower(e->name, e->name, e->namelen);
++  if(opts & DYNHDS_OPT_LOWERCASE_VAL)
++    Curl_strntolower(e->value, e->value, e->valuelen);
+   return e;
+ }
+ 
+@@ -134,6 +136,16 @@ void Curl_dynhds_set_opts(struct dynhds *dynhds, int opts)
+   dynhds->opts = opts;
+ }
+ 
++void Curl_dynhds_set_opt(struct dynhds *dynhds, int opt)
++{
++  dynhds->opts |= opt;
++}
++
++void Curl_dynhds_del_opt(struct dynhds *dynhds, int opt)
++{
++  dynhds->opts &= ~opt;
++}
++
+ struct dynhds_entry *Curl_dynhds_getn(struct dynhds *dynhds, size_t n)
+ {
+   DEBUGASSERT(dynhds);
+diff --git a/lib/dynhds.h b/lib/dynhds.h
+index 777baa58a..2d542dfd6 100644
+--- a/lib/dynhds.h
++++ b/lib/dynhds.h
+@@ -53,6 +53,7 @@ struct dynhds {
+ 
+ #define DYNHDS_OPT_NONE          (0)
+ #define DYNHDS_OPT_LOWERCASE     (1 << 0)
++#define DYNHDS_OPT_LOWERCASE_VAL (1 << 1)
+ 
+ /**
+  * Init for use on first time or after a reset.
+@@ -82,6 +83,8 @@ size_t Curl_dynhds_count(struct dynhds *dynhds);
+  * This will not have an effect on already existing headers.
+  */
+ void Curl_dynhds_set_opts(struct dynhds *dynhds, int opts);
++void Curl_dynhds_set_opt(struct dynhds *dynhds, int opt);
++void Curl_dynhds_del_opt(struct dynhds *dynhds, int opt);
+ 
+ /**
+  * Return the n-th header entry or NULL if it does not exist.
 diff --git a/lib/easy.c b/lib/easy.c
-index 704a59df6..349d03933 100644
+index d36cc03d1..c5a21e4e3 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
-@@ -81,6 +81,8 @@
+@@ -73,6 +73,8 @@
  #include "dynbuf.h"
  #include "altsvc.h"
  #include "hsts.h"
 +#include "strcase.h"
 +#include "impersonate.h"
  
- /* The last 3 #include files should be in this order */
- #include "curl_printf.h"
-@@ -332,6 +334,76 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
+ #include "easy_lock.h"
+ 
+@@ -330,6 +332,76 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
    return rc;
  }
  
@@ -240,7 +293,7 @@ index 704a59df6..349d03933 100644
 +  struct curl_slist *headers = NULL;
 +
 +  for (opts = impersonations; opts->target != NULL; opts++) {
-+    if (Curl_strncasecompare(target, opts->target, strlen(opts->target))) {
++    if (strncasecompare(target, opts->target, strlen(opts->target))) {
 +      break;
 +    }
 +  }
@@ -299,7 +352,7 @@ index 704a59df6..349d03933 100644
  /*
   * curl_easy_init() is the external interface to alloc, setup and init an
   * easy handle that is returned. If anything goes wrong, NULL is returned.
-@@ -340,6 +412,8 @@ struct Curl_easy *curl_easy_init(void)
+@@ -338,6 +410,8 @@ struct Curl_easy *curl_easy_init(void)
  {
    CURLcode result;
    struct Curl_easy *data;
@@ -308,7 +361,7 @@ index 704a59df6..349d03933 100644
  
    /* Make sure we inited the global SSL stuff */
    global_init_lock();
-@@ -362,6 +436,29 @@ struct Curl_easy *curl_easy_init(void)
+@@ -360,6 +434,29 @@ struct Curl_easy *curl_easy_init(void)
      return NULL;
    }
  
@@ -323,7 +376,7 @@ index 704a59df6..349d03933 100644
 +    env_headers = curl_getenv("CURL_IMPERSONATE_HEADERS");
 +    if(env_headers) {
 +      result = curl_easy_impersonate(data, env_target,
-+                                     !Curl_strcasecompare(env_headers, "no"));
++                                     !strcasecompare(env_headers, "no"));
 +      free(env_headers);
 +    } else {
 +      result = curl_easy_impersonate(data, env_target, true);
@@ -338,7 +391,7 @@ index 704a59df6..349d03933 100644
    return data;
  }
  
-@@ -936,6 +1033,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -930,6 +1027,13 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
      outcurl->state.referer_alloc = TRUE;
    }
  
@@ -352,7 +405,7 @@ index 704a59df6..349d03933 100644
    /* Reinitialize an SSL engine for the new handle
     * note: the engine name has already been copied by dupset */
    if(outcurl->set.str[STRING_SSL_ENGINE]) {
-@@ -1025,6 +1129,9 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
+@@ -1019,6 +1123,9 @@ fail:
   */
  void curl_easy_reset(struct Curl_easy *data)
  {
@@ -362,7 +415,7 @@ index 704a59df6..349d03933 100644
    Curl_free_request_state(data);
  
    /* zero out UserDefined data: */
-@@ -1049,6 +1156,23 @@ void curl_easy_reset(struct Curl_easy *data)
+@@ -1043,6 +1150,23 @@ void curl_easy_reset(struct Curl_easy *data)
  #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_CRYPTO_AUTH)
    Curl_http_auth_cleanup_digest(data);
  #endif
@@ -376,7 +429,7 @@ index 704a59df6..349d03933 100644
 +    env_headers = curl_getenv("CURL_IMPERSONATE_HEADERS");
 +    if(env_headers) {
 +      curl_easy_impersonate(data, env_target,
-+                            !Curl_strcasecompare(env_headers, "no"));
++                            !strcasecompare(env_headers, "no"));
 +      free(env_headers);
 +    } else {
 +      curl_easy_impersonate(data, env_target, true);
@@ -387,10 +440,10 @@ index 704a59df6..349d03933 100644
  
  /*
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index c99f135ff..d70ff8c51 100644
+index a9c1efd00..e04b42381 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
-@@ -132,6 +132,7 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -134,6 +134,7 @@ struct curl_easyoption Curl_easyopts[] = {
    {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
    {"HTTPAUTH", CURLOPT_HTTPAUTH, CURLOT_VALUES, 0},
    {"HTTPGET", CURLOPT_HTTPGET, CURLOT_LONG, 0},
@@ -398,43 +451,19 @@ index c99f135ff..d70ff8c51 100644
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
-diff --git a/lib/h2h3.c b/lib/h2h3.c
-index 9453cf55b..ba9433cb9 100644
---- a/lib/h2h3.c
-+++ b/lib/h2h3.c
-@@ -43,7 +43,8 @@
- 
- /* Index where :authority header field will appear in request header
-    field list. */
--#define AUTHORITY_DST_IDX 3
-+/* curl-impersonate: Put the ":authority" header in the second place. */
-+#define AUTHORITY_DST_IDX 2
- 
- /* USHRT_MAX is 65535 == 0xffff */
- #define HEADER_OVERFLOW(x) \
-@@ -258,9 +259,6 @@ CURLcode Curl_pseudo_headers(struct Curl_easy *data,
-       nva[i].valuelen = (end - hdbuf);
-     }
- 
--    nva[i].value = hdbuf;
--    nva[i].valuelen = (end - hdbuf);
--
-     ++i;
-   }
- 
 diff --git a/lib/http.c b/lib/http.c
-index 258722a60..9a06e281a 100644
+index 219dcc2c0..19ddd1d36 100644
 --- a/lib/http.c
 +++ b/lib/http.c
-@@ -85,6 +85,7 @@
- #include "altsvc.h"
+@@ -89,6 +89,7 @@
  #include "hsts.h"
+ #include "ws.h"
  #include "c-hyper.h"
 +#include "slist.h"
+ #include "curl_ctype.h"
  
  /* The last 3 #include files should be in this order */
- #include "curl_printf.h"
-@@ -1804,6 +1805,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1881,6 +1882,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
    int numlists = 1; /* by default */
    int i;
  
@@ -450,7 +479,7 @@ index 258722a60..9a06e281a 100644
  #ifndef CURL_DISABLE_PROXY
    enum proxy_use proxy;
  
-@@ -1815,10 +1825,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1892,10 +1902,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
  
    switch(proxy) {
    case HEADER_SERVER:
@@ -463,7 +492,7 @@ index 258722a60..9a06e281a 100644
      if(data->set.sep_headers) {
        h[1] = data->set.proxyheaders;
        numlists++;
-@@ -1828,12 +1838,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
+@@ -1905,12 +1915,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
      if(data->set.sep_headers)
        h[0] = data->set.proxyheaders;
      else
@@ -478,7 +507,7 @@ index 258722a60..9a06e281a 100644
  #endif
  
    /* loop through one or two lists */
-@@ -2069,6 +2079,108 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
+@@ -2146,6 +2156,108 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
    *reqp = httpreq;
  }
  
@@ -587,7 +616,7 @@ index 258722a60..9a06e281a 100644
  CURLcode Curl_http_useragent(struct Curl_easy *data)
  {
    /* The User-Agent string might have been allocated in url.c already, because
-@@ -3088,6 +3200,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
+@@ -3165,6 +3277,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
    http = data->req.p.http;
    DEBUGASSERT(http);
  
@@ -599,54 +628,79 @@ index 258722a60..9a06e281a 100644
    result = Curl_http_host(data, conn);
    if(result)
      return result;
+@@ -4818,23 +4935,32 @@ CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
+   Curl_dynhds_set_opts(h2_headers, DYNHDS_OPT_LOWERCASE);
+   result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_METHOD),
+                            req->method, strlen(req->method));
+-  if(!result && scheme) {
+-    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_SCHEME),
+-                             scheme, strlen(scheme));
++  if(!result && req->path) {
++    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_PATH),
++                             req->path, strlen(req->path));
+   }
+   if(!result && authority) {
+     result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_AUTHORITY),
+                              authority, strlen(authority));
+   }
+-  if(!result && req->path) {
+-    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_PATH),
+-                             req->path, strlen(req->path));
++  if(!result && scheme) {
++    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_SCHEME),
++                             scheme, strlen(scheme));
+   }
+   for(i = 0; !result && i < Curl_dynhds_count(&req->headers); ++i) {
+     e = Curl_dynhds_getn(&req->headers, i);
+     if(!h2_non_field(e->name, e->namelen)) {
++      /* curl-impersonate:
++       * Some HTTP/2 servers reject 'te' header value that is not lowercase (e.g. 'Trailers).
++       * Convert to lowercase explicitly.
++       */
++      if(e->namelen == 2 && strcasecompare(e->name, "te"))
++        Curl_dynhds_set_opt(h2_headers, DYNHDS_OPT_LOWERCASE_VAL);
++
+       result = Curl_dynhds_add(h2_headers, e->name, e->namelen,
+                                e->value, e->valuelen);
++
++      Curl_dynhds_del_opt(h2_headers, DYNHDS_OPT_LOWERCASE_VAL);
+     }
+   }
+ 
 diff --git a/lib/http2.c b/lib/http2.c
-index f6364d0e0..b5cb05e7e 100644
+index c666192fc..e926eb3f5 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
-@@ -61,7 +61,7 @@
+@@ -63,12 +63,13 @@
  #define NGHTTP2_HAS_SET_LOCAL_WINDOW_SIZE 1
  #endif
  
--#define HTTP2_HUGE_WINDOW_SIZE (32 * 1024 * 1024) /* 32 MB */
-+#define HTTP2_HUGE_WINDOW_SIZE (12 * 1024 * 1024) /*  12 MB */
+-
+ /* buffer dimensioning:
+  * use 16K as chunk size, as that fits H2 DATA frames well */
+ #define H2_CHUNK_SIZE           (16 * 1024)
+ /* this is how much we want "in flight" for a stream */
+-#define H2_STREAM_WINDOW_SIZE   (10 * 1024 * 1024)
++/* curl-impersonate: Set H2_STREAM_WINDOW_SIZE to 128kb so that the initial
++ * window size matches what Firefox sends. */
++#define H2_STREAM_WINDOW_SIZE   (128 * 1024)
+ /* on receving from TLS, we prep for holding a full stream window */
+ #define H2_NW_RECV_CHUNKS       (H2_STREAM_WINDOW_SIZE / H2_CHUNK_SIZE)
+ /* on send into TLS, we just want to accumulate small frames */
+@@ -86,7 +87,8 @@
+  * will block their received QUOTA in the connection window. And if we
+  * run out of space, the server is blocked from sending us any data.
+  * See #10988 for an issue with this. */
+-#define HTTP2_HUGE_WINDOW_SIZE (100 * H2_STREAM_WINDOW_SIZE)
++/* curl-impersonate: set HTTP2_HUGE_WINDOW_SIZE to 12MB to match Firefox. */
++#define HTTP2_HUGE_WINDOW_SIZE (96 * H2_STREAM_WINDOW_SIZE)
  
- #ifdef DEBUG_HTTP2
- #define H2BUGF(x) x
-@@ -79,13 +79,20 @@ static int h2_process_pending_input(struct Curl_easy *data,
-                                     struct http_conn *httpc,
-                                     CURLcode *err);
- 
-+
-+/*
-+ * curl-impersonate: Set the HTTP/2 stream weight to the one used by Firefox
-+ * by default to fetch html resources.
-+ */
-+#define FIREFOX_DEFAULT_STREAM_WEIGHT  (42)
-+
- /*
-  * Curl_http2_init_state() is called when the easy handle is created and
-  * allows for HTTP/2 specific init of state.
-  */
- void Curl_http2_init_state(struct UrlState *state)
+ #define H2_SETTINGS_IV_LEN  3
+ #define H2_BINSETTINGS_LEN 80
+@@ -94,14 +96,18 @@
+ static int populate_settings(nghttp2_settings_entry *iv,
+                              struct Curl_easy *data)
  {
--  state->stream_weight = NGHTTP2_DEFAULT_WEIGHT;
-+  state->stream_weight = FIREFOX_DEFAULT_STREAM_WEIGHT;
- }
- 
- /*
-@@ -94,7 +101,7 @@ void Curl_http2_init_state(struct UrlState *state)
-  */
- void Curl_http2_init_userset(struct UserDefined *set)
- {
--  set->stream_weight = NGHTTP2_DEFAULT_WEIGHT;
-+  set->stream_weight = FIREFOX_DEFAULT_STREAM_WEIGHT;
- }
- 
- static int http2_getsock(struct Curl_easy *data,
-@@ -1212,14 +1219,18 @@ static void populate_settings(struct Curl_easy *data,
- {
-   nghttp2_settings_entry *iv = httpc->local_settings;
- 
 -  iv[0].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
 -  iv[0].value = Curl_multi_max_concurrent_streams(data->multi);
 +  /* curl-impersonate: Align HTTP/2 settings to Firefox's */
@@ -654,8 +708,7 @@ index f6364d0e0..b5cb05e7e 100644
 +  iv[0].value = 0x10000;
  
    iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
--  iv[1].value = HTTP2_HUGE_WINDOW_SIZE;
-+  iv[1].value = 0x20000;
+   iv[1].value = H2_STREAM_WINDOW_SIZE;
  
 -  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
 -  iv[2].value = data->multi->push_cb != NULL;
@@ -665,9 +718,123 @@ index f6364d0e0..b5cb05e7e 100644
 +  // iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
 +  // iv[2].value = data->multi->push_cb != NULL;
  
-   httpc->local_settings_num = 3;
+   return 3;
  }
-@@ -1586,12 +1597,18 @@ static ssize_t http2_handle_stream_close(struct connectdata *conn,
+@@ -392,6 +398,71 @@ static void multi_connchanged(struct Curl_multi *multi)
+   multi->recheckstate = TRUE;
+ }
+ 
++/*
++ * curl-impersonate: Start with stream id 15 as Firefox does.
++ */
++#define FIREFOX_DEFAULT_STREAM_ID   (15)
++
++static CURLcode http2_set_stream_priority(struct Curl_cfilter *cf,
++                                          struct Curl_easy *data,
++                                          int32_t stream_id,
++                                          int32_t dep_stream_id,
++                                          int32_t weight)
++{
++  int rv;
++  struct cf_h2_ctx *ctx = cf->ctx;
++  nghttp2_priority_spec pri_spec;
++
++  nghttp2_priority_spec_init(&pri_spec, dep_stream_id, weight, 0);
++  rv = nghttp2_submit_priority(ctx->h2, NGHTTP2_FLAG_NONE,
++                               stream_id, &pri_spec);
++  if(rv) {
++    failf(data, "nghttp2_submit_priority() failed: %s(%d)",
++          nghttp2_strerror(rv), rv);
++    return CURLE_HTTP2;
++  }
++
++  return CURLE_OK;
++}
++
++/*
++ * curl-impersonate: Firefox uses an elaborate scheme of http/2 streams to
++ * split the load for html/js/css/images. It builds a tree of streams with
++ * different weights (priorities) by default and communicates this to the
++ * server. Imitate that behavior.
++ */
++static CURLcode http2_set_stream_priorities(struct Curl_cfilter *cf,
++                                            struct Curl_easy *data)
++{
++  CURLcode result;
++
++  result = http2_set_stream_priority(cf, data, 3, 0, 201);
++  if(result)
++    return result;
++
++  result = http2_set_stream_priority(cf, data, 5, 0, 101);
++  if(result)
++    return result;
++
++  result = http2_set_stream_priority(cf, data, 7, 0, 0);
++  if(result)
++    return result;
++
++  result = http2_set_stream_priority(cf, data, 9, 7, 0);
++  if(result)
++    return result;
++
++  result = http2_set_stream_priority(cf, data, 11, 3, 0);
++  if(result)
++    return result;
++
++  result = http2_set_stream_priority(cf, data, 13, 0, 241);
++  if(result)
++    return result;
++
++  return CURLE_OK;
++}
++
+ /*
+  * Initialize the cfilter context
+  */
+@@ -492,6 +563,13 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
+     goto out;
+   }
+ 
++  result = http2_set_stream_priorities(cf, data);
++  if(result)
++    goto out;
++
++  /* Best effort to set the request's stream id to 15, like Firefox does. */
++  nghttp2_session_set_next_stream_id(ctx->h2, FIREFOX_DEFAULT_STREAM_ID);
++
+   /* all set, traffic will be send on connect */
+   result = CURLE_OK;
+ 
+@@ -1616,18 +1694,25 @@ out:
+   return rv;
+ }
+ 
++
++/*
++ * curl-impersonate: Set the HTTP/2 stream weight to the one used by Firefox
++ * by default to fetch html resources.
++ */
++#define FIREFOX_DEFAULT_STREAM_WEIGHT  (42)
++
+ static int sweight_wanted(const struct Curl_easy *data)
+ {
+   /* 0 weight is not set by user and we take the nghttp2 default one */
+   return data->set.priority.weight?
+-    data->set.priority.weight : NGHTTP2_DEFAULT_WEIGHT;
++    data->set.priority.weight : FIREFOX_DEFAULT_STREAM_WEIGHT;
+ }
+ 
+ static int sweight_in_effect(const struct Curl_easy *data)
+ {
+   /* 0 weight is not set by user and we take the nghttp2 default one */
+   return data->state.priority.weight?
+-    data->state.priority.weight : NGHTTP2_DEFAULT_WEIGHT;
++    data->state.priority.weight : FIREFOX_DEFAULT_STREAM_WEIGHT;
+ }
+ 
+ /*
+@@ -1636,12 +1721,18 @@ static int sweight_in_effect(const struct Curl_easy *data)
   * struct.
   */
  
@@ -680,117 +847,22 @@ index f6364d0e0..b5cb05e7e 100644
  static void h2_pri_spec(struct Curl_easy *data,
                          nghttp2_priority_spec *pri_spec)
  {
-   struct HTTP *depstream = (data->set.stream_depends_on?
-                             data->set.stream_depends_on->req.p.http:NULL);
--  int32_t depstream_id = depstream? depstream->stream_id:0;
-+  int32_t depstream_id = depstream? depstream->stream_id:FIREFOX_DEFAULT_STREAM_DEP;
-   nghttp2_priority_spec_init(pri_spec, depstream_id, data->set.stream_weight,
-                              data->set.stream_depends_e);
-   data->state.stream_weight = data->set.stream_weight;
-@@ -2068,6 +2085,73 @@ CURLcode Curl_http2_setup(struct Curl_easy *data,
-   return CURLE_OK;
- }
- 
-+/*
-+ * curl-impersonate: Start with stream id 15 as Firefox does.
-+ */
-+#define FIREFOX_DEFAULT_STREAM_ID   (15)
-+
-+static CURLcode http2_set_stream_priority(struct Curl_easy *data,
-+                                          int32_t stream_id,
-+                                          int32_t dep_stream_id,
-+                                          int32_t weight)
-+{
-+  int rv;
-+  nghttp2_priority_spec pri_spec;
-+  struct connectdata *conn = data->conn;
-+  struct http_conn *httpc = &conn->proto.httpc;
-+
-+  nghttp2_priority_spec_init(&pri_spec, dep_stream_id, weight, 0);
-+  rv = nghttp2_submit_priority(httpc->h2, NGHTTP2_FLAG_NONE,
-+                               stream_id, &pri_spec);
-+  if(rv) {
-+    failf(data, "nghttp2_submit_priority() failed: %s(%d)",
-+          nghttp2_strerror(rv), rv);
-+    return CURLE_HTTP2;
-+  }
-+
-+  return CURLE_OK;
-+}
-+
-+
-+/*
-+ * curl-impersonate: Firefox uses an elaborate scheme of http/2 streams to
-+ * split the load for html/js/css/images. It builds a tree of streams with
-+ * different weights (priorities) by default and communicates this to the
-+ * server. Imitate that behavior.
-+ */
-+static CURLcode http2_set_stream_priorities(struct Curl_easy *data)
-+{
-+  CURLcode result;
-+  struct connectdata *conn = data->conn;
-+  struct http_conn *httpc = &conn->proto.httpc;
-+
-+  result = http2_set_stream_priority(data, 3, 0, 201);
-+  if(result)
-+    return result;
-+
-+  result = http2_set_stream_priority(data, 5, 0, 101);
-+  if(result)
-+    return result;
-+
-+  result = http2_set_stream_priority(data, 7, 0, 0);
-+  if(result)
-+    return result;
-+
-+  result = http2_set_stream_priority(data, 9, 7, 0);
-+  if(result)
-+    return result;
-+
-+  result = http2_set_stream_priority(data, 11, 3, 0);
-+  if(result)
-+    return result;
-+
-+  result = http2_set_stream_priority(data, 13, 0, 241);
-+  if(result)
-+    return result;
-+
-+  return CURLE_OK;
-+}
-+
- CURLcode Curl_http2_switched(struct Curl_easy *data,
-                              const char *mem, size_t nread)
- {
-@@ -2076,6 +2160,7 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
-   struct http_conn *httpc = &conn->proto.httpc;
-   int rv;
-   struct HTTP *stream = data->req.p.http;
-+  nghttp2_priority_spec pri_spec;
- 
-   result = Curl_http2_setup(data, conn);
-   if(result)
-@@ -2130,6 +2215,13 @@ CURLcode Curl_http2_switched(struct Curl_easy *data,
-     return CURLE_HTTP2;
-   }
- 
-+  result = http2_set_stream_priorities(data);
-+  if(result)
-+    return result;
-+
-+  /* Best effort to set the request's stream id to 15, like Firefox does. */
-+  nghttp2_session_set_next_stream_id(httpc->h2, FIREFOX_DEFAULT_STREAM_ID);
-+
-   /* we are going to copy mem to httpc->inbuf.  This is required since
-      mem is part of buffer pointed by stream->mem, and callbacks
-      called by nghttp2_session_mem_recv() will write stream specific
+   struct Curl_data_priority *prio = &data->set.priority;
+   struct stream_ctx *depstream = H2_STREAM_CTX(prio->parent);
+-  int32_t depstream_id = depstream? depstream->id:0;
++  int32_t depstream_id = depstream? depstream->id:FIREFOX_DEFAULT_STREAM_DEP;
+   nghttp2_priority_spec_init(pri_spec, depstream_id,
+                              sweight_wanted(data),
+                              data->set.priority.exclusive);
 diff --git a/lib/impersonate.c b/lib/impersonate.c
 new file mode 100644
-index 000000000..33b822c1a
+index 000000000..e8ae6a722
 --- /dev/null
 +++ b/lib/impersonate.c
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,257 @@
 +#include "curl_setup.h"
 +
++#include <curl/curl.h>
 +#include "impersonate.h"
 +
 +const struct impersonate_opts impersonations[] = {
@@ -1006,6 +1078,41 @@ index 000000000..33b822c1a
 +    }
 +  },
 +  {
++    .target = "ff117",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "aes_128_gcm_sha_256,"
++      "chacha20_poly1305_sha_256,"
++      "aes_256_gcm_sha_384,"
++      "ecdhe_ecdsa_aes_128_gcm_sha_256,"
++      "ecdhe_rsa_aes_128_gcm_sha_256,"
++      "ecdhe_ecdsa_chacha20_poly1305_sha_256,"
++      "ecdhe_rsa_chacha20_poly1305_sha_256,"
++      "ecdhe_ecdsa_aes_256_gcm_sha_384,"
++      "ecdhe_rsa_aes_256_gcm_sha_384,"
++      "ecdhe_ecdsa_aes_256_sha,"
++      "ecdhe_ecdsa_aes_128_sha,"
++      "ecdhe_rsa_aes_128_sha,"
++      "ecdhe_rsa_aes_256_sha,"
++      "rsa_aes_128_gcm_sha_256,"
++      "rsa_aes_256_gcm_sha_384,"
++      "rsa_aes_128_sha,"
++      "rsa_aes_256_sha",
++    .http_headers = {
++      "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
++      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
++      "Accept-Language: en-US,en;q=0.5",
++      "Accept-Encoding: gzip, deflate, br",
++      "Upgrade-Insecure-Requests: 1",
++      "Sec-Fetch-Dest: document",
++      "Sec-Fetch-Mode: navigate",
++      "Sec-Fetch-Site: none",
++      "Sec-Fetch-User: ?1",
++      "TE: Trailers"
++    }
++  },
++  {
 +    /* Last one must be NULL. */
 +    .target = NULL
 +  }
@@ -1042,7 +1149,7 @@ index 000000000..964b81f2e
 +
 +#endif /* HEADER_CURL_IMPERSONATE_H */
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 6b16e1c7c..a83d69917 100644
+index 0c3b9634d..bd7c6746d 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -50,6 +50,7 @@
@@ -1053,10 +1160,10 @@ index 6b16e1c7c..a83d69917 100644
  
  /* The last 3 #include files should be in this order */
  #include "curl_printf.h"
-@@ -674,6 +675,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
-                             va_arg(param, char *));
-     break;
- 
+@@ -967,6 +968,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+ #if !defined(CURL_DISABLE_HTTP) || !defined(CURL_DISABLE_SMTP) ||       \
+     !defined(CURL_DISABLE_IMAP)
+ # if !defined(CURL_DISABLE_HTTP) || !defined(CURL_DISABLE_MIME)
 +  case CURLOPT_HTTPBASEHEADER:
 +    /*
 +     * curl-impersonate:
@@ -1078,10 +1185,10 @@ index 6b16e1c7c..a83d69917 100644
      /*
       * Set a list with HTTP headers to use (or replace internals with)
 diff --git a/lib/transfer.c b/lib/transfer.c
-index 1720b24b1..dcae3c143 100644
+index d2ff0c24c..56e2090b6 100644
 --- a/lib/transfer.c
 +++ b/lib/transfer.c
-@@ -104,7 +104,15 @@ char *Curl_checkheaders(const struct Curl_easy *data,
+@@ -106,7 +106,15 @@ char *Curl_checkheaders(const struct Curl_easy *data,
    DEBUGASSERT(thislen);
    DEBUGASSERT(thisheader[thislen-1] != ':');
  
@@ -1099,10 +1206,10 @@ index 1720b24b1..dcae3c143 100644
         Curl_headersep(head->data[thislen]) )
        return head->data;
 diff --git a/lib/url.c b/lib/url.c
-index 1114c6c12..89e29be62 100644
+index b37d13f8f..ffb74cc4f 100644
 --- a/lib/url.c
 +++ b/lib/url.c
-@@ -465,6 +465,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
+@@ -444,6 +444,11 @@ CURLcode Curl_close(struct Curl_easy **datap)
    Curl_safefree(data->state.aptr.proxyuser);
    Curl_safefree(data->state.aptr.proxypasswd);
  
@@ -1115,10 +1222,10 @@ index 1114c6c12..89e29be62 100644
    if(data->req.doh) {
      Curl_dyn_free(&data->req.doh->probe[0].serverdoh);
 diff --git a/lib/urldata.h b/lib/urldata.h
-index bcb4d460c..148cd1927 100644
+index f02e66541..d6162a80e 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -1453,6 +1453,19 @@ struct UrlState {
+@@ -1395,6 +1395,19 @@ struct UrlState {
    CURLcode hresult; /* used to pass return codes back from hyper callbacks */
  #endif
  
@@ -1139,7 +1246,7 @@ index bcb4d460c..148cd1927 100644
       killed. */
    struct dynamically_allocated_data {
 diff --git a/lib/vtls/nss.c b/lib/vtls/nss.c
-index 9d3a8584c..8ffd68171 100644
+index 5e5dbb744..2604fc755 100644
 --- a/lib/vtls/nss.c
 +++ b/lib/vtls/nss.c
 @@ -145,6 +145,7 @@ static const struct cipher_s cipherlist[] = {
@@ -1246,7 +1353,7 @@ index 9d3a8584c..8ffd68171 100644
  /*
   * Return true if at least one cipher-suite is enabled. Used to determine
   * if we need to call NSS_SetDomesticPolicy() to enable the default ciphers.
-@@ -1347,6 +1437,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
+@@ -1341,6 +1431,7 @@ static CURLcode nss_load_module(SECMODModule **pmod, const char *library,
  
    if(module)
      SECMOD_DestroyModule(module);
@@ -1254,20 +1361,20 @@ index 9d3a8584c..8ffd68171 100644
    return CURLE_FAILED_INIT;
  }
  
-@@ -1970,6 +2061,12 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1923,6 +2014,12 @@ static CURLcode nss_setup_connect(struct Curl_cfilter *cf,
    if(SSL_OptionSet(model, SSL_NO_CACHE, ssl_no_cache) != SECSuccess)
      goto error;
  
-+  if(SSL_SET_OPTION(primary.sessionid)) {
++  if(ssl_config->primary.sessionid) {
 +    if(SSL_OptionSet(model, SSL_ENABLE_SESSION_TICKETS,
 +                     PR_TRUE) != SECSuccess)
 +      goto error;
 +  }
 +
    /* enable/disable the requested SSL version(s) */
-   if(nss_init_sslver(&sslver, data, conn) != CURLE_OK)
+   if(nss_init_sslver(&sslver, cf, data) != CURLE_OK)
      goto error;
-@@ -2009,6 +2106,14 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
+@@ -1962,6 +2059,14 @@ static CURLcode nss_setup_connect(struct Curl_cfilter *cf,
      }
    }
  
@@ -1279,32 +1386,24 @@ index 9d3a8584c..8ffd68171 100644
 +      goto error;
 +  }
 +
-   if(!SSL_CONN_CONFIG(verifypeer) && SSL_CONN_CONFIG(verifyhost))
+   if(!conn_config->verifypeer && conn_config->verifyhost)
      infof(data, "WARNING: ignoring value of ssl.verifyhost");
  
-@@ -2165,6 +2270,10 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
-     int cur = 0;
-     unsigned char protocols[128];
- 
-+    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
-+    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);
-+    cur += ALPN_HTTP_1_1_LENGTH;
-+
+diff --git a/lib/vtls/vtls.c b/lib/vtls/vtls.c
+index 32334016b..a9b6299b2 100644
+--- a/lib/vtls/vtls.c
++++ b/lib/vtls/vtls.c
+@@ -139,7 +139,7 @@ static const struct alpn_spec ALPN_SPEC_H11 = {
+ };
  #ifdef USE_HTTP2
-     if(data->state.httpwant >= CURL_HTTP_VERSION_2
- #ifndef CURL_DISABLE_PROXY
-@@ -2176,9 +2285,6 @@ static CURLcode nss_setup_connect(struct Curl_easy *data,
-       cur += ALPN_H2_LENGTH;
-     }
+ static const struct alpn_spec ALPN_SPEC_H2_H11 = {
+-  { ALPN_H2, ALPN_HTTP_1_1 }, 2
++  { ALPN_HTTP_1_1, ALPN_H2 }, 2
+ };
  #endif
--    protocols[cur++] = ALPN_HTTP_1_1_LENGTH;
--    memcpy(&protocols[cur], ALPN_HTTP_1_1, ALPN_HTTP_1_1_LENGTH);
--    cur += ALPN_HTTP_1_1_LENGTH;
  
-     if(SSL_SetNextProtoNego(backend->handle, protocols, cur) != SECSuccess)
-       goto error;
 diff --git a/libcurl.pc.in b/libcurl.pc.in
-index 49485f192..7c2ea437c 100644
+index 9db6b0f89..9e2f19af9 100644
 --- a/libcurl.pc.in
 +++ b/libcurl.pc.in
 @@ -36,6 +36,6 @@ Name: libcurl
@@ -1316,7 +1415,7 @@ index 49485f192..7c2ea437c 100644
  Libs.private: @LIBCURL_LIBS@
  Cflags: -I${includedir} @CPPFLAG_CURL_STATICLIB@
 diff --git a/m4/curl-nss.m4 b/m4/curl-nss.m4
-index cb162755d..13ee571aa 100644
+index 2916c3613..f07fa30ac 100644
 --- a/m4/curl-nss.m4
 +++ b/m4/curl-nss.m4
 @@ -76,7 +76,123 @@ if test "x$OPT_NSS" != xno; then
@@ -1354,7 +1453,7 @@ index cb162755d..13ee571aa 100644
 +
 +      case $host_cpu in
 +        arm)
-+          addlib="$addlib -larmv8_c_lib"
++          addlib="$addlib -larmv8_c_lib -lgcm-aes-arm32-neon_c_lib"
 +          ;;
 +        aarch64)
 +          addlib="$addlib -larmv8_c_lib -lgcm-aes-aarch64_c_lib"
@@ -1465,7 +1564,7 @@ index cb162755d..13ee571aa 100644
  
      if test "x$USE_NSS" = "xyes"; then
 diff --git a/src/Makefile.am b/src/Makefile.am
-index 706f0aac3..0ad94622e 100644
+index f24cb6924..5750eaba8 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
 @@ -43,7 +43,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
@@ -1477,16 +1576,19 @@ index 706f0aac3..0ad94622e 100644
  
  SUBDIRS = ../docs
  
-@@ -54,7 +54,7 @@ endif
+@@ -54,9 +54,9 @@ endif
  include Makefile.inc
  
  # CURL_FILES comes from Makefile.inc
 -curl_SOURCES = $(CURL_FILES)
 +curl_impersonate_ff_SOURCES = $(CURL_FILES)
+ if HAVE_WINDRES
+-curl_SOURCES += $(CURL_RCFILES)
++curl_impersonate_ff_SOURCES += $(CURL_RCFILES)
+ $(CURL_RCFILES): tool_version.h
+ endif
  
- # This might hold -Werror
- CFLAGS += @CURL_CFLAG_EXTRAS@
-@@ -63,9 +63,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
+@@ -67,9 +67,9 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
  LIBS = $(BLANK_AT_MAKETIME)
  
  if USE_EXPLICIT_LIB_DEPS

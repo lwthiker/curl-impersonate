@@ -74,9 +74,9 @@ RUN cd brotli-${BROTLI_VERSION} && \
 # Needed for building libnss
 RUN pip install gyp-next
 
-ARG NSS_VERSION=nss-3.77
+ARG NSS_VERSION=nss-3.92
 # This tarball is already bundled with nspr, a dependency of libnss.
-ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_77_RTM/src/nss-3.77-with-nspr-4.32.tar.gz
+ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_92_RTM/src/nss-3.92-with-nspr-4.35.tar.gz
 
 # Download and compile nss.
 RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
@@ -116,8 +116,8 @@ RUN mkdir boringssl/build/lib && \
 RUN apt-get install -y bzip2
 {{/debian}}
 
-ARG NGHTTP2_VERSION=nghttp2-1.46.0
-ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.46.0/nghttp2-1.46.0.tar.bz2
+ARG NGHTTP2_VERSION=nghttp2-1.56.0
+ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 
 # Download nghttp2 for HTTP/2.0 support.
 RUN curl -o ${NGHTTP2_VERSION}.tar.bz2 -L ${NGHTTP2_URL}
@@ -134,7 +134,7 @@ RUN apt-get install -y xz-utils
 {{/debian}}
 
 # Download curl.
-ARG CURL_VERSION=curl-7.84.0
+ARG CURL_VERSION=curl-8.1.1
 RUN curl -o ${CURL_VERSION}.tar.xz https://curl.se/download/${CURL_VERSION}.tar.xz
 RUN tar xf ${CURL_VERSION}.tar.xz
 

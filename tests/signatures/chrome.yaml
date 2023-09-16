@@ -674,6 +674,104 @@ signature:
       - 'accept-encoding: gzip, deflate, br'
       - 'accept-language: en-US,en;q=0.9'
 ---
+name: chrome_116.0.5845.180_win10
+browser:
+  name: chrome
+  version: 116.0.5845.180
+  os: win10
+  mode: regular
+signature:
+  options:
+    tls_permute_extensions: true
+  tls_client_hello:
+    record_version: 'TLS_VERSION_1_0'
+    handshake_version: 'TLS_VERSION_1_2'
+    session_id_length: 32
+    ciphersuites: [
+      'GREASE',
+      0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
+      0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f,
+      0x0035
+    ]
+    comp_methods: [0x00]
+    extensions:
+      - type: GREASE
+        length: 0
+      - type: server_name
+      - type: extended_master_secret
+        length: 0
+      - type: renegotiation_info
+        length: 1
+      - type: supported_groups
+        length: 10
+        supported_groups: [
+          'GREASE',
+          0x001d, 0x0017, 0x0018
+        ]
+      - type: ec_point_formats
+        length: 2
+        ec_point_formats: [0]
+      - type: session_ticket
+        length: 0
+      - type: application_layer_protocol_negotiation
+        length: 14
+        alpn_list: ['h2', 'http/1.1']
+      - type: status_request
+        length: 5
+        status_request_type: 0x01
+      - type: signature_algorithms
+        length: 18
+        sig_hash_algs: [
+          0x0403, 0x0804, 0x0401, 0x0503,
+          0x0805, 0x0501, 0x0806, 0x0601
+        ]
+      - type: signed_certificate_timestamp
+        length: 0
+      - type: keyshare
+        length: 43
+        key_shares:
+          - group: GREASE
+            length: 1
+          - group: 29
+            length: 32
+      - type: psk_key_exchange_modes
+        length: 2
+        psk_ke_mode: 1
+      - type: supported_versions
+        length: 7
+        supported_versions: [
+          'GREASE', 'TLS_VERSION_1_3', 'TLS_VERSION_1_2'
+        ]
+      - type: compress_certificate
+        length: 3
+        algorithms: [0x02]
+      - type: application_settings
+        length: 5
+        alps_alpn_list: ['h2']
+      - type: GREASE
+        length: 1
+        data: !!binary AA==
+      - type: padding
+  http2:
+    pseudo_headers:
+      - ':method'
+      - ':authority'
+      - ':scheme'
+      - ':path'
+    headers:
+      - 'sec-ch-ua: "Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"'
+      - 'sec-ch-ua-mobile: ?0'
+      - 'sec-ch-ua-platform: "Windows"'
+      - 'upgrade-insecure-requests: 1'
+      - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+      - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
+      - 'sec-fetch-site: none'
+      - 'sec-fetch-mode: navigate'
+      - 'sec-fetch-user: ?1'
+      - 'sec-fetch-dest: document'
+      - 'accept-encoding: gzip, deflate, br'
+      - 'accept-language: en-US,en;q=0.9'
+---
 name: chrome_99.0.4844.73_android12-pixel6
 browser:
     name: chrome
