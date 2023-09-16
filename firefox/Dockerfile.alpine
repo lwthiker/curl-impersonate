@@ -1,20 +1,22 @@
 #
 # NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
-# "generate-dockerfiles.sh".
+# `./generate_dockerfiles.sh`
 #
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
-FROM alpine:3.15.0 as builder
+FROM alpine:3.18 as builder
 
 WORKDIR /build
 
 # Common dependencies
-RUN apk add git build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
+RUN apk add git bash build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
 RUN apk add autoconf automake pkgconfig libtool
+
+
 
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
@@ -128,7 +130,7 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM alpine:3.15.0
+FROM alpine:3.18
 # curl tries to load the CA certificates for libnss.
 # It loads them from /usr/lib/libnssckbi.so,
 # which is supplied by 'nss' on alpine.

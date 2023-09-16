@@ -1,13 +1,13 @@
 #
 # NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
-# "generate-dockerfiles.sh".
+# `./generate_dockerfiles.sh`
 #
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-bullseye as builder
+FROM python:3.11-slim-bookworm as builder
 
 WORKDIR /build
 
@@ -18,6 +18,12 @@ RUN apt-get update && \
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
 RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
+# Dependencies for downloading and building nghttp2
+RUN apt-get install -y bzip2
+
+# Dependencies for downloading and building curl
+RUN apt-get install -y xz-utils
 
 # Dependencies for downloading and building BoringSSL
 RUN apt-get install -y g++ golang-go unzip
@@ -44,7 +50,9 @@ COPY patches/boringssl-*.patch boringssl/
 RUN cd boringssl && \
     for p in $(ls boringssl-*.patch); do patch -p1 < $p; done && \
     mkdir build && cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
+    cmake \
+        -DCMAKE_C_FLAGS="-Wno-error=array-bounds -Wno-error=stringop-overflow" \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
     ninja
 
 # Fix the directory structure so that curl can compile against it.
@@ -137,8 +145,9 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y ca-certificates
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Update the loader's cache

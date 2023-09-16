@@ -1,13 +1,13 @@
 #
 # NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
-# "generate-dockerfiles.sh".
+# `./generate_dockerfiles.sh`
 #
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
 # Python is needed for building libnss.
 # Use it as a common base.
-FROM python:3.10.1-slim-bullseye as builder
+FROM python:3.11-slim-bookworm as builder
 
 WORKDIR /build
 
@@ -18,6 +18,12 @@ RUN apt-get update && \
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
 RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+
+# Dependencies for downloading and building nghttp2
+RUN apt-get install -y bzip2
+
+# Dependencies for downloading and building curl
+RUN apt-get install -y xz-utils
 
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
@@ -133,12 +139,13 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y ca-certificates
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates \
 # curl tries to load the CA certificates for libnss.
 # It loads them from /usr/lib/libnssckbi.so and /usr/lib/libnsspem.so,
 # which are supplied by 'libnss3' and 'nss-plugin-pem' on debian.
-RUN apt-get install -y libnss3 nss-plugin-pem
+    libnss3 nss-plugin-pem \
+    && rm -rf /var/lib/apt/lists/*
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Update the loader's cache

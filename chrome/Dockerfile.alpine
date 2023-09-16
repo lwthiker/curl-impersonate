@@ -1,20 +1,22 @@
 #
 # NOTE: THIS DOCKERFILE IS GENERATED FROM "Dockerfile.template" VIA
-# "generate-dockerfiles.sh".
+# `./generate_dockerfiles.sh`
 #
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
-FROM alpine:3.15.0 as builder
+FROM alpine:3.18 as builder
 
 WORKDIR /build
 
 # Common dependencies
-RUN apk add git build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
+RUN apk add git bash build-base make cmake ninja curl zlib-dev patch linux-headers python3 python3-dev
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
 RUN apk add autoconf automake pkgconfig libtool
+
+
 
 # Dependencies for downloading and building BoringSSL
 RUN apk add g++ go unzip
@@ -41,7 +43,9 @@ COPY patches/boringssl-*.patch boringssl/
 RUN cd boringssl && \
     for p in $(ls boringssl-*.patch); do patch -p1 < $p; done && \
     mkdir build && cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
+    cmake \
+        -DCMAKE_C_FLAGS="-Wno-error=array-bounds -Wno-error=stringop-overflow" \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=on -GNinja .. && \
     ninja
 
 # Fix the directory structure so that curl can compile against it.
@@ -136,7 +140,7 @@ RUN chmod +x out/curl_*
 
 # Create a final, minimal image with the compiled binaries
 # only.
-FROM alpine:3.15.0
+FROM alpine:3.18
 # Copy curl-impersonate from the builder image
 COPY --from=builder /build/install /usr/local
 # Wrapper scripts
