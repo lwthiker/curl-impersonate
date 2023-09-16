@@ -16,6 +16,8 @@ RUN apk add git bash build-base make cmake ninja curl zlib-dev patch linux-heade
 # both for libnghttp2 and curl.
 RUN apk add autoconf automake pkgconfig libtool
 
+
+
 # Dependencies for building libnss
 # See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
 RUN apk add mercurial py3-pip clang-analyzer
@@ -43,8 +45,6 @@ RUN tar xf ${NSS_VERSION}.tar.gz && \
     cd ${NSS_VERSION}/nss && \
     ./build.sh -o --disable-tests --static --python=python3
 
-# Dependencies for downloading and building nghttp2
-
 ARG NGHTTP2_VERSION=nghttp2-1.56.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 
@@ -56,8 +56,6 @@ RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 RUN cd ${NGHTTP2_VERSION} && \
     ./configure --prefix=/build/${NGHTTP2_VERSION}/installed --with-pic --disable-shared && \
     make && make install
-
-# Dependencies for downloading and building curl
 
 # Download curl.
 ARG CURL_VERSION=curl-8.1.1

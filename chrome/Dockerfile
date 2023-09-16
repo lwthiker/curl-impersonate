@@ -19,6 +19,12 @@ RUN apt-get update && \
 # both for libnghttp2 and curl.
 RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
 
+# Dependencies for downloading and building nghttp2
+RUN apt-get install -y bzip2
+
+# Dependencies for downloading and building curl
+RUN apt-get install -y xz-utils
+
 # Dependencies for downloading and building BoringSSL
 RUN apt-get install -y g++ golang-go unzip
 
@@ -56,9 +62,6 @@ RUN mkdir boringssl/build/lib && \
     ln -s ../ssl/libssl.a boringssl/build/lib/libssl.a && \
     cp -R boringssl/include boringssl/build
 
-# Dependencies for downloading and building nghttp2
-RUN apt-get install -y bzip2
-
 ARG NGHTTP2_VERSION=nghttp2-1.56.0
 ARG NGHTTP2_URL=https://github.com/nghttp2/nghttp2/releases/download/v1.56.0/nghttp2-1.56.0.tar.bz2
 
@@ -70,9 +73,6 @@ RUN tar xf ${NGHTTP2_VERSION}.tar.bz2
 RUN cd ${NGHTTP2_VERSION} && \
     ./configure --prefix=/build/${NGHTTP2_VERSION}/installed --with-pic --disable-shared && \
     make && make install
-
-# Dependencies for downloading and building curl
-RUN apt-get install -y xz-utils
 
 # Download curl.
 ARG CURL_VERSION=curl-8.1.1
