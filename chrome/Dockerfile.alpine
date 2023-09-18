@@ -84,6 +84,7 @@ RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
                 --enable-static \
                 --disable-shared \
+                --enable-websockets \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-openssl=/build/boringssl/build \
