@@ -1,3 +1,37 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 49a44eabf..fe8b38915 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -550,6 +550,29 @@ if(CURL_ZSTD)
+   endif()
+ endif()
+ 
++option(USE_ECH "Enable ECH support" OFF)
++if(USE_ECH)
++  if(USE_OPENSSL OR USE_WOLFSSL)
++    # Be sure that the OpenSSL/wolfSSL library actually supports ECH.
++    if(NOT DEFINED HAVE_ECH)
++      if(USE_OPENSSL AND HAVE_BORINGSSL)
++        openssl_check_symbol_exists(SSL_set1_ech_config_list "openssl/ssl.h" HAVE_ECH)
++      elseif(USE_OPENSSL)
++        openssl_check_symbol_exists(SSL_ech_set1_echconfig "openssl/ech.h" HAVE_ECH)
++      elseif(USE_WOLFSSL)
++        openssl_check_symbol_exists(wolfSSL_CTX_GenerateEchConfig "wolfssl/options.h;wolfssl/ssl.h" HAVE_ECH)
++      endif()
++    endif()
++    if(NOT HAVE_ECH)
++      message(FATAL_ERROR "ECH support missing in OpenSSL/BoringSSL/wolfSSL")
++    else()
++      message("ECH enabled.")
++    endif()
++  else()
++    message(FATAL_ERROR "ECH requires ECH-enablded OpenSSL, BoringSSL or wolfSSL")
++  endif()
++endif()
++
+ option(USE_NGHTTP2 "Use Nghttp2 library" OFF)
+ if(USE_NGHTTP2)
+   find_package(NGHTTP2 REQUIRED)
 diff --git a/Makefile.am b/Makefile.am
 index f25e4e2f0..ff0c5630b 100644
 --- a/Makefile.am
@@ -19,7 +53,7 @@ index f25e4e2f0..ff0c5630b 100644
  # List of files required to generate VC IDE .dsp, .vcproj and .vcxproj files
  include lib/Makefile.inc
 diff --git a/configure.ac b/configure.ac
-index 75a882b12..71fd3290a 100644
+index 75a882b12..8697a6f74 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1493,7 +1493,8 @@ if test X"$OPT_BROTLI" != Xno; then
@@ -45,7 +79,36 @@ index 75a882b12..71fd3290a 100644
  
    AC_CHECK_HEADERS(brotli/decode.h,
      curl_brotli_msg="enabled (libbrotlidec)"
-@@ -4706,8 +4711,8 @@ AC_CONFIG_FILES([Makefile \
+@@ -4306,14 +4311,23 @@ if test "x$want_ech" != "xno"; then
+   ECH_ENABLED=0
+   ECH_SUPPORT=''
+ 
+-  dnl OpenSSL with a chosen ECH function should be enough
+-  dnl so more exhaustive checking seems unnecessary for now
++  dnl check for OpenSSL
++  if test "x$OPENSSL_ENABLED" = "x1"; then
++    AC_CHECK_FUNCS(SSL_ech_set1_echconfig,
++      ECH_SUPPORT="ECH support available via OpenSSL with SSL_ech_set1_echconfig"
++      ECH_ENABLED=1)
++  fi
++  dnl check for boringssl equivalent
+   if test "x$OPENSSL_ENABLED" = "x1"; then
+-    AC_CHECK_FUNCS(SSL_get_ech_status,
+-      ECH_SUPPORT="ECH support available (OpenSSL with SSL_get_ech_status)"
++    AC_CHECK_FUNCS(SSL_set1_ech_config_list,
++      ECH_SUPPORT="ECH support available via boringssl with SSL_set1_ech_config_list"
++      ECH_ENABLED=1)
++  fi
++  if test "x$WOLFSSL_ENABLED" = "x1"; then
++    AC_CHECK_FUNCS(wolfSSL_CTX_GenerateEchConfig,
++      ECH_SUPPORT="ECH support available via WolfSSL with wolfSSL_CTX_GenerateEchConfig"
+       ECH_ENABLED=1)
+ 
+-  dnl add 'elif' chain here for additional implementations
+   fi
+ 
+   dnl now deal with whatever we found
+@@ -4706,8 +4720,8 @@ AC_CONFIG_FILES([Makefile \
             tests/http/clients/Makefile \
             packages/Makefile \
             packages/vms/Makefile \
@@ -82,10 +145,18 @@ index 54f92d931..ea5895e9b 100644
            echo "curl was built with static libraries disabled" >&2
            exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index 944352421..c0a6c5cd9 100644
+index 944352421..333c184b0 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
-@@ -2207,6 +2207,56 @@ typedef enum {
+@@ -640,6 +640,7 @@ typedef enum {
+   CURLE_PROXY,                   /* 97 - proxy handshake error */
+   CURLE_SSL_CLIENTCERT,          /* 98 - client-side certificate required */
+   CURLE_UNRECOVERABLE_POLL,      /* 99 - poll/select returned fatal error */
++  CURLE_ECH_REQUIRED      ,      /* 100 - ECH tried but failed */
+   CURL_LAST /* never use! */
+ } CURLcode;
+ 
+@@ -2207,6 +2208,59 @@ typedef enum {
    /* Can leak things, gonna exit() soon */
    CURLOPT(CURLOPT_QUICK_EXIT, CURLOPTTYPE_LONG, 322),
  
@@ -139,6 +210,9 @@ index 944352421..c0a6c5cd9 100644
 +   */
 +  CURLOPT(CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, CURLOPTTYPE_LONG, 331),
 +
++  /* set ECH configuration, XXX, the official one is 324  */
++  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 332),
++
    CURLOPT_LASTENTRY /* the last unused */
  } CURLoption;
  
@@ -163,6 +237,18 @@ index 1285101c5..c620065dc 100644
  /*
   * NAME curl_easy_getinfo()
   *
+diff --git a/include/curl/typecheck-gcc.h b/include/curl/typecheck-gcc.h
+index bc8d7a78c..033c994ca 100644
+--- a/include/curl/typecheck-gcc.h
++++ b/include/curl/typecheck-gcc.h
+@@ -275,6 +275,7 @@ CURLWARNING(_curl_easy_getinfo_err_curl_off_t,
+    (option) == CURLOPT_DNS_LOCAL_IP6 ||                                       \
+    (option) == CURLOPT_DNS_SERVERS ||                                         \
+    (option) == CURLOPT_DOH_URL ||                                             \
++   (option) == CURLOPT_ECH ||                                                 \
+    (option) == CURLOPT_EGDSOCKET ||                                           \
+    (option) == CURLOPT_FTP_ACCOUNT ||                                         \
+    (option) == CURLOPT_FTP_ALTERNATIVE_TO_USER ||                             \
 diff --git a/lib/Makefile.am b/lib/Makefile.am
 index 3c0a70912..61a9eb90b 100644
 --- a/lib/Makefile.am
@@ -256,6 +342,17 @@ index f815170a7..9d9417edc 100644
    inet_ntop.c        \
    inet_pton.c        \
    krb5.c             \
+diff --git a/lib/curl_config.h.cmake b/lib/curl_config.h.cmake
+index eca71bdef..ae9f02aca 100644
+--- a/lib/curl_config.h.cmake
++++ b/lib/curl_config.h.cmake
+@@ -783,3 +783,6 @@ ${SIZEOF_TIME_T_CODE}
+ 
+ /* Define to 1 to enable websocket support. */
+ #cmakedefine USE_WEBSOCKETS 1
++
++/* if ECH support is available */
++#cmakedefine USE_ECH 1
 diff --git a/lib/dynhds.c b/lib/dynhds.c
 index b325e0060..4c8a73bab 100644
 --- a/lib/dynhds.c
@@ -549,10 +646,18 @@ index d36cc03d1..961503fdc 100644
  
  /*
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index a9c1efd00..b25f58588 100644
+index a9c1efd00..1935ecf17 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
-@@ -132,8 +132,14 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -86,6 +86,7 @@ struct curl_easyoption Curl_easyopts[] = {
+   {"DOH_SSL_VERIFYPEER", CURLOPT_DOH_SSL_VERIFYPEER, CURLOT_LONG, 0},
+   {"DOH_SSL_VERIFYSTATUS", CURLOPT_DOH_SSL_VERIFYSTATUS, CURLOT_LONG, 0},
+   {"DOH_URL", CURLOPT_DOH_URL, CURLOT_STRING, 0},
++  {"ECH", CURLOPT_ECH, CURLOT_STRING, 0},
+   {"EGDSOCKET", CURLOPT_EGDSOCKET, CURLOT_STRING, 0},
+   {"ENCODING", CURLOPT_ACCEPT_ENCODING, CURLOT_STRING, CURLOT_FLAG_ALIAS},
+   {"ERRORBUFFER", CURLOPT_ERRORBUFFER, CURLOT_OBJECT, 0},
+@@ -132,8 +133,14 @@ struct curl_easyoption Curl_easyopts[] = {
    {"HSTS_CTRL", CURLOPT_HSTS_CTRL, CURLOT_LONG, 0},
    {"HTTP09_ALLOWED", CURLOPT_HTTP09_ALLOWED, CURLOT_LONG, 0},
    {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
@@ -567,7 +672,7 @@ index a9c1efd00..b25f58588 100644
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
-@@ -302,18 +308,23 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -302,18 +309,23 @@ struct curl_easyoption Curl_easyopts[] = {
    {"SSLKEYTYPE", CURLOPT_SSLKEYTYPE, CURLOT_STRING, 0},
    {"SSLKEY_BLOB", CURLOPT_SSLKEY_BLOB, CURLOT_BLOB, 0},
    {"SSLVERSION", CURLOPT_SSLVERSION, CURLOT_VALUES, 0},
@@ -591,12 +696,12 @@ index a9c1efd00..b25f58588 100644
    {"STDERR", CURLOPT_STDERR, CURLOT_OBJECT, 0},
    {"STREAM_DEPENDS", CURLOPT_STREAM_DEPENDS, CURLOT_OBJECT, 0},
    {"STREAM_DEPENDS_E", CURLOPT_STREAM_DEPENDS_E, CURLOT_OBJECT, 0},
-@@ -370,6 +381,6 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -370,6 +382,6 @@ struct curl_easyoption Curl_easyopts[] = {
   */
  int Curl_easyopts_check(void)
  {
 -  return ((CURLOPT_LASTENTRY%10000) != (322 + 1));
-+  return ((CURLOPT_LASTENTRY%10000) != (330 + 1));
++  return ((CURLOPT_LASTENTRY%10000) != (332 + 1));
  }
  #endif
 diff --git a/lib/http.c b/lib/http.c
@@ -1690,7 +1795,7 @@ index d1d32b793..3b49a1b4c 100644
  #ifdef USE_WINSOCK
    multi->wsa_event = WSACreateEvent();
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 0c3b9634d..a55d6dc55 100644
+index 0c3b9634d..b5bfdf569 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -50,6 +50,7 @@
@@ -1779,6 +1884,54 @@ index 0c3b9634d..a55d6dc55 100644
  #ifdef USE_UNIX_SOCKETS
    case CURLOPT_UNIX_SOCKET_PATH:
      data->set.abstract_unix_socket = FALSE;
+@@ -3146,6 +3204,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+     data->set.ws_raw_mode = raw;
+     break;
+   }
++#endif
++#ifdef USE_ECH
++  case CURLOPT_ECH: {
++    size_t plen = 0;
++    argptr = va_arg(param, char *);
++    if(!argptr) {
++      data->set.tls_ech = CURLECH_DISABLE;
++      result = CURLE_BAD_FUNCTION_ARGUMENT;
++      return result;
++    }
++    plen = strlen(argptr);
++    if(plen > CURL_MAX_INPUT_LENGTH) {
++      data->set.tls_ech = CURLECH_DISABLE;
++      result = CURLE_BAD_FUNCTION_ARGUMENT;
++      return result;
++    }
++    if(plen == 6 && strcasecompare(argptr, "GREASE"))
++      data->set.tls_ech = CURLECH_GREASE;
++    else {
++      data->set.tls_ech = CURLECH_DISABLE;
++      result = CURLE_BAD_FUNCTION_ARGUMENT;
++      return result;
++    }
++    break;
++  }
+ #endif
+   case CURLOPT_QUICK_EXIT:
+     data->set.quick_exit = (0 != va_arg(param, long)) ? 1L:0L;
+diff --git a/lib/strerror.c b/lib/strerror.c
+index bd9cc535c..971568792 100644
+--- a/lib/strerror.c
++++ b/lib/strerror.c
+@@ -319,6 +319,11 @@ curl_easy_strerror(CURLcode error)
+   case CURLE_UNRECOVERABLE_POLL:
+     return "Unrecoverable error in select/poll";
+ 
++#ifdef USE_ECH
++  case CURLE_ECH_REQUIRED:
++    return "ECH attempted but failed";
++#endif
++
+     /* error codes not used by current libcurl */
+   case CURLE_OBSOLETE20:
+   case CURLE_OBSOLETE24:
 diff --git a/lib/transfer.c b/lib/transfer.c
 index d2ff0c24c..56e2090b6 100644
 --- a/lib/transfer.c
@@ -1847,10 +2000,26 @@ index b37d13f8f..f1b3b5440 100644
  
      if(waitpipe)
 diff --git a/lib/urldata.h b/lib/urldata.h
-index f02e66541..07b094b94 100644
+index f02e66541..28c448a6f 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -277,6 +277,8 @@ struct ssl_primary_config {
+@@ -53,6 +53,15 @@
+ #define PORT_GOPHER 70
+ #define PORT_MQTT 1883
+ 
++#ifdef USE_ECH
++/* CURLECH_ defines are for the tls_ech option */
++# define CURLECH_DISABLE    0
++# define CURLECH_GREASE     1
++# define CURLECH_ENABLE     2
++# define CURLECH_HARD       3
++# define CURLECH_CLA_CFG    4
++#endif
++
+ #ifdef USE_WEBSOCKETS
+ /* CURLPROTO_GOPHERS (29) is the highest publicly used protocol bit number,
+  * the rest are internal information. If we use higher bits we only do this on
+@@ -277,6 +286,8 @@ struct ssl_primary_config {
    char *password; /* TLS password (for, e.g., SRP) */
  #endif
    char *curves;          /* list of curves to use */
@@ -1859,7 +2028,7 @@ index f02e66541..07b094b94 100644
    unsigned char ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
    unsigned int version_max; /* max supported version the client wants to use */
    unsigned char version;    /* what version the client wants to use */
-@@ -526,6 +528,9 @@ struct ConnectBits {
+@@ -526,6 +537,9 @@ struct ConnectBits {
    BIT(multiplex); /* connection is multiplexed */
    BIT(tcp_fastopen); /* use TCP Fast Open */
    BIT(tls_enable_alpn); /* TLS ALPN extension? */
@@ -1869,7 +2038,7 @@ index f02e66541..07b094b94 100644
  #ifndef CURL_DISABLE_DOH
    BIT(doh);
  #endif
-@@ -1395,6 +1400,19 @@ struct UrlState {
+@@ -1395,6 +1409,19 @@ struct UrlState {
    CURLcode hresult; /* used to pass return codes back from hyper callbacks */
  #endif
  
@@ -1889,17 +2058,19 @@ index f02e66541..07b094b94 100644
    /* Dynamically allocated strings, MUST be freed before this struct is
       killed. */
    struct dynamically_allocated_data {
-@@ -1563,6 +1581,9 @@ enum dupstring {
+@@ -1563,6 +1590,11 @@ enum dupstring {
    STRING_DNS_LOCAL_IP6,
    STRING_SSL_EC_CURVES,
    STRING_AWS_SIGV4, /* Parameters for V4 signature */
 +  STRING_SSL_SIG_HASH_ALGS,
 +  STRING_SSL_CERT_COMPRESSION,
 +  STRING_HTTP2_PSEUDO_HEADERS_ORDER,
++  STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
++  STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
  
    /* -- end of null-terminated strings -- */
  
-@@ -1857,6 +1878,9 @@ struct UserDefined {
+@@ -1857,6 +1889,9 @@ struct UserDefined {
    BIT(tcp_keepalive);  /* use TCP keepalives */
    BIT(tcp_fastopen);   /* use TCP Fast Open */
    BIT(ssl_enable_alpn);/* TLS ALPN extension? */
@@ -1909,7 +2080,7 @@ index f02e66541..07b094b94 100644
    BIT(path_as_is);     /* allow dotdots? */
    BIT(pipewait);       /* wait for multiplex status before starting a new
                            connection */
-@@ -1877,6 +1901,10 @@ struct UserDefined {
+@@ -1877,6 +1912,13 @@ struct UserDefined {
  #ifdef USE_WEBSOCKETS
    BIT(ws_raw_mode);
  #endif
@@ -1917,14 +2088,17 @@ index f02e66541..07b094b94 100644
 +  BIT(http2_no_server_push);    /* Disable HTTP2 server push */
 +  BIT(http2_skip_max_concurrent_streams);    /* Skip HTTP2 max concurrent streams setting */
 +#endif
++#ifdef USE_ECH
++  int tls_ech;      /* TLS ECH configuration  */
++#endif
  };
  
  struct Names {
 diff --git a/lib/vtls/openssl.c b/lib/vtls/openssl.c
-index 6543fb19a..da4882af8 100644
+index 6543fb19a..58d243f1e 100644
 --- a/lib/vtls/openssl.c
 +++ b/lib/vtls/openssl.c
-@@ -79,6 +79,14 @@
+@@ -79,6 +79,21 @@
  #include <openssl/bio.h>
  #include <openssl/buffer.h>
  #include <openssl/pkcs12.h>
@@ -1936,10 +2110,17 @@ index 6543fb19a..da4882af8 100644
 +#ifdef HAVE_BROTLI
 +#include <brotli/decode.h>
 +#endif
++
++#ifdef USE_ECH
++# ifndef OPENSSL_IS_BORINGSSL
++#  include <openssl/ech.h>
++# endif
++# include "curl_base64.h"
++#endif /* USE_ECH */
  
  #if (OPENSSL_VERSION_NUMBER >= 0x0090808fL) && !defined(OPENSSL_NO_OCSP)
  #include <openssl/ocsp.h>
-@@ -266,6 +274,113 @@
+@@ -266,6 +281,113 @@
  #define HAVE_OPENSSL_VERSION
  #endif
  
@@ -2053,7 +2234,7 @@ index 6543fb19a..da4882af8 100644
  #ifdef OPENSSL_IS_BORINGSSL
  typedef uint32_t sslerr_t;
  #else
-@@ -2583,6 +2698,151 @@ static const char *tls_rt_type(int type)
+@@ -2583,6 +2705,151 @@ static const char *tls_rt_type(int type)
    }
  }
  
@@ -2205,7 +2386,7 @@ index 6543fb19a..da4882af8 100644
  /*
   * Our callback from the SSL/TLS layers.
   */
-@@ -3536,7 +3796,14 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+@@ -3536,7 +3803,14 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    ctx_options = SSL_OP_ALL;
  
  #ifdef SSL_OP_NO_TICKET
@@ -2221,7 +2402,7 @@ index 6543fb19a..da4882af8 100644
  #endif
  
  #ifdef SSL_OP_NO_COMPRESSION
-@@ -3603,6 +3870,16 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+@@ -3603,6 +3877,16 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    }
  #endif
  
@@ -2238,7 +2419,7 @@ index 6543fb19a..da4882af8 100644
    if(ssl_cert || ssl_cert_blob || ssl_cert_type) {
      if(!result &&
         !cert_stuff(data, backend->ctx,
-@@ -3656,6 +3933,35 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+@@ -3656,6 +3940,35 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    }
  #endif
  
@@ -2274,7 +2455,7 @@ index 6543fb19a..da4882af8 100644
  #ifdef USE_OPENSSL_SRP
    if(ssl_config->primary.username && Curl_auth_allowed_to_host(data)) {
      char * const ssl_username = ssl_config->primary.username;
-@@ -3681,6 +3987,30 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+@@ -3681,6 +3994,30 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    }
  #endif
  
@@ -2305,7 +2486,7 @@ index 6543fb19a..da4882af8 100644
    /* OpenSSL always tries to verify the peer, this only says whether it should
     * fail to connect if the verification fails, or if it should continue
     * anyway. In the latter case the result of the verification is checked with
-@@ -3727,6 +4057,23 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+@@ -3727,6 +4064,23 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
  
    SSL_set_app_data(backend->handle, cf);
  
@@ -2329,6 +2510,89 @@ index 6543fb19a..da4882af8 100644
  #if (OPENSSL_VERSION_NUMBER >= 0x0090808fL) && !defined(OPENSSL_NO_TLSEXT) && \
    !defined(OPENSSL_NO_OCSP)
    if(conn_config->verifystatus)
+@@ -3755,6 +4109,21 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
+   }
+ #endif
+ 
++#ifdef USE_ECH
++  if(data->set.tls_ech != CURLECH_DISABLE) {
++    unsigned char *ech_config = NULL;
++    size_t ech_config_len = 0;
++    int trying_ech_now = 0;
++    if(data->set.tls_ech == CURLECH_GREASE) {
++# ifdef OPENSSL_IS_BORINGSSL
++      SSL_set_enable_ech_grease(backend->handle, 1);
++# else
++      SSL_set_options(backend->handle, SSL_OP_ECH_GREASE);
++# endif
++    }
++  }
++#endif
++
+   SSL_set_app_data(backend->handle, cf);
+ 
+   if(ssl_config->primary.sessionid) {
+@@ -3946,6 +4315,60 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
+           SSL_get_version(backend->handle),
+           SSL_get_cipher(backend->handle));
+ 
++#ifdef USE_ECH
++# ifndef OPENSSL_IS_BORINGSSL
++    if(data->set.tls_ech != CURLECH_DISABLE) {
++      char *inner = NULL, *outer = NULL;
++      const char *status = NULL;
++      int rv;
++
++      rv = SSL_ech_get_status(backend->handle, &inner, &outer);
++      switch(rv) {
++      case SSL_ECH_STATUS_SUCCESS:
++        status = "Succeeded";
++        break;
++      case SSL_ECH_STATUS_GREASE_ECH:
++        status = "sent GREASE, got retry-configs";
++        break;
++      case SSL_ECH_STATUS_GREASE:
++        status = "sent GREASE";
++        break;
++      case SSL_ECH_STATUS_NOT_TRIED:
++        status = "not attempted";
++        break;
++      case SSL_ECH_STATUS_NOT_CONFIGURED:
++        status = "not configured";
++        break;
++      case SSL_ECH_STATUS_BACKEND:
++        status = "backend (unexpected)";
++        break;
++      case SSL_ECH_STATUS_FAILED:
++        status = "failed";
++        break;
++      case SSL_ECH_STATUS_BAD_CALL:
++        status = "bad call (unexpected)";
++        break;
++      case SSL_ECH_STATUS_BAD_NAME:
++        status = "bad name (unexpected)";
++        break;
++      default:
++        status = "unexpected status";
++        infof(data, "ECH: unexpected status %d",rv);
++      }
++      infof(data, "ECH: result: status is %s, inner is %s, outer is %s",
++             (status?status:"NULL"),
++             (inner?inner:"NULL"),
++             (outer?outer:"NULL"));
++      OPENSSL_free(inner);
++      OPENSSL_free(outer);
++      if(rv != SSL_ECH_STATUS_SUCCESS && data->set.tls_ech == CURLECH_HARD) {
++        infof(data, "ECH: ech-hard failed");
++        return CURLE_SSL_CONNECT_ERROR;
++      }
++   }
++# endif  /* BORING */
++#endif  /* USE_ECH */
++
+ #ifdef HAS_ALPN
+     /* Sets data and len to negotiated protocol, len is 0 if no protocol was
+      * negotiated
 diff --git a/lib/vtls/vtls.c b/lib/vtls/vtls.c
 index 32334016b..1a8a75ade 100644
 --- a/lib/vtls/vtls.c
@@ -2607,8 +2871,27 @@ index f24cb6924..30b4fdb0a 100644
  endif
  
  # if unit tests are enabled, build a static library to link them with
+diff --git a/src/tool_cfgable.c b/src/tool_cfgable.c
+index ec5698ba2..df8d5913c 100644
+--- a/src/tool_cfgable.c
++++ b/src/tool_cfgable.c
+@@ -172,6 +172,14 @@ static void free_config_fields(struct OperationConfig *config)
+   Curl_safefree(config->aws_sigv4);
+   Curl_safefree(config->proto_str);
+   Curl_safefree(config->proto_redir_str);
++#ifdef USE_ECH
++  Curl_safefree(config->ech);
++  config->ech = NULL;
++  Curl_safefree(config->ech_config);
++  config->ech_config = NULL;
++  Curl_safefree(config->ech_public);
++  config->ech_public = NULL;
++#endif
+ }
+ 
+ void config_free(struct OperationConfig *config)
 diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
-index 9a15659bc..7529fb651 100644
+index 9a15659bc..616544267 100644
 --- a/src/tool_cfgable.h
 +++ b/src/tool_cfgable.h
 @@ -160,8 +160,13 @@ struct OperationConfig {
@@ -2642,11 +2925,23 @@ index 9a15659bc..7529fb651 100644
    char *unix_socket_path;         /* path to Unix domain socket */
    bool abstract_unix_socket;      /* path to an abstract Unix domain socket */
    bool falsestart;
+@@ -295,6 +303,11 @@ struct OperationConfig {
+   struct State state;             /* for create_transfer() */
+   bool rm_partial;                /* on error, remove partially written output
+                                      files */
++#ifdef USE_ECH
++  char *ech;                      /* Config set by --ech keywords */
++  char *ech_config;               /* Config set by "--ech esl:" option */
++  char *ech_public;               /* Config set by "--ech pn:" option */
++#endif
+ };
+ 
+ struct GlobalConfig {
 diff --git a/src/tool_getparam.c b/src/tool_getparam.c
-index c9810e9d4..07adf1ab2 100644
+index c9810e9d4..4e42b4c9f 100644
 --- a/src/tool_getparam.c
 +++ b/src/tool_getparam.c
-@@ -287,6 +287,14 @@ static const struct LongShort aliases[]= {
+@@ -287,6 +287,17 @@ static const struct LongShort aliases[]= {
    {"EC", "etag-save",                ARG_FILENAME},
    {"ED", "etag-compare",             ARG_FILENAME},
    {"EE", "curves",                   ARG_STRING},
@@ -2658,10 +2953,13 @@ index c9810e9d4..07adf1ab2 100644
 +  {"EL", "http2-no-server-push",     ARG_BOOL},
 +  {"EM", "tls-permute-extensions",     ARG_BOOL},
 +  {"EN", "http2-skip-max-concurrent-streams",     ARG_BOOL},
++#ifdef USE_ECH
++  {"ER", "ech",                      ARG_STRING},
++#endif
    {"f",  "fail",                     ARG_BOOL},
    {"fa", "fail-early",               ARG_BOOL},
    {"fb", "styled-output",            ARG_BOOL},
-@@ -1940,6 +1948,43 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
+@@ -1940,6 +1951,55 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
          GetStr(&config->ssl_ec_curves, nextarg);
          break;
  
@@ -2702,11 +3000,23 @@ index c9810e9d4..07adf1ab2 100644
 +        /* --http2-skip-max-concurrent-streams */
 +        config->http2_skip_max_concurrent_streams = toggle;
 +        break;
++#ifdef USE_ECH
++      case 'R':
++        if(strlen(nextarg) != 6 || !strncasecompare("GREASE", nextarg, 6)) {
++          warnf(global, "Only GREASE is supported for --ech.");
++          return PARAM_BAD_USE; /*  */
++        }
++        else {
++          /* Simple case: just a string, with a keyword */
++          GetStr(&config->ech, nextarg);
++        }
++        break;
++#endif
        default: /* unknown flag */
          return PARAM_OPTION_UNKNOWN;
        }
 diff --git a/src/tool_listhelp.c b/src/tool_listhelp.c
-index 61550de72..678bfb9c6 100644
+index 61550de72..b491b77b3 100644
 --- a/src/tool_listhelp.c
 +++ b/src/tool_listhelp.c
 @@ -108,6 +108,27 @@ const struct helptxt helptext[] = {
@@ -2737,7 +3047,19 @@ index 61550de72..678bfb9c6 100644
    {"-d, --data <data>",
     "HTTP POST data",
     CURLHELP_IMPORTANT | CURLHELP_HTTP | CURLHELP_POST | CURLHELP_UPLOAD},
-@@ -387,6 +408,9 @@ const struct helptxt helptext[] = {
+@@ -165,6 +186,11 @@ const struct helptxt helptext[] = {
+   {"-D, --dump-header <filename>",
+    "Write the received headers to <filename>",
+    CURLHELP_HTTP | CURLHELP_FTP},
++#ifdef USE_ECH
++  {"    --ech <config>",
++   "Encrypted Client Hello controls",
++  CURLHELP_TLS},
++#endif
+   {"    --egd-file <file>",
+    "EGD socket path for random data",
+    CURLHELP_TLS},
+@@ -387,6 +413,9 @@ const struct helptxt helptext[] = {
    {"    --no-alpn",
     "Disable the ALPN TLS extension",
     CURLHELP_TLS | CURLHELP_HTTP},
@@ -2748,7 +3070,7 @@ index 61550de72..678bfb9c6 100644
     "Disable buffering of the output stream",
     CURLHELP_CURL},
 diff --git a/src/tool_operate.c b/src/tool_operate.c
-index ead7dca63..8f72e25cf 100644
+index ead7dca63..ac1b7490b 100644
 --- a/src/tool_operate.c
 +++ b/src/tool_operate.c
 @@ -1493,6 +1493,19 @@ static CURLcode single_transfer(struct GlobalConfig *global,
@@ -2812,6 +3134,23 @@ index ead7dca63..8f72e25cf 100644
          /* new in 7.40.0, abstract support added in 7.53.0 */
          if(config->unix_socket_path) {
            if(config->abstract_unix_socket) {
+@@ -2166,6 +2199,16 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+         if(config->hsts)
+           my_setopt_str(curl, CURLOPT_HSTS, config->hsts);
+ 
++#ifdef USE_ECH
++        /* only if enabled in configure */
++        if(config->ech) /* only if set (optional) */
++          my_setopt_str(curl, CURLOPT_ECH, config->ech);
++        if(config->ech_public) /* only if set (optional) */
++          my_setopt_str(curl, CURLOPT_ECH, config->ech_public);
++        if(config->ech_config) /* only if set (optional) */
++          my_setopt_str(curl, CURLOPT_ECH, config->ech_config);
++#endif
++
+         /* initialize retry vars for loop below */
+         per->retry_sleep_default = (config->retry_delay) ?
+           config->retry_delay*1000L : RETRY_SLEEP_DEFAULT; /* ms */
 diff --git a/src/tool_setopt.c b/src/tool_setopt.c
 index 0f3cc83b9..1c14e9854 100644
 --- a/src/tool_setopt.c
