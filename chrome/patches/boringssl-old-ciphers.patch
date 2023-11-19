@@ -1,17 +1,5 @@
-diff --git a/ssl/extensions.cc b/ssl/extensions.cc
-index 5ee280221..5f85d5911 100644
---- a/ssl/extensions.cc
-+++ b/ssl/extensions.cc
-@@ -3536,6 +3536,7 @@ bool ssl_add_clienthello_tlsext(SSL_HANDSHAKE *hs, CBB *out, CBB *out_encoded,
-       }
-     }
- 
-+    padding_len = 0;  // just do not pad
-     if (padding_len != 0 &&
-         !add_padding_extension(&extensions, TLSEXT_TYPE_padding, padding_len)) {
-       return false;
 diff --git a/ssl/internal.h b/ssl/internal.h
-index 2f8ce575f..cebdfb2a0 100644
+index c9facb699..ec3c21fed 100644
 --- a/ssl/internal.h
 +++ b/ssl/internal.h
 @@ -574,9 +574,14 @@ BSSL_NAMESPACE_BEGIN
@@ -31,7 +19,7 @@ index 2f8ce575f..cebdfb2a0 100644
  // Bits for |algorithm_prf| (handshake digest).
  #define SSL_HANDSHAKE_MAC_DEFAULT 0x1
 diff --git a/ssl/ssl_cipher.cc b/ssl/ssl_cipher.cc
-index abf5e3d4a..2bed8281b 100644
+index fd8cef95d..1d6ffe88b 100644
 --- a/ssl/ssl_cipher.cc
 +++ b/ssl/ssl_cipher.cc
 @@ -197,6 +197,37 @@ static constexpr SSL_CIPHER kCiphers[] = {
@@ -173,7 +161,7 @@ index abf5e3d4a..2bed8281b 100644
  
      // GCM based TLS v1.2 ciphersuites from RFC 5289
  
-@@ -550,6 +654,11 @@ static const CIPHER_ALIAS kCipherAliases[] = {
+@@ -554,6 +658,11 @@ static const CIPHER_ALIAS kCipherAliases[] = {
      // MAC aliases
      {"SHA1", ~0u, ~0u, ~0u, SSL_SHA1, 0},
      {"SHA", ~0u, ~0u, ~0u, SSL_SHA1, 0},
@@ -185,7 +173,7 @@ index abf5e3d4a..2bed8281b 100644
  
      // Legacy protocol minimum version aliases. "TLSv1" is intentionally the
      // same as "SSLv3".
-@@ -1152,13 +1261,20 @@ bool ssl_create_cipher_list(UniquePtr<SSLCipherPreferenceList> *out_cipher_list,
+@@ -1154,13 +1263,20 @@ bool ssl_create_cipher_list(UniquePtr<SSLCipherPreferenceList> *out_cipher_list,
        TLS1_CK_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256 & 0xffff,
    };
    static const uint16_t kLegacyCiphers[] = {
