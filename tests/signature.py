@@ -296,7 +296,7 @@ class TLSExtensionStatusRequest(TLSExtensionSignature,
         d = super().to_dict()
         d["status_request_type"] = self.status_request_type
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionStatusRequest(**d)
@@ -364,7 +364,7 @@ class TLSExtensionSignatureAlgorithms(TLSExtensionSignature,
         d = super().to_dict()
         d["sig_hash_algs"] = self.sig_hash_algs
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionSignatureAlgorithms(**d)
@@ -401,7 +401,7 @@ class TLSExtensionPadding(TLSExtensionSignature,
     def __init__(self):
         # Padding has varying lengths, so don't include in the signature
         super().__init__(self.ext_type, length=None)
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionPadding()
@@ -421,7 +421,7 @@ class TLSExtensionCompressCertificate(TLSExtensionSignature,
         d = super().to_dict()
         d["algorithms"] = self.algorithms
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionCompressCertificate(**d)
@@ -442,7 +442,7 @@ class TLSExtensionRecordSizeLimit(TLSExtensionSignature,
         d = super().to_dict()
         d["record_size_limit"] = self.record_size_limit
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionRecordSizeLimit(**d)
@@ -463,7 +463,7 @@ class TLSExtensionDelegatedCredentials(TLSExtensionSignature,
         d = super().to_dict()
         d["sig_hash_algs"] = self.sig_hash_algs
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionDelegatedCredentials(**d)
@@ -487,7 +487,7 @@ class TLSExtensionSupportedVersions(TLSExtensionSignature,
             self.supported_versions
         ))
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         supported_versions = list(map(
@@ -513,7 +513,7 @@ class TLSExtensionPSKKeyExchangeModes(TLSExtensionSignature,
         d = super().to_dict()
         d["psk_ke_mode"] = self.psk_ke_mode
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionPSKKeyExchangeModes(**d)
@@ -524,7 +524,7 @@ class TLSExtensionPSKKeyExchangeModes(TLSExtensionSignature,
         if ke_length > 1:
             # Unsupported
             raise Exception("Failed to parse psk_key_exchange_modes extension")
-        
+
         return TLSExtensionPSKKeyExchangeModes(length, ke_mode)
 
 
@@ -544,7 +544,7 @@ class TLSExtensionKeyshare(TLSExtensionSignature,
             for ks in self.key_shares
         ]
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         key_shares = [
@@ -585,7 +585,7 @@ class TLSExtensionApplicationSettings(TLSExtensionSignature,
         d = super().to_dict()
         d["alps_alpn_list"] = self.alps_alpn_list
         return d
-    
+
     @classmethod
     def from_dict(cls, d):
         return TLSExtensionApplicationSettings(**d)
@@ -838,7 +838,7 @@ class TLSClientHelloSignature():
                 f"Got 0x{handshake_header.type:02x}"
            )
 
-        if (len(record) - off - 4 != 
+        if (len(record) - off - 4 !=
             (handshake_header.length_high << 16) + handshake_header.length_low):
             raise Exception("Corrupt handshake length")
 

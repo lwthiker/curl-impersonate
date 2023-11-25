@@ -194,3 +194,16 @@ index fd8cef95d..1d6ffe88b 100644
        TLS1_CK_RSA_WITH_AES_128_GCM_SHA256 & 0xffff,
        TLS1_CK_RSA_WITH_AES_256_GCM_SHA384 & 0xffff,
        TLS1_CK_RSA_WITH_AES_128_SHA & 0xffff,
+diff --git a/ssl/ssl_privkey.cc b/ssl/ssl_privkey.cc
+index 57116cd6c..fa1652832 100644
+--- a/ssl/ssl_privkey.cc
++++ b/ssl/ssl_privkey.cc
+@@ -594,7 +594,7 @@ static bool sigalgs_unique(Span<const uint16_t> in_sigalgs) {
+ 
+ static bool set_sigalg_prefs(Array<uint16_t> *out, Span<const uint16_t> prefs) {
+   if (!sigalgs_unique(prefs)) {
+-    return false;
++    // return false;
+   }
+ 
+   // Check for invalid algorithms, and filter out |SSL_SIGN_RSA_PKCS1_MD5_SHA1|.
