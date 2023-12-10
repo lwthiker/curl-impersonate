@@ -90,6 +90,8 @@ RUN cd ${CURL_VERSION} && \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
                 --with-nss-deprecated \
+                --without-zstd \
+                --enable-ech \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make && make install
@@ -117,6 +119,8 @@ RUN cd ${CURL_VERSION} && \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
                 --with-nss-deprecated \
+                --without-zstd \
+                --enable-ech \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make clean && make && make install
