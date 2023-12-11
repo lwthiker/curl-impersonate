@@ -23,5 +23,5 @@ For each supported browser, the following tests are performed:
 The following tests are still missing:
 - [ ] Test that `curl-impersonate` sends the same HTTP/2 SETTINGS as the browser.
 - [ ] Capture traffic automatically from different browsers
-- [ ] Update safari versions, double `rsa_pss_rsae_sha384`
+- [x] Update safari versions, double `rsa_pss_rsae_sha384`
 
