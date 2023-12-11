@@ -1954,7 +1954,7 @@ index 0c3b9634d..b5bfdf569 100644
  #endif
    case CURLOPT_IPRESOLVE:
      arg = va_arg(param, long);
-@@ -2953,6 +2992,25 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -2953,6 +2992,27 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
    case CURLOPT_SSL_ENABLE_ALPN:
      data->set.ssl_enable_alpn = (0 != va_arg(param, long)) ? TRUE : FALSE;
      break;
@@ -1971,16 +1971,18 @@ index 0c3b9634d..b5bfdf569 100644
 +    result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
 +                            va_arg(param, char *));
 +    break;
++#ifdef USE_HTTP2
 +  case CURLOPT_HTTP2_NO_SERVER_PUSH:
 +    data->set.http2_no_server_push = (0 != va_arg(param, long)) ? TRUE : FALSE;
 +    break;
 +  case CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS:
 +    data->set.http2_skip_max_concurrent_streams = (0 != va_arg(param, long)) ? TRUE : FALSE;
 +    break;
++#endif
  #ifdef USE_UNIX_SOCKETS
    case CURLOPT_UNIX_SOCKET_PATH:
      data->set.abstract_unix_socket = FALSE;
-@@ -3146,6 +3204,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -3146,6 +3206,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
      data->set.ws_raw_mode = raw;
      break;
    }
