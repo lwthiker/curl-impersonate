@@ -119,7 +119,6 @@ RUN cd ${CURL_VERSION} && \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
                 --with-nss-deprecated \
                 --without-zstd \
-                --enable-ech \
                 CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
                 USE_CURL_SSLKEYLOGFILE=true && \
     make clean && make && make install
