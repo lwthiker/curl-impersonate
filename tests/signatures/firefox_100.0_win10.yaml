@@ -1,0 +1,120 @@
+browser:
+  mode: regular
+  name: firefox
+  os: win10
+  version: 100.0
+name: firefox_100.0_win10
+signature:
+  http2:
+    frames:
+    - frame_type: HEADERS
+      headers:
+      - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101
+        Firefox/100.0'
+      - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+      - 'accept-language: en-US,en;q=0.5'
+      - 'accept-encoding: gzip, deflate, br'
+      - 'upgrade-insecure-requests: 1'
+      - 'sec-fetch-dest: document'
+      - 'sec-fetch-mode: navigate'
+      - 'sec-fetch-site: none'
+      - 'sec-fetch-user: ?1'
+      - 'te: trailers'
+      pseudo_headers:
+      - :method
+      - :path
+      - :authority
+      - :scheme
+  tls_client_hello:
+    ciphersuites:
+    - 4865
+    - 4867
+    - 4866
+    - 49195
+    - 49199
+    - 52393
+    - 52392
+    - 49196
+    - 49200
+    - 49162
+    - 49161
+    - 49171
+    - 49172
+    - 156
+    - 157
+    - 47
+    - 53
+    comp_methods:
+    - 0
+    extensions:
+    - type: server_name
+    - length: 0
+      type: extended_master_secret
+    - length: 1
+      type: renegotiation_info
+    - length: 14
+      supported_groups:
+      - 29
+      - 23
+      - 24
+      - 25
+      - 256
+      - 257
+      type: supported_groups
+    - ec_point_formats:
+      - 0
+      length: 2
+      type: ec_point_formats
+    - length: 0
+      type: session_ticket
+    - alpn_list:
+      - h2
+      - http/1.1
+      length: 14
+      type: application_layer_protocol_negotiation
+    - length: 5
+      status_request_type: 1
+      type: status_request
+    - length: 10
+      sig_hash_algs:
+      - 1027
+      - 1283
+      - 1539
+      - 515
+      type: delegated_credentials
+    - key_shares:
+      - group: 29
+        length: 32
+      - group: 23
+        length: 65
+      length: 107
+      type: keyshare
+    - length: 5
+      supported_versions:
+      - TLS_VERSION_1_3
+      - TLS_VERSION_1_2
+      type: supported_versions
+    - length: 24
+      sig_hash_algs:
+      - 1027
+      - 1283
+      - 1539
+      - 2052
+      - 2053
+      - 2054
+      - 1025
+      - 1281
+      - 1537
+      - 515
+      - 513
+      type: signature_algorithms
+    - length: 2
+      psk_ke_mode: 1
+      type: psk_key_exchange_modes
+    - length: 2
+      record_size_limit: 16385
+      type: record_size_limit
+    - type: padding
+    handshake_version: TLS_VERSION_1_2
+    record_version: TLS_VERSION_1_0
+    session_id_length: 32

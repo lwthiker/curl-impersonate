@@ -1,0 +1,125 @@
+browser:
+  mode: regular
+  name: chrome
+  os: win10
+  version: 116.0.5845.180
+name: chrome_116.0.5845.180_win10
+signature:
+  http2:
+    frames:
+    - frame_type: HEADERS
+      headers:
+      - 'sec-ch-ua: "Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"'
+      - 'sec-ch-ua-mobile: ?0'
+      - 'sec-ch-ua-platform: "Windows"'
+      - 'upgrade-insecure-requests: 1'
+      - 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+        (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+      - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
+      - 'sec-fetch-site: none'
+      - 'sec-fetch-mode: navigate'
+      - 'sec-fetch-user: ?1'
+      - 'sec-fetch-dest: document'
+      - 'accept-encoding: gzip, deflate, br'
+      - 'accept-language: en-US,en;q=0.9'
+      pseudo_headers:
+      - :method
+      - :authority
+      - :scheme
+      - :path
+  options:
+    tls_permute_extensions: true
+  tls_client_hello:
+    ciphersuites:
+    - GREASE
+    - 4865
+    - 4866
+    - 4867
+    - 49195
+    - 49199
+    - 49196
+    - 49200
+    - 52393
+    - 52392
+    - 49171
+    - 49172
+    - 156
+    - 157
+    - 47
+    - 53
+    comp_methods:
+    - 0
+    extensions:
+    - length: 0
+      type: GREASE
+    - type: server_name
+    - length: 0
+      type: extended_master_secret
+    - length: 1
+      type: renegotiation_info
+    - length: 10
+      supported_groups:
+      - GREASE
+      - 29
+      - 23
+      - 24
+      type: supported_groups
+    - ec_point_formats:
+      - 0
+      length: 2
+      type: ec_point_formats
+    - length: 0
+      type: session_ticket
+    - alpn_list:
+      - h2
+      - http/1.1
+      length: 14
+      type: application_layer_protocol_negotiation
+    - length: 5
+      status_request_type: 1
+      type: status_request
+    - length: 18
+      sig_hash_algs:
+      - 1027
+      - 2052
+      - 1025
+      - 1283
+      - 2053
+      - 1281
+      - 2054
+      - 1537
+      type: signature_algorithms
+    - length: 0
+      type: signed_certificate_timestamp
+    - key_shares:
+      - group: GREASE
+        length: 1
+      - group: 29
+        length: 32
+      length: 43
+      type: keyshare
+    - length: 2
+      psk_ke_mode: 1
+      type: psk_key_exchange_modes
+    - length: 7
+      supported_versions:
+      - GREASE
+      - TLS_VERSION_1_3
+      - TLS_VERSION_1_2
+      type: supported_versions
+    - algorithms:
+      - 2
+      length: 3
+      type: compress_certificate
+    - alps_alpn_list:
+      - h2
+      length: 5
+      type: application_settings
+    - data: !!binary |
+        AA==
+      length: 1
+      type: GREASE
+    - type: padding
+    handshake_version: TLS_VERSION_1_2
+    record_version: TLS_VERSION_1_0
+    session_id_length: 32
