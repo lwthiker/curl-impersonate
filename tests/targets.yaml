@@ -1,0 +1,173 @@
+# Test wrapper scripts
+- - curl_chrome99
+  - null
+  - null
+  - chrome_99.0.4844.51_win10
+- - curl_chrome100
+  - null
+  - null
+  - chrome_100.0.4896.127_win10
+- - curl_chrome101
+  - null
+  - null
+  - chrome_101.0.4951.67_win10
+- - curl_chrome104
+  - null
+  - null
+  - chrome_104.0.5112.81_win10
+- - curl_chrome107
+  - null
+  - null
+  - chrome_107.0.5304.107_win10
+- - curl_chrome110
+  - null
+  - null
+  - chrome_110.0.5481.177_win10
+- - curl_chrome116
+  - null
+  - null
+  - chrome_116.0.5845.180_win10
+- - curl_chrome119
+  - null
+  - null
+  - chrome_119.0.6045.199_macOS
+# - - curl_chrome120
+#   - null
+#   - null
+#   - chrome_120.0.6099.109_macOS
+- - curl_chrome99_android
+  - null
+  - null
+  - chrome_99.0.4844.73_android12-pixel6
+- - curl_edge99
+  - null
+  - null
+  - edge_99.0.1150.30_win10
+- - curl_edge101
+  - null
+  - null
+  - edge_101.0.1210.47_win10
+- - curl_safari15_3
+  - null
+  - null
+  - safari_15.3_macos11.6.4
+- - curl_safari15_5
+  - null
+  - null
+  - safari_15.5_macos12.4
+- - curl_ff91esr
+  - null
+  - null
+  - firefox_91.6.0esr_win10
+- - curl_ff95
+  - null
+  - null
+  - firefox_95.0.2_win10
+- - curl_ff98
+  - null
+  - null
+  - firefox_98.0_win10
+- - curl_ff100
+  - null
+  - null
+  - firefox_100.0_win10
+- - curl_ff102
+  - null
+  - null
+  - firefox_102.0_win10
+- - curl_ff109
+  - null
+  - null
+  - firefox_109.0_win10
+- - curl_ff117
+  - null
+  - null
+  - firefox_117.0.1_win10
+
+# Test libcurl-impersonate by loading it with LD_PRELOAD to an app
+# linked against the regular libcurl and setting the
+# CURL_IMPERSONATE env var.
+- - minicurl
+  - CURL_IMPERSONATE: chrome99
+  - libcurl-impersonate-chrome
+  - chrome_99.0.4844.51_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome100
+  - libcurl-impersonate-chrome
+  - chrome_100.0.4896.127_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome101
+  - libcurl-impersonate-chrome
+  - chrome_101.0.4951.67_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome104
+  - libcurl-impersonate-chrome
+  - chrome_104.0.5112.81_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome107
+  - libcurl-impersonate-chrome
+  - chrome_107.0.5304.107_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome110
+  - libcurl-impersonate-chrome
+  - chrome_110.0.5481.177_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome116
+  - libcurl-impersonate-chrome
+  - chrome_116.0.5845.180_win10
+- - minicurl
+  - CURL_IMPERSONATE: chrome119
+  - libcurl-impersonate-chrome
+  - chrome_119.0.6045.199_macOS
+# - - minicurl
+#   - CURL_IMPERSONATE: chrome120
+#   - libcurl-impersonate-chrome
+#   - chrome_120.0.6099.109_macOS
+- - minicurl
+  - CURL_IMPERSONATE: chrome99_android
+  - libcurl-impersonate-chrome
+  - chrome_99.0.4844.73_android12-pixel6
+- - minicurl
+  - CURL_IMPERSONATE: edge99
+  - libcurl-impersonate-chrome
+  - edge_99.0.1150.30_win10
+- - minicurl
+  - CURL_IMPERSONATE: edge101
+  - libcurl-impersonate-chrome
+  - edge_101.0.1210.47_win10
+- - minicurl
+  - CURL_IMPERSONATE: safari15_3
+  - libcurl-impersonate-chrome
+  - safari_15.3_macos11.6.4
+- - minicurl
+  - CURL_IMPERSONATE: safari15_5
+  - libcurl-impersonate-chrome
+  - safari_15.5_macos12.4
+- - minicurl
+  - CURL_IMPERSONATE: ff91esr
+  - libcurl-impersonate-ff
+  - firefox_91.6.0esr_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff95
+  - libcurl-impersonate-ff
+  - firefox_95.0.2_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff98
+  - libcurl-impersonate-ff
+  - firefox_98.0_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff100
+  - libcurl-impersonate-ff
+  - firefox_100.0_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff102
+  - libcurl-impersonate-ff
+  - firefox_102.0_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff109
+  - libcurl-impersonate-ff
+  - firefox_109.0_win10
+- - minicurl
+  - CURL_IMPERSONATE: ff117
+  - libcurl-impersonate-ff
+  - firefox_117.0.1_win10

@@ -1,4 +1,4 @@
 pyyaml
 pytest
 pytest-asyncio
-dpkt
+th1 @ git+https://github.com/yifeikong/th1.git@main
