@@ -23,7 +23,11 @@ def browser_signatures():
         with open(path, "r") as f:
             # Parse signatures.yaml database.
             docs.update(
-                {doc["name"]: doc for doc in yaml.safe_load_all(f.read()) if doc}
+                {
+                    f'{doc["browser"]["name"]}_{doc["browser"]["version"]}_{doc["browser"]["os"]}': doc
+                    for doc in yaml.safe_load_all(f.read())
+                    if doc
+                }
             )
     return docs
 
@@ -90,6 +94,7 @@ def tcpdump(pytestconfig):
     p.terminate()
     p.wait(timeout=10)
 
+
 async def _read_proc_output(proc, timeout):
     """Read an async process' output until timeout is reached"""
     data = bytes()
@@ -106,6 +111,7 @@ async def _read_proc_output(proc, timeout):
         passed = loop.time() - start_time
     return data
 
+
 async def _wait_nghttpd(proc):
     """Wait for nghttpd to start listening on its designated port"""
     data = bytes()
@@ -120,6 +126,7 @@ async def _wait_nghttpd(proc):
             return True
 
     return False
+
 
 @pytest.fixture
 async def nghttpd():
@@ -315,7 +322,7 @@ async def test_http2_headers(
     assert len(output) > 0
     sig = parse_nghttpd_log(output)
 
-    logging.debug( f"Received {len(sig.frames)} HTTP/2 frames")
+    logging.debug(f"Received {len(sig.frames)} HTTP/2 frames")
 
     expected_sig = HTTP2Signature.from_dict(
         browser_signatures[expected_signature]["signature"]["http2"]
@@ -499,7 +506,9 @@ async def test_user_agent(pytestconfig, nghttpd, curl_binary, env_vars, ld_prelo
     for frame in sig.frames:
         if frame.frame_type == "HEADERS":
             headers_frame = frame
-    assert any([header.lower().startswith("user-agent:") for header in headers_frame.headers])
+    assert any(
+        [header.lower().startswith("user-agent:") for header in headers_frame.headers]
+    )
 
     for header in headers_frame.headers:
         if header.lower().startswith("user-agent:"):

@@ -3,6 +3,8 @@ browser:
   os: linux
   version: 118.0.2088.76
 signature:
+  options:
+    tls_permute_extensions: true
   http2:
     frames:
     - frame_type: SETTINGS

@@ -3,6 +3,8 @@ browser:
   os: macOS
   version: 120.0.6099.109
 signature:
+  options:
+    tls_permute_extensions: true
   http2:
     frames:
     - frame_type: SETTINGS
@@ -21,21 +23,18 @@ signature:
       window_size_increment: 15663105
     - frame_type: HEADERS
       headers:
-      - 'cache-control: max-age=0'
       - 'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
       - 'sec-ch-ua-mobile: ?0'
       - 'sec-ch-ua-platform: "macOS"'
-      - 'dnt: 1'
       - 'upgrade-insecure-requests: 1'
-      - 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
-        (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      - 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
       - 'sec-fetch-site: none'
       - 'sec-fetch-mode: navigate'
       - 'sec-fetch-user: ?1'
       - 'sec-fetch-dest: document'
       - 'accept-encoding: gzip, deflate, br'
-      - 'accept-language: en,zh-CN;q=0.9,zh-TW;q=0.8,zh;q=0.7'
+      - 'accept-language: en-US,en;q=0.9'
       pseudo_headers:
       - :method
       - :authority

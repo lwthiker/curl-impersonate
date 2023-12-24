@@ -1163,10 +1163,10 @@ index 562c05c99..b99c085d5 100644
   * Store nghttp2 version info in this buffer.
 diff --git a/lib/impersonate.c b/lib/impersonate.c
 new file mode 100644
-index 000000000..f0e108b0d
+index 000000000..9e951de55
 --- /dev/null
 +++ b/lib/impersonate.c
-@@ -0,0 +1,656 @@
+@@ -0,0 +1,568 @@
 +#include "curl_setup.h"
 +
 +#include <curl/curl.h>
@@ -1460,94 +1460,6 @@ index 000000000..f0e108b0d
 +      .http2_no_server_push = true
 +  },
 +  {
-+      .target = "chrome117",
-+      .httpversion = CURL_HTTP_VERSION_2_0,
-+      .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
-+      .ciphers =
-+      "TLS_AES_128_GCM_SHA256,"
-+      "TLS_AES_256_GCM_SHA384,"
-+      "TLS_CHACHA20_POLY1305_SHA256,"
-+      "ECDHE-ECDSA-AES128-GCM-SHA256,"
-+      "ECDHE-RSA-AES128-GCM-SHA256,"
-+      "ECDHE-ECDSA-AES256-GCM-SHA384,"
-+      "ECDHE-RSA-AES256-GCM-SHA384,"
-+      "ECDHE-ECDSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-AES128-SHA,"
-+      "ECDHE-RSA-AES256-SHA,"
-+      "AES128-GCM-SHA256,"
-+      "AES256-GCM-SHA384,"
-+      "AES128-SHA,"
-+      "AES256-SHA",
-+      .npn = false,
-+      .alpn = true,
-+      .alps = true,
-+      .tls_permute_extensions = true,
-+      .tls_session_ticket = true,
-+      .cert_compression = "brotli",
-+      .http_headers = {
-+              "sec-ch-ua: \"Google Chrome\";v=\"117\", \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"117\"",
-+              "sec-ch-ua-mobile: ?0",
-+              "sec-ch-ua-platform: \"Windows\"",
-+              "Upgrade-Insecure-Requests: 1",
-+              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-+              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-+              "Sec-Fetch-Site: none",
-+              "Sec-Fetch-Mode: navigate",
-+              "Sec-Fetch-User: ?1",
-+              "Sec-Fetch-Dest: document",
-+              "Accept-Encoding: gzip, deflate, br",
-+              "Accept-Language: en-US,en;q=0.9"
-+      },
-+      .http2_no_server_push = true,
-+      .http2_skip_max_concurrent_streams = true,
-+      .ech = "GREASE"
-+  },
-+  {
-+      .target = "chrome118",
-+      .httpversion = CURL_HTTP_VERSION_2_0,
-+      .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
-+      .ciphers =
-+      "TLS_AES_128_GCM_SHA256,"
-+      "TLS_AES_256_GCM_SHA384,"
-+      "TLS_CHACHA20_POLY1305_SHA256,"
-+      "ECDHE-ECDSA-AES128-GCM-SHA256,"
-+      "ECDHE-RSA-AES128-GCM-SHA256,"
-+      "ECDHE-ECDSA-AES256-GCM-SHA384,"
-+      "ECDHE-RSA-AES256-GCM-SHA384,"
-+      "ECDHE-ECDSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-CHACHA20-POLY1305,"
-+      "ECDHE-RSA-AES128-SHA,"
-+      "ECDHE-RSA-AES256-SHA,"
-+      "AES128-GCM-SHA256,"
-+      "AES256-GCM-SHA384,"
-+      "AES128-SHA,"
-+      "AES256-SHA",
-+      .npn = false,
-+      .alpn = true,
-+      .alps = true,
-+      .tls_permute_extensions = true,
-+      .tls_session_ticket = true,
-+      .cert_compression = "brotli",
-+      .http_headers = {
-+              "sec-ch-ua: \"Chromium\";v=\"118\", \"Google Chrome\";v=\"118\", \"Not=A?Brand\";v=\"99\"",
-+              "sec-ch-ua-mobile: ?0",
-+              "sec-ch-ua-platform: \"Windows\"",
-+              "Upgrade-Insecure-Requests: 1",
-+              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-+              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-+              "Sec-Fetch-Site: none",
-+              "Sec-Fetch-Mode: navigate",
-+              "Sec-Fetch-User: ?1",
-+              "Sec-Fetch-Dest: document",
-+              "Accept-Encoding: gzip, deflate, br",
-+              "Accept-Language: en-US,en;q=0.9"
-+      },
-+      .http2_no_server_push = true,
-+      .http2_skip_max_concurrent_streams = true,
-+      .ech = "GREASE"
-+  },
-+  {
 +      .target = "chrome119",
 +      .httpversion = CURL_HTTP_VERSION_2_0,
 +      .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
@@ -1578,7 +1490,7 @@ index 000000000..f0e108b0d
 +              "sec-ch-ua-mobile: ?0",
 +              "sec-ch-ua-platform: \"Windows\"",
 +              "Upgrade-Insecure-Requests: 1",
-+              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
++              "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
 +              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
 +              "Sec-Fetch-Site: none",
 +              "Sec-Fetch-Mode: navigate",
@@ -1891,7 +1803,7 @@ index d1d32b793..3b49a1b4c 100644
  #ifdef USE_WINSOCK
    multi->wsa_event = WSACreateEvent();
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 0c3b9634d..b5bfdf569 100644
+index 0c3b9634d..46a5eed8b 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -50,6 +50,7 @@
@@ -1967,11 +1879,11 @@ index 0c3b9634d..b5bfdf569 100644
 +  case CURLOPT_SSL_PERMUTE_EXTENSIONS:
 +    data->set.ssl_permute_extensions = (0 != va_arg(param, long)) ? TRUE : FALSE;
 +    break;
++#ifdef USE_HTTP2
 +  case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
 +    result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
 +                            va_arg(param, char *));
 +    break;
-+#ifdef USE_HTTP2
 +  case CURLOPT_HTTP2_NO_SERVER_PUSH:
 +    data->set.http2_no_server_push = (0 != va_arg(param, long)) ? TRUE : FALSE;
 +    break;
