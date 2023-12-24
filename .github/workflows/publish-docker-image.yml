@@ -2,10 +2,11 @@
 # Docker hub.
 name: Publish Docker image
 
-# on:
-#   push:
-#     tags:
-#       - 'v*'
+on:
+  push:
+    tags:
+      # - 'v*'
+      - skip_for_now
 
 jobs:
   push-docker-image:

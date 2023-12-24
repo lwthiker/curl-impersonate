@@ -38,7 +38,7 @@
 - - curl_chrome99_android
   - null
   - null
-  - chrome_99.0.4844.73_android12-pixel6
+  - chrome_99.0.4844.73_android12
 - - curl_edge99
   - null
   - null
@@ -126,7 +126,7 @@
 - - minicurl
   - CURL_IMPERSONATE: chrome99_android
   - libcurl-impersonate-chrome
-  - chrome_99.0.4844.73_android12-pixel6
+  - chrome_99.0.4844.73_android12
 - - minicurl
   - CURL_IMPERSONATE: edge99
   - libcurl-impersonate-chrome
