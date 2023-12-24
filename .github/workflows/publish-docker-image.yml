@@ -2,10 +2,10 @@
 # Docker hub.
 name: Publish Docker image
 
-on:
-  push:
-    tags:
-      - 'v*'
+# on:
+#   push:
+#     tags:
+#       - 'v*'
 
 jobs:
   push-docker-image:

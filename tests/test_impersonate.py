@@ -47,7 +47,7 @@ TEST_URLS = [
 ]
 
 # List of binaries and their expected signatures
-CURL_BINARIES_AND_SIGNATURES = yaml.safe_load(open("tests/targets.yaml"))
+CURL_BINARIES_AND_SIGNATURES = yaml.safe_load(open("./targets.yaml"))
 
 
 @pytest.fixture
