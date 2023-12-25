@@ -65,6 +65,7 @@ signature:
     extensions:
     - length: 0
       type: GREASE
+    - type: server_name
     - length: 0
       type: session_ticket
     - alpn_list:

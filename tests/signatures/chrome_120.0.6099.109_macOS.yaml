@@ -64,6 +64,7 @@ signature:
     extensions:
     - length: 0
       type: GREASE
+    - type: server_name
     - length: 1
       type: renegotiation_info
     - ec_point_formats:
