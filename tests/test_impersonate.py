@@ -43,7 +43,8 @@ LOCAL_PORTS = (50000, 50100)
 
 
 # https://docs.github.com/en/actions/learn-github-actions/variables
-if os.getenv("CI") == "true":
+if os.getenv("CI") is not None:
+    print("$CI is:", os.getenv("CI"))
     TEST_URLS = [
         "https://www.wikimedia.org",
         "https://www.wikipedia.org",
