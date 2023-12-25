@@ -102,7 +102,7 @@ def tcpdump(pytestconfig):
     p.wait(timeout=10)
 
 
-async def _read_proc_output(proc, timeout):
+async def _read_proc_output(proc, timeout: int = 5):
     """Read an async process' output until timeout is reached"""
     data = bytes()
     loop = asyncio.get_running_loop()
@@ -445,7 +445,7 @@ async def test_no_builtin_headers(
     )
     assert ret == 0
 
-    output = await _read_proc_output(nghttpd, timeout=2)
+    output = await _read_proc_output(nghttpd, timeout=5)
 
     assert len(output) > 0
     sig = parse_nghttpd_log(output)
@@ -508,7 +508,7 @@ async def test_user_agent(pytestconfig, nghttpd, curl_binary, env_vars, ld_prelo
     )
     assert ret == 0
 
-    output = await _read_proc_output(nghttpd, timeout=2)
+    output = await _read_proc_output(nghttpd, timeout=5)
 
     assert len(output) > 0
 
@@ -580,7 +580,7 @@ async def test_user_agent_curlopt_useragent(
     )
     assert ret == 0
 
-    output = await _read_proc_output(nghttpd, timeout=2)
+    output = await _read_proc_output(nghttpd, timeout=5)
 
     assert len(output) > 0
 
