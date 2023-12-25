@@ -43,21 +43,19 @@ LOCAL_PORTS = (50000, 50100)
 
 
 # https://docs.github.com/en/actions/learn-github-actions/variables
-if os.getenv("CI") is not None:
-    print("$CI is:", os.getenv("CI"))
-    TEST_URLS = [
-        "https://www.wikimedia.org",
-        "https://www.wikipedia.org",
-        "https://www.mozilla.org/en-US/",
-        "https://www.apache.org",
-        "https://www.kernel.org",
-        "https://git-scm.com",
-    ]
-else:
-    TEST_URLS = [
-        "https://tls.browserleaks.com/json",
-        "https://httpbin.org/ip",
-    ]
+logging.debug("$CI is: %s", os.getenv("CI"))
+TEST_URLS = [
+    "https://www.wikimedia.org",
+    "https://www.wikipedia.org",
+    "https://www.mozilla.org/en-US/",
+    "https://www.apache.org",
+    "https://www.kernel.org",
+    "https://git-scm.com",
+]
+# TEST_URLS = [
+#     "https://tls.browserleaks.com/json",
+#     "https://httpbin.org/ip",
+# ]
 
 # List of binaries and their expected signatures
 CURL_BINARIES_AND_SIGNATURES = yaml.safe_load(open("./targets.yaml"))
