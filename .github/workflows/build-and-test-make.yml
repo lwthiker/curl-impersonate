@@ -23,20 +23,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-12]
+        os: [ubuntu-20.04, macos-12]
         arch: [x86_64]
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             arch: x86_64
             host: x86_64-linux-gnu
             capture_interface: eth0
             make: make
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             arch: aarch64
             host: aarch64-linux-gnu
             capture_interface: eth0
             make: make
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             arch: arm
             host: arm-linux-gnueabihf
             capture_interface: eth0
@@ -52,7 +52,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install Ubuntu dependencies
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
@@ -64,7 +64,7 @@ jobs:
           sudo apt-get install tcpdump nghttp2-server libnss3
 
       - name: Install Ubuntu cross-compile dependencies (${{ matrix.arch }})
-        if: matrix.os == 'ubuntu-22.04' && matrix.arch != 'x86_64'
+        if: matrix.os == 'ubuntu-20.04' && matrix.arch != 'x86_64'
         run: |
           sudo apt-get install gcc-${{ matrix.host }} g++-${{ matrix.host }}
 
