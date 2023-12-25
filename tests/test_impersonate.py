@@ -42,7 +42,8 @@ a real browser, by comparing with known signatures
 LOCAL_PORTS = (50000, 50100)
 
 
-if os.getenv("GITHUB_ACTIONS") == "true":
+# https://docs.github.com/en/actions/learn-github-actions/variables
+if os.getenv("CI") == "true":
     TEST_URLS = [
         "https://www.wikimedia.org",
         "https://www.wikipedia.org",
