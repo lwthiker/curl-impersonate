@@ -41,14 +41,21 @@ a real browser, by comparing with known signatures
 # This ensures we will capture the correct traffic in tcpdump.
 LOCAL_PORTS = (50000, 50100)
 
-TEST_URLS = [
-    "https://www.wikimedia.org",
-    "https://www.wikipedia.org",
-    "https://www.mozilla.org/en-US/",
-    "https://www.apache.org",
-    "https://www.kernel.org",
-    "https://git-scm.com",
-]
+
+if os.getenv("GITHUB_ACTIONS") == "true":
+    TEST_URLS = [
+        "https://www.wikimedia.org",
+        "https://www.wikipedia.org",
+        "https://www.mozilla.org/en-US/",
+        "https://www.apache.org",
+        "https://www.kernel.org",
+        "https://git-scm.com",
+    ]
+else:
+    TEST_URLS = [
+        "https://tls.browserleaks.com/json",
+        "https://httpbin.org/ip",
+    ]
 
 # List of binaries and their expected signatures
 CURL_BINARIES_AND_SIGNATURES = yaml.safe_load(open("./targets.yaml"))
@@ -187,12 +194,15 @@ def _run_curl(curl_binary, env_vars, extra_args, urls, output="/dev/null"):
         curl_binary,
         "-o",
         output,
+        "-o",
+        output,
         "--local-port",
         f"{LOCAL_PORTS[0]}-{LOCAL_PORTS[1]}",
     ]
     if extra_args:
         args += extra_args
     args.extend(urls)
+    logging.debug("runing curl with: %s", " ".join(args))
 
     curl = subprocess.Popen(args, env=env)
     return curl.wait(timeout=15)
