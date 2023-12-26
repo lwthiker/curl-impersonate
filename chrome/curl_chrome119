@@ -20,7 +20,9 @@ dir=${0%/*}
     -H 'Sec-Fetch-Dest: document' \
     -H 'Accept-Encoding: gzip, deflate, br' \
     -H 'Accept-Language: en-US,en;q=0.9' \
-    --http2 --http2-no-server-push --http2-skip-max-concurrent-streams \
+    --http2 \
+    --http2-settings '1:65536;2:0;4:6291456;6:262144' \
+    --http2-window-update 15663105 \
     --compressed \
     --ech GREASE \
     --tlsv1.2 --alps --tls-permute-extensions \

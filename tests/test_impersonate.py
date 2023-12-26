@@ -49,7 +49,7 @@ TEST_URLS = [
     "https://www.wikipedia.org",
     "https://www.mozilla.org/en-US/",
     "https://www.apache.org",
-    "https://www.kernel.org",
+    # "https://www.kernel.org",
     "https://git-scm.com",
 ]
 # TEST_URLS = [

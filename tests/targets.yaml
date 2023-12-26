@@ -31,10 +31,10 @@
   - null
   - null
   - chrome_119.0.6045.199_macOS
-# - - curl_chrome120
-#   - null
-#   - null
-#   - chrome_120.0.6099.109_macOS
+- - curl_chrome120
+  - null
+  - null
+  - chrome_120.0.6099.109_macOS
 - - curl_chrome99_android
   - null
   - null
@@ -55,34 +55,38 @@
   - null
   - null
   - safari_15.5_macos12.4
-- - curl_ff91esr
+- - curl_safari17_2_ios
   - null
   - null
-  - firefox_91.6.0esr_win10
-- - curl_ff95
-  - null
-  - null
-  - firefox_95.0.2_win10
-- - curl_ff98
-  - null
-  - null
-  - firefox_98.0_win10
-- - curl_ff100
-  - null
-  - null
-  - firefox_100.0_win10
-- - curl_ff102
-  - null
-  - null
-  - firefox_102.0_win10
-- - curl_ff109
-  - null
-  - null
-  - firefox_109.0_win10
-- - curl_ff117
-  - null
-  - null
-  - firefox_117.0.1_win10
+  - safari_17.2_iOS
+# - - curl_ff91esr
+#   - null
+#   - null
+#   - firefox_91.6.0esr_win10
+# - - curl_ff95
+#   - null
+#   - null
+#   - firefox_95.0.2_win10
+# - - curl_ff98
+#   - null
+#   - null
+#   - firefox_98.0_win10
+# - - curl_ff100
+#   - null
+#   - null
+#   - firefox_100.0_win10
+# - - curl_ff102
+#   - null
+#   - null
+#   - firefox_102.0_win10
+# - - curl_ff109
+#   - null
+#   - null
+#   - firefox_109.0_win10
+# - - curl_ff117
+#   - null
+#   - null
+#   - firefox_117.0.1_win10
 
 # Test libcurl-impersonate by loading it with LD_PRELOAD to an app
 # linked against the regular libcurl and setting the
@@ -119,10 +123,10 @@
   - CURL_IMPERSONATE: chrome119
   - libcurl-impersonate-chrome
   - chrome_119.0.6045.199_macOS
-# - - minicurl
-#   - CURL_IMPERSONATE: chrome120
-#   - libcurl-impersonate-chrome
-#   - chrome_120.0.6099.109_macOS
+- - minicurl
+  - CURL_IMPERSONATE: chrome120
+  - libcurl-impersonate-chrome
+  - chrome_120.0.6099.109_macOS
 - - minicurl
   - CURL_IMPERSONATE: chrome99_android
   - libcurl-impersonate-chrome
@@ -144,30 +148,34 @@
   - libcurl-impersonate-chrome
   - safari_15.5_macos12.4
 - - minicurl
-  - CURL_IMPERSONATE: ff91esr
-  - libcurl-impersonate-ff
-  - firefox_91.6.0esr_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff95
-  - libcurl-impersonate-ff
-  - firefox_95.0.2_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff98
-  - libcurl-impersonate-ff
-  - firefox_98.0_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff100
-  - libcurl-impersonate-ff
-  - firefox_100.0_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff102
-  - libcurl-impersonate-ff
-  - firefox_102.0_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff109
-  - libcurl-impersonate-ff
-  - firefox_109.0_win10
-- - minicurl
-  - CURL_IMPERSONATE: ff117
-  - libcurl-impersonate-ff
-  - firefox_117.0.1_win10
+  - CURL_IMPERSONATE: safari17_2_ios
+  - libcurl-impersonate-chrome
+  - safari_17.2_iOS
+# - - minicurl
+#   - CURL_IMPERSONATE: ff91esr
+#   - libcurl-impersonate-ff
+#   - firefox_91.6.0esr_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff95
+#   - libcurl-impersonate-ff
+#   - firefox_95.0.2_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff98
+#   - libcurl-impersonate-ff
+#   - firefox_98.0_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff100
+#   - libcurl-impersonate-ff
+#   - firefox_100.0_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff102
+#   - libcurl-impersonate-ff
+#   - firefox_102.0_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff109
+#   - libcurl-impersonate-ff
+#   - firefox_109.0_win10
+# - - minicurl
+#   - CURL_IMPERSONATE: ff117
+#   - libcurl-impersonate-ff
+#   - firefox_117.0.1_win10

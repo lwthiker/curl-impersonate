@@ -1,0 +1,142 @@
+browser:
+  name: safari
+  os: iOS
+  version: 17.2
+signature:
+  http2:
+    frames:
+    - frame_type: SETTINGS
+      settings:
+      - key: 2
+        value: 0
+      - key: 4
+        value: 2097152
+      - key: 3
+        value: 100
+      stream_id: 0
+    - frame_type: WINDOW_UPDATE
+      stream_id: 0
+      window_size_increment: 10485760
+    - frame_type: HEADERS
+      headers:
+      - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      - 'sec-fetch-site: none'
+      - 'accept-encoding: gzip, deflate, br'
+      - 'sec-fetch-mode: navigate'
+      - 'user-agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'
+      - 'accept-language: en-US,en;q=0.9'
+      - 'sec-fetch-dest: document'
+      pseudo_headers:
+      - :method
+      - :scheme
+      - :path
+      - :authority
+      stream_id: 1
+  tls_client_hello:
+    ciphersuites:
+    - GREASE
+    - 4865
+    - 4866
+    - 4867
+    - 49196
+    - 49195
+    - 52393
+    - 49200
+    - 49199
+    - 52392
+    - 49162
+    - 49161
+    - 49172
+    - 49171
+    - 157
+    - 156
+    - 53
+    - 47
+    - 49160
+    - 49170
+    - 10
+    comp_methods:
+    - 0
+    extensions:
+    - length: 0
+      type: GREASE
+    - type: server_name
+    - length: 0
+      type: extended_master_secret
+    - length: 1
+      type: renegotiation_info
+    - length: 12
+      supported_groups:
+      - GREASE
+      - 29
+      - 23
+      - 24
+      - 25
+      type: supported_groups
+    - ec_point_formats:
+      - 0
+      length: 2
+      type: ec_point_formats
+    - alpn_list:
+      - h2
+      - http/1.1
+      length: 14
+      type: application_layer_protocol_negotiation
+    - length: 5
+      status_request_type: 1
+      type: status_request
+    - length: 24
+      sig_hash_algs:
+      - 1027
+      - 2052
+      - 1025
+      - 1283
+      - 515
+      - 2053
+      - 2053
+      - 1281
+      - 2054
+      - 1537
+      - 513
+      type: signature_algorithms
+    - length: 0
+      type: signed_certificate_timestamp
+    - key_shares:
+      - group: GREASE
+        length: 1
+      - group: 29
+        length: 32
+      length: 43
+      type: keyshare
+    - length: 2
+      psk_ke_mode: 1
+      type: psk_key_exchange_modes
+    - length: 11
+      supported_versions:
+      - GREASE
+      - TLS_VERSION_1_3
+      - TLS_VERSION_1_2
+      - TLS_VERSION_1_1
+      - TLS_VERSION_1_0
+      type: supported_versions
+    - algorithms:
+      - 1
+      length: 3
+      type: compress_certificate
+    - data: !!binary |
+        AA==
+      length: 1
+      type: GREASE
+    - type: padding
+    handshake_version: TLS_VERSION_1_2
+    record_version: TLS_VERSION_1_0
+    session_id_length: 32
+third_party:
+  akamai_hash: ad8424af1cc590e09f7b0c499bf7fcdb
+  akamai_text: 2:0;4:2097152;3:100|10485760|0|m,s,p,a
+  ja3_hash: 773906b0efdefa24a7f2b8eb6985bf37
+  ja3_text: 771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49162-49161-49172-49171-157-156-53-47-49160-49170-10,0-23-65281-10-11-16-5-13-18-51-45-43-27-21,29-23-24-25,0
+  ja3n_hash: 44f7ed5185d22c92b96da72dbe68d307
+  ja3n_text: 771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49162-49161-49172-49171-157-156-53-47-49160-49170-10,0-5-10-11-13-16-18-21-23-27-43-45-51-65281,29-23-24-25,0
+  user_agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15
+    (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1

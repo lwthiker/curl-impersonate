@@ -145,7 +145,7 @@ index 54f92d931..ea5895e9b 100644
            echo "curl was built with static libraries disabled" >&2
            exit 1
 diff --git a/include/curl/curl.h b/include/curl/curl.h
-index 944352421..333c184b0 100644
+index 944352421..8d81e9a8d 100644
 --- a/include/curl/curl.h
 +++ b/include/curl/curl.h
 @@ -640,6 +640,7 @@ typedef enum {
@@ -194,9 +194,9 @@ index 944352421..333c184b0 100644
 +
 +  /*
 +   * curl-impersonate:
-+   * Disable HTTP2 server push in the HTTP2 SETTINGS.
++   * HTTP2 settings frame keys and values, format: 1:v;2:v;3:v
 +   */
-+  CURLOPT(CURLOPT_HTTP2_NO_SERVER_PUSH, CURLOPTTYPE_LONG, 329),
++  CURLOPT(CURLOPT_HTTP2_SETTINGS, CURLOPTTYPE_STRINGPOINT, 329),
 +
 +  /* 
 +   * curl-impersonate: Whether to enable Boringssl permute extensions
@@ -206,9 +206,9 @@ index 944352421..333c184b0 100644
 +
 +  /*
 +   * curl-impersonate:
-+   * Skip HTTP2 max_concurrent_streams in the HTTP2 SETTINGS.
++   * HTTP2 initial window update
 +   */
-+  CURLOPT(CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, CURLOPTTYPE_LONG, 331),
++  CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 331),
 +
 +  /* set ECH configuration, XXX, the official one is 324  */
 +  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 332),
@@ -405,7 +405,7 @@ index 777baa58a..2d542dfd6 100644
  /**
   * Return the n-th header entry or NULL if it does not exist.
 diff --git a/lib/easy.c b/lib/easy.c
-index d36cc03d1..4ef99083e 100644
+index d36cc03d1..ec25400c5 100644
 --- a/lib/easy.c
 +++ b/lib/easy.c
 @@ -73,6 +73,8 @@
@@ -535,14 +535,14 @@ index d36cc03d1..4ef99083e 100644
 +      return ret;
 +  }
 +
-+  if(opts->http2_no_server_push) {
-+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_NO_SERVER_PUSH, 1L);
++  if(opts->http2_settings) {
++    ret = curl_easy_setopt(data, CURLOPT_HTTP2_SETTINGS, opts->http2_settings);
 +    if(ret)
 +      return ret;
 +  }
 +
-+  if(opts->http2_skip_max_concurrent_streams) {
-+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, 1L);
++  if(opts->http2_window_update) {
++    ret = curl_easy_setopt(data, CURLOPT_HTTP2_WINDOW_UPDATE, opts->http2_window_update);
 +    if(ret)
 +      return ret;
 +  }
@@ -652,7 +652,7 @@ index d36cc03d1..4ef99083e 100644
  
  /*
 diff --git a/lib/easyoptions.c b/lib/easyoptions.c
-index a9c1efd00..1935ecf17 100644
+index a9c1efd00..b81f3a671 100644
 --- a/lib/easyoptions.c
 +++ b/lib/easyoptions.c
 @@ -86,6 +86,7 @@ struct curl_easyoption Curl_easyopts[] = {
@@ -663,22 +663,21 @@ index a9c1efd00..1935ecf17 100644
    {"EGDSOCKET", CURLOPT_EGDSOCKET, CURLOT_STRING, 0},
    {"ENCODING", CURLOPT_ACCEPT_ENCODING, CURLOT_STRING, CURLOT_FLAG_ALIAS},
    {"ERRORBUFFER", CURLOPT_ERRORBUFFER, CURLOT_OBJECT, 0},
-@@ -132,8 +133,14 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -132,8 +133,13 @@ struct curl_easyoption Curl_easyopts[] = {
    {"HSTS_CTRL", CURLOPT_HSTS_CTRL, CURLOT_LONG, 0},
    {"HTTP09_ALLOWED", CURLOPT_HTTP09_ALLOWED, CURLOT_LONG, 0},
    {"HTTP200ALIASES", CURLOPT_HTTP200ALIASES, CURLOT_SLIST, 0},
 +  {"HTTP2_PSEUDO_HEADERS_ORDER", CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
 +      CURLOT_STRING, 0},
-+  {"HTTP2_NO_SERVER_PUSH", CURLOPT_HTTP2_NO_SERVER_PUSH, CURLOT_LONG, 0},
-+  {"HTTP2_SKIP_MAX_CONCURRENT_STREAMS", CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS,
-+      CURLOT_LONG, 0},
++  {"HTTP2_SETTINGS", CURLOPT_HTTP2_SETTINGS, CURLOT_STRING, 0},
++  {"HTTP2_WINDOW_UPDATE", CURLOPT_HTTP2_WINDOW_UPDATE, CURLOT_LONG, 0},
    {"HTTPAUTH", CURLOPT_HTTPAUTH, CURLOT_VALUES, 0},
    {"HTTPGET", CURLOPT_HTTPGET, CURLOT_LONG, 0},
 +  {"HTTPBASEHEADER", CURLOPT_HTTPBASEHEADER, CURLOT_SLIST, 0},
    {"HTTPHEADER", CURLOPT_HTTPHEADER, CURLOT_SLIST, 0},
    {"HTTPPOST", CURLOPT_HTTPPOST, CURLOT_OBJECT, 0},
    {"HTTPPROXYTUNNEL", CURLOPT_HTTPPROXYTUNNEL, CURLOT_LONG, 0},
-@@ -302,18 +309,23 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -302,18 +308,23 @@ struct curl_easyoption Curl_easyopts[] = {
    {"SSLKEYTYPE", CURLOPT_SSLKEYTYPE, CURLOT_STRING, 0},
    {"SSLKEY_BLOB", CURLOPT_SSLKEY_BLOB, CURLOT_BLOB, 0},
    {"SSLVERSION", CURLOPT_SSLVERSION, CURLOT_VALUES, 0},
@@ -702,7 +701,7 @@ index a9c1efd00..1935ecf17 100644
    {"STDERR", CURLOPT_STDERR, CURLOT_OBJECT, 0},
    {"STREAM_DEPENDS", CURLOPT_STREAM_DEPENDS, CURLOT_OBJECT, 0},
    {"STREAM_DEPENDS_E", CURLOPT_STREAM_DEPENDS_E, CURLOT_OBJECT, 0},
-@@ -370,6 +382,6 @@ struct curl_easyoption Curl_easyopts[] = {
+@@ -370,6 +381,6 @@ struct curl_easyoption Curl_easyopts[] = {
   */
  int Curl_easyopts_check(void)
  {
@@ -999,7 +998,7 @@ index 219dcc2c0..7b04c6c36 100644
    }
  
 diff --git a/lib/http2.c b/lib/http2.c
-index c666192fc..889866e39 100644
+index c666192fc..4b37df2e8 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -50,6 +50,7 @@
@@ -1019,7 +1018,7 @@ index c666192fc..889866e39 100644
  /* on receving from TLS, we prep for holding a full stream window */
  #define H2_NW_RECV_CHUNKS       (H2_STREAM_WINDOW_SIZE / H2_CHUNK_SIZE)
  /* on send into TLS, we just want to accumulate small frames */
-@@ -86,24 +87,50 @@
+@@ -86,24 +87,75 @@
   * will block their received QUOTA in the connection window. And if we
   * run out of space, the server is blocked from sending us any data.
   * See #10988 for an issue with this. */
@@ -1031,55 +1030,97 @@ index c666192fc..889866e39 100644
 +#define H2_SETTINGS_IV_LEN  8
  #define H2_BINSETTINGS_LEN 80
  
++
  static int populate_settings(nghttp2_settings_entry *iv,
                               struct Curl_easy *data)
  {
 -  iv[0].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
 -  iv[0].value = Curl_multi_max_concurrent_streams(data->multi);
++  // curl-impersonate:
++  // Setting http2 settings frame based on user instruction.
++  // https://httpwg.org/specs/rfc7540.html#SETTINGS
++  // Format example: 1:65536;2:0;4:6291456;6:262144
++
++  // TODO check if the http2 settings is valid
 +  int i = 0;
++  char *delimiter = ";";
++
++  char *setting = strtok(data->set.str[STRING_HTTP2_SETTINGS], delimiter);
  
 -  iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
 -  iv[1].value = H2_STREAM_WINDOW_SIZE;
-+  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
-+  iv[i].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
-+  iv[i].value = 0x10000;
-+  i++;
  
 -  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
 -  iv[2].value = data->multi->push_cb != NULL;
-+  if(data->set.http2_no_server_push) {
-+    iv[i].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
-+    iv[i].value = 0;
-+    i++;
-+  }
++  // loop through the string to extract all other tokens
++  while(setting != NULL) {
++    // deal with each setting
++    switch(setting[0]) {
++      case '1':
++        iv[i].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++      case '2':
++        iv[i].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++      case '3':
++        // FIXME We also need to notify curl_multi about this setting
++        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++      case '4':
++        iv[i].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++      case '5':
++        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_FRAME_SIZE;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++      case '6':
++        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
++        iv[i].value = atoi(setting + 2);
++        i++;
++        break;
++    }
++    setting = strtok(NULL, delimiter);
++   }
 +
-+  if(!data->set.http2_skip_max_concurrent_streams) {
-+    iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
-+    iv[i].value = Curl_multi_max_concurrent_streams(data->multi);
-+    i++;
-+  }
- 
--  return 3;
-+  iv[i].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
-+  iv[i].value = 0x600000;
-+  i++;
-+
-+  iv[i].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
-+  iv[i].value = 0x40000;
-+  i++;
-+  
 +  // curl-impersonate:
 +  // Up until Chrome 98, there was a randomly chosen setting number in the
 +  // HTTP2 SETTINGS frame. This might be something similar to TLS GREASE.
 +  // However, it seems to have been removed since.
 +  // Curl_rand(data, (unsigned char *)&iv[4].settings_id, sizeof(iv[4].settings_id));
 +  // Curl_rand(data, (unsigned char *)&iv[4].value, sizeof(iv[4].value));
-+
+ 
+-  return 3;
 +  return i;
  }
  
  static size_t populate_binsettings(uint8_t *binsettings,
-@@ -1616,11 +1643,17 @@ out:
+@@ -483,8 +535,14 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
+     }
+   }
+ 
+-  rc = nghttp2_session_set_local_window_size(ctx->h2, NGHTTP2_FLAG_NONE, 0,
+-                                             HTTP2_HUGE_WINDOW_SIZE);
++  // curl-impersonate:
++  // Directly changing the initial window update using users' settings.
++  int current_window_size = nghttp2_session_get_local_window_size(ctx->h2);
++
++  rc = nghttp2_session_set_local_window_size(
++      ctx->h2, NGHTTP2_FLAG_NONE, 0,
++      current_window_size + data->set.http2_window_update);
++
+   if(rc) {
+     failf(data, "nghttp2_session_set_local_window_size() failed: %s(%d)",
+           nghttp2_strerror(rc), rc);
+@@ -1616,11 +1674,17 @@ out:
    return rv;
  }
  
@@ -1098,7 +1139,7 @@ index c666192fc..889866e39 100644
  }
  
  static int sweight_in_effect(const struct Curl_easy *data)
-@@ -1642,9 +1675,11 @@ static void h2_pri_spec(struct Curl_easy *data,
+@@ -1642,9 +1706,11 @@ static void h2_pri_spec(struct Curl_easy *data,
    struct Curl_data_priority *prio = &data->set.priority;
    struct stream_ctx *depstream = H2_STREAM_CTX(prio->parent);
    int32_t depstream_id = depstream? depstream->id:0;
@@ -1111,7 +1152,7 @@ index c666192fc..889866e39 100644
    data->state.priority = *prio;
  }
  
-@@ -1661,20 +1696,25 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
+@@ -1661,20 +1727,25 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
    struct stream_ctx *stream = H2_STREAM_CTX(data);
    int rv = 0;
  
@@ -1163,10 +1204,10 @@ index 562c05c99..b99c085d5 100644
   * Store nghttp2 version info in this buffer.
 diff --git a/lib/impersonate.c b/lib/impersonate.c
 new file mode 100644
-index 000000000..164f3b8a4
+index 000000000..04e58f7ca
 --- /dev/null
 +++ b/lib/impersonate.c
-@@ -0,0 +1,568 @@
+@@ -0,0 +1,689 @@
 +#include "curl_setup.h"
 +
 +#include <curl/curl.h>
@@ -1212,7 +1253,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "chrome100",
@@ -1252,7 +1295,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "chrome101",
@@ -1292,7 +1337,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "chrome104",
@@ -1332,7 +1379,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "chrome107",
@@ -1373,7 +1422,8 @@ index 000000000..164f3b8a4
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
 +    },
-+    .http2_no_server_push = true
++    .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +      .target = "chrome110",
@@ -1415,7 +1465,8 @@ index 000000000..164f3b8a4
 +              "Accept-Encoding: gzip, deflate, br",
 +              "Accept-Language: en-US,en;q=0.9"
 +      },
-+      .http2_no_server_push = true
++      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
++      .http2_window_update = 15663105
 +  },
 +  {
 +      .target = "chrome116",
@@ -1457,7 +1508,8 @@ index 000000000..164f3b8a4
 +              "Accept-Encoding: gzip, deflate, br",
 +              "Accept-Language: en-US,en;q=0.9"
 +      },
-+      .http2_no_server_push = true
++      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
++      .http2_window_update = 15663105
 +  },
 +  {
 +      .target = "chrome119",
@@ -1499,8 +1551,52 @@ index 000000000..164f3b8a4
 +              "Accept-Encoding: gzip, deflate, br",
 +              "Accept-Language: en-US,en;q=0.9"
 +      },
-+      .http2_no_server_push = true,
-+      .http2_skip_max_concurrent_streams = true,
++      .http2_settings = "1:65536;2:0;4:6291456;6:262144",
++      .http2_window_update = 15663105,
++      .ech = "GREASE"
++  },
++  {
++      .target = "chrome120",
++      .httpversion = CURL_HTTP_VERSION_2_0,
++      .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
++      .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "ECDHE-ECDSA-AES128-GCM-SHA256,"
++      "ECDHE-RSA-AES128-GCM-SHA256,"
++      "ECDHE-ECDSA-AES256-GCM-SHA384,"
++      "ECDHE-RSA-AES256-GCM-SHA384,"
++      "ECDHE-ECDSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-CHACHA20-POLY1305,"
++      "ECDHE-RSA-AES128-SHA,"
++      "ECDHE-RSA-AES256-SHA,"
++      "AES128-GCM-SHA256,"
++      "AES256-GCM-SHA384,"
++      "AES128-SHA,"
++      "AES256-SHA",
++      .npn = false,
++      .alpn = true,
++      .alps = true,
++      .tls_permute_extensions = true,
++      .tls_session_ticket = true,
++      .cert_compression = "brotli",
++      .http_headers = {
++              "sec-ch-ua: \"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
++              "sec-ch-ua-mobile: ?0",
++              "sec-ch-ua-platform: \"macOS\"",
++              "Upgrade-Insecure-Requests: 1",
++              "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
++              "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
++              "Sec-Fetch-Site: none",
++              "Sec-Fetch-Mode: navigate",
++              "Sec-Fetch-User: ?1",
++              "Sec-Fetch-Dest: document",
++              "Accept-Encoding: gzip, deflate, br",
++              "Accept-Language: en-US,en;q=0.9"
++      },
++      .http2_settings = "1:65536;2:0;4:6291456;6:262144",
++      .http2_window_update = 15663105,
 +      .ech = "GREASE"
 +  },
 +  {
@@ -1541,7 +1637,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "edge99",
@@ -1581,7 +1679,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "edge101",
@@ -1621,7 +1721,9 @@ index 000000000..164f3b8a4
 +      "Sec-Fetch-Dest: document",
 +      "Accept-Encoding: gzip, deflate, br",
 +      "Accept-Language: en-US,en;q=0.9"
-+    }
++    },
++    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
++    .http2_window_update = 15663105
 +  },
 +  {
 +    .target = "safari15_3",
@@ -1677,6 +1779,8 @@ index 000000000..164f3b8a4
 +        "Accept-Language: en-us",
 +        "Accept-Encoding: gzip, deflate, br"
 +    },
++    .http2_settings = "4:4194304;3:100",
++    .http2_window_update = 10485760,
 +    .http2_pseudo_headers_order = "mspa"
 +  },
 +  {
@@ -1728,6 +1832,64 @@ index 000000000..164f3b8a4
 +        "Accept-Language: en-GB,en-US;q=0.9,en;q=0.8",
 +        "Accept-Encoding: gzip, deflate, br"
 +    },
++    .http2_settings = "4:4194304;3:100",
++    .http2_window_update = 10485760,
++    .http2_pseudo_headers_order = "mspa"
++  },
++  {
++    .target = "safari17_2_ios",
++    .httpversion = CURL_HTTP_VERSION_2_0,
++    .ssl_version = CURL_SSLVERSION_TLSv1_0 | CURL_SSLVERSION_MAX_DEFAULT,
++    .ciphers =
++      "TLS_AES_128_GCM_SHA256,"
++      "TLS_AES_256_GCM_SHA384,"
++      "TLS_CHACHA20_POLY1305_SHA256,"
++      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
++      "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
++      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
++      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
++      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
++      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
++      "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
++      "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
++      "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
++      "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
++      "TLS_RSA_WITH_AES_256_GCM_SHA384,"
++      "TLS_RSA_WITH_AES_128_GCM_SHA256,"
++      "TLS_RSA_WITH_AES_256_CBC_SHA,"
++      "TLS_RSA_WITH_AES_128_CBC_SHA,"
++      "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,"
++      "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,"
++      "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
++    .curves = "X25519:P-256:P-384:P-521",
++    .sig_hash_algs =
++      "ecdsa_secp256r1_sha256,"
++      "rsa_pss_rsae_sha256,"
++      "rsa_pkcs1_sha256,"
++      "ecdsa_secp384r1_sha384,"
++      "ecdsa_sha1,"
++      "rsa_pss_rsae_sha384,"
++      "rsa_pss_rsae_sha384,"
++      "rsa_pkcs1_sha384,"
++      "rsa_pss_rsae_sha512,"
++      "rsa_pkcs1_sha512,"
++      "rsa_pkcs1_sha1",
++    .npn = false,
++    .alpn = true,
++    .alps = false,
++    .tls_session_ticket = false,
++    .cert_compression = "zlib",
++    .http_headers = {
++        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
++        "Sec-Fetch-Site: none",
++        "Accept-Encoding: gzip, deflate, br",
++        "Sec-Fetch-Mode: navigate",
++        "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
++        "Accept-Language: en-US,en;q=0.9",
++        "Sec-Fetch-Dest: document"
++    },
++    .http2_settings = "2:0;4:2097152;3:100",
++    .http2_window_update = 10485760,
 +    .http2_pseudo_headers_order = "mspa"
 +  },
 +  {
@@ -1737,7 +1899,7 @@ index 000000000..164f3b8a4
 +};
 diff --git a/lib/impersonate.h b/lib/impersonate.h
 new file mode 100644
-index 000000000..f5f3dd6d9
+index 000000000..0158d5477
 --- /dev/null
 +++ b/lib/impersonate.h
 @@ -0,0 +1,47 @@
@@ -1773,9 +1935,9 @@ index 000000000..f5f3dd6d9
 +  const char *cert_compression;
 +  const char *http_headers[IMPERSONATE_MAX_HEADERS];
 +  const char *http2_pseudo_headers_order;
-+  bool http2_no_server_push;
++  const char *http2_settings;
++  int http2_window_update;
 +  bool tls_permute_extensions;
-+  bool http2_skip_max_concurrent_streams;
 +  const char *ech;
 +  /* Other TLS options will come here in the future once they are
 +   * configurable through curl_easy_setopt() */
@@ -1803,7 +1965,7 @@ index d1d32b793..3b49a1b4c 100644
  #ifdef USE_WINSOCK
    multi->wsa_event = WSACreateEvent();
 diff --git a/lib/setopt.c b/lib/setopt.c
-index 0c3b9634d..46a5eed8b 100644
+index 0c3b9634d..a65c5d99e 100644
 --- a/lib/setopt.c
 +++ b/lib/setopt.c
 @@ -50,6 +50,7 @@
@@ -1866,7 +2028,7 @@ index 0c3b9634d..46a5eed8b 100644
  #endif
    case CURLOPT_IPRESOLVE:
      arg = va_arg(param, long);
-@@ -2953,6 +2992,27 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -2953,6 +2992,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
    case CURLOPT_SSL_ENABLE_ALPN:
      data->set.ssl_enable_alpn = (0 != va_arg(param, long)) ? TRUE : FALSE;
      break;
@@ -1884,17 +2046,21 @@ index 0c3b9634d..46a5eed8b 100644
 +    result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
 +                            va_arg(param, char *));
 +    break;
-+  case CURLOPT_HTTP2_NO_SERVER_PUSH:
-+    data->set.http2_no_server_push = (0 != va_arg(param, long)) ? TRUE : FALSE;
++  case CURLOPT_HTTP2_SETTINGS:
++    result = Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS],
++                            va_arg(param, char *));
 +    break;
-+  case CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS:
-+    data->set.http2_skip_max_concurrent_streams = (0 != va_arg(param, long)) ? TRUE : FALSE;
++  case CURLOPT_HTTP2_WINDOW_UPDATE:
++    arg = va_arg(param, long);
++    if(arg < -1)
++      return CURLE_BAD_FUNCTION_ARGUMENT;
++    data->set.http2_window_update = arg;
 +    break;
 +#endif
  #ifdef USE_UNIX_SOCKETS
    case CURLOPT_UNIX_SOCKET_PATH:
      data->set.abstract_unix_socket = FALSE;
-@@ -3146,6 +3206,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
+@@ -3146,6 +3210,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
      data->set.ws_raw_mode = raw;
      break;
    }
@@ -2010,7 +2176,7 @@ index b37d13f8f..f1b3b5440 100644
  
      if(waitpipe)
 diff --git a/lib/urldata.h b/lib/urldata.h
-index f02e66541..28c448a6f 100644
+index f02e66541..058ace33c 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
 @@ -53,6 +53,15 @@
@@ -2068,19 +2234,20 @@ index f02e66541..28c448a6f 100644
    /* Dynamically allocated strings, MUST be freed before this struct is
       killed. */
    struct dynamically_allocated_data {
-@@ -1563,6 +1590,11 @@ enum dupstring {
+@@ -1563,6 +1590,12 @@ enum dupstring {
    STRING_DNS_LOCAL_IP6,
    STRING_SSL_EC_CURVES,
    STRING_AWS_SIGV4, /* Parameters for V4 signature */
 +  STRING_SSL_SIG_HASH_ALGS,
 +  STRING_SSL_CERT_COMPRESSION,
 +  STRING_HTTP2_PSEUDO_HEADERS_ORDER,
++  STRING_HTTP2_SETTINGS,
 +  STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
 +  STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
  
    /* -- end of null-terminated strings -- */
  
-@@ -1857,6 +1889,9 @@ struct UserDefined {
+@@ -1857,6 +1890,9 @@ struct UserDefined {
    BIT(tcp_keepalive);  /* use TCP keepalives */
    BIT(tcp_fastopen);   /* use TCP Fast Open */
    BIT(ssl_enable_alpn);/* TLS ALPN extension? */
@@ -2090,17 +2257,14 @@ index f02e66541..28c448a6f 100644
    BIT(path_as_is);     /* allow dotdots? */
    BIT(pipewait);       /* wait for multiplex status before starting a new
                            connection */
-@@ -1877,6 +1912,13 @@ struct UserDefined {
+@@ -1877,6 +1913,10 @@ struct UserDefined {
  #ifdef USE_WEBSOCKETS
    BIT(ws_raw_mode);
  #endif
-+#ifdef USE_HTTP2
-+  BIT(http2_no_server_push);    /* Disable HTTP2 server push */
-+  BIT(http2_skip_max_concurrent_streams);    /* Skip HTTP2 max concurrent streams setting */
-+#endif
 +#ifdef USE_ECH
 +  int tls_ech;      /* TLS ECH configuration  */
 +#endif
++  int http2_window_update;
  };
  
  struct Names {
@@ -2901,7 +3065,7 @@ index ec5698ba2..df8d5913c 100644
  
  void config_free(struct OperationConfig *config)
 diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
-index 9a15659bc..616544267 100644
+index 9a15659bc..d7355cfd8 100644
 --- a/src/tool_cfgable.h
 +++ b/src/tool_cfgable.h
 @@ -160,8 +160,13 @@ struct OperationConfig {
@@ -2913,8 +3077,8 @@ index 9a15659bc..616544267 100644
    char *krblevel;
    char *request_target;
 +  char *http2_pseudo_headers_order;
-+  bool http2_no_server_push;
-+  bool http2_skip_max_concurrent_streams;
++  char *http2_settings;
++  long http2_window_update;
    long httpversion;
    bool http09_allowed;
    bool nobuffer;
@@ -2948,7 +3112,7 @@ index 9a15659bc..616544267 100644
  
  struct GlobalConfig {
 diff --git a/src/tool_getparam.c b/src/tool_getparam.c
-index c9810e9d4..4e42b4c9f 100644
+index c9810e9d4..8bcd914db 100644
 --- a/src/tool_getparam.c
 +++ b/src/tool_getparam.c
 @@ -287,6 +287,17 @@ static const struct LongShort aliases[]= {
@@ -2960,16 +3124,16 @@ index c9810e9d4..4e42b4c9f 100644
 +  {"EI", "cert-compression",         ARG_STRING},
 +  {"EJ", "tls-session-ticket",       ARG_BOOL},
 +  {"EK", "http2-pseudo-headers-order", ARG_STRING},
-+  {"EL", "http2-no-server-push",     ARG_BOOL},
-+  {"EM", "tls-permute-extensions",     ARG_BOOL},
-+  {"EN", "http2-skip-max-concurrent-streams",     ARG_BOOL},
++  {"EL", "http2-settings",           ARG_STRING},
++  {"EM", "tls-permute-extensions",   ARG_BOOL},
++  {"EN", "http2-window-update",      ARG_STRING},
 +#ifdef USE_ECH
 +  {"ER", "ech",                      ARG_STRING},
 +#endif
    {"f",  "fail",                     ARG_BOOL},
    {"fa", "fail-early",               ARG_BOOL},
    {"fb", "styled-output",            ARG_BOOL},
-@@ -1940,6 +1951,55 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
+@@ -1940,6 +1951,62 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
          GetStr(&config->ssl_ec_curves, nextarg);
          break;
  
@@ -2999,17 +3163,24 @@ index c9810e9d4..4e42b4c9f 100644
 +        break;
 +
 +      case 'L':
-+        /* --http2-no-server-push */
-+        config->http2_no_server_push = toggle;
++        /* --http2-settings */
++        GetStr(&config->http2_settings, nextarg);
 +        break;
++
 +      case 'M':
 +          /* --tls-permute-extensions */
 +          config->ssl_permute_extensions = toggle;
 +          break;
++
 +      case 'N':
-+        /* --http2-skip-max-concurrent-streams */
-+        config->http2_skip_max_concurrent_streams = toggle;
++        /* --http2-window-update */
++        err = str2num(&config->http2_window_update, nextarg);
++        if(err)
++          return err;
++        if(config->http2_window_update < -1)
++          return PARAM_BAD_NUMERIC;
 +        break;
++
 +#ifdef USE_ECH
 +      case 'R':
 +        if(strlen(nextarg) != 6 || !strncasecompare("GREASE", nextarg, 6)) {
@@ -3026,7 +3197,7 @@ index c9810e9d4..4e42b4c9f 100644
          return PARAM_OPTION_UNKNOWN;
        }
 diff --git a/src/tool_listhelp.c b/src/tool_listhelp.c
-index 61550de72..b491b77b3 100644
+index 61550de72..c3b99ab72 100644
 --- a/src/tool_listhelp.c
 +++ b/src/tool_listhelp.c
 @@ -108,6 +108,27 @@ const struct helptxt helptext[] = {
@@ -3045,15 +3216,15 @@ index 61550de72..b491b77b3 100644
 +  {"    --http2-pseudo-headers-order",
 +   "Change the order of the HTTP2 pseudo headers",
 +   CURLHELP_HTTP},
-+  {"    --http2-no-server-push",
-+   "Send HTTP2 setting to disable server push",
++  {"    --http2-settings",
++   "Change the order and values of the HTTP2 settings frame, e.g. 1:65536;2:0;4:6291456;6:262144",
++   CURLHELP_HTTP},
++  {"    --http2-window-update",
++   "Change the initial value for window update",
 +   CURLHELP_HTTP},
 +  {"    --tls-permute-extensions",
-+          "Enable BoringSSL TLS extensions permutations on client hello",
-+          CURLHELP_TLS},
-+  {"    --http2-skip-max-concurrent-streams",
-+   "Skip sending HTTP2 setting for max concurrent streams",
-+   CURLHELP_HTTP},
++   "Enable BoringSSL TLS extensions permutations on client hello",
++   CURLHELP_TLS},
    {"-d, --data <data>",
     "HTTP POST data",
     CURLHELP_IMPORTANT | CURLHELP_HTTP | CURLHELP_POST | CURLHELP_UPLOAD},
@@ -3080,10 +3251,10 @@ index 61550de72..b491b77b3 100644
     "Disable buffering of the output stream",
     CURLHELP_CURL},
 diff --git a/src/tool_operate.c b/src/tool_operate.c
-index ead7dca63..ac1b7490b 100644
+index ead7dca63..c3d1aecf5 100644
 --- a/src/tool_operate.c
 +++ b/src/tool_operate.c
-@@ -1493,6 +1493,19 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -1493,6 +1493,22 @@ static CURLcode single_transfer(struct GlobalConfig *global,
              return result;
            }
  
@@ -3092,18 +3263,21 @@ index ead7dca63..ac1b7490b 100644
 +                          CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
 +                          config->http2_pseudo_headers_order);
 +
-+          if(config->http2_no_server_push)
-+            my_setopt(curl, CURLOPT_HTTP2_NO_SERVER_PUSH,
-+                      config->http2_no_server_push ? 1L : 0L);
++          if(config->http2_settings)
++            my_setopt_str(curl,
++                          CURLOPT_HTTP2_SETTINGS,
++                          config->http2_settings);
 +
-+          if(config->http2_skip_max_concurrent_streams)
-+            my_setopt(curl, CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS,
-+                      config->http2_skip_max_concurrent_streams ? 1L : 0L);
++          if(config->http2_window_update)
++            my_setopt(curl,
++                      CURLOPT_HTTP2_WINDOW_UPDATE,
++                      config->http2_window_update);
++
 +
          } /* (proto_http) */
  
          if(proto_ftp)
-@@ -1581,6 +1594,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -1581,6 +1597,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
          if(config->ssl_ec_curves)
            my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
  
@@ -3118,7 +3292,7 @@ index ead7dca63..ac1b7490b 100644
          if(config->writeout)
            my_setopt_str(curl, CURLOPT_CERTINFO, 1L);
  
-@@ -1914,6 +1935,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -1914,6 +1938,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
            my_setopt_str(curl, CURLOPT_PROXY_TLS13_CIPHERS,
                          config->proxy_cipher13_list);
  
@@ -3129,7 +3303,7 @@ index ead7dca63..ac1b7490b 100644
          /* new in libcurl 7.9.2: */
          if(config->disable_epsv)
            /* disable it */
-@@ -2123,6 +2148,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -2123,6 +2151,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
            my_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0L);
          }
  
@@ -3144,7 +3318,7 @@ index ead7dca63..ac1b7490b 100644
          /* new in 7.40.0, abstract support added in 7.53.0 */
          if(config->unix_socket_path) {
            if(config->abstract_unix_socket) {
-@@ -2166,6 +2199,16 @@ static CURLcode single_transfer(struct GlobalConfig *global,
+@@ -2166,6 +2202,16 @@ static CURLcode single_transfer(struct GlobalConfig *global,
          if(config->hsts)
            my_setopt_str(curl, CURLOPT_HSTS, config->hsts);
  

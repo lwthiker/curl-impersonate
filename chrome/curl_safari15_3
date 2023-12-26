@@ -14,7 +14,10 @@ dir=${0%/*}
     -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
     -H 'Accept-Language: en-us' \
     -H 'Accept-Encoding: gzip, deflate, br' \
-    --http2 --compressed \
-    --tlsv1.0 --no-tls-session-ticket \
+    --http2 \
+    --http2-settings '4:4194304;3:100' \
     --http2-pseudo-headers-order 'mspa' \
+    --http2-window-update 10485760 \
+    --compressed \
+    --tlsv1.0 --no-tls-session-ticket \
     "$@"
