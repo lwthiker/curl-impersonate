@@ -998,7 +998,7 @@ index 219dcc2c0..7b04c6c36 100644
    }
  
 diff --git a/lib/http2.c b/lib/http2.c
-index c666192fc..4b37df2e8 100644
+index c666192fc..ebdc08dcc 100644
 --- a/lib/http2.c
 +++ b/lib/http2.c
 @@ -50,6 +50,7 @@
@@ -1018,7 +1018,7 @@ index c666192fc..4b37df2e8 100644
  /* on receving from TLS, we prep for holding a full stream window */
  #define H2_NW_RECV_CHUNKS       (H2_STREAM_WINDOW_SIZE / H2_CHUNK_SIZE)
  /* on send into TLS, we just want to accumulate small frames */
-@@ -86,24 +87,75 @@
+@@ -86,24 +87,80 @@
   * will block their received QUOTA in the connection window. And if we
   * run out of space, the server is blocked from sending us any data.
   * See #10988 for an issue with this. */
@@ -1045,13 +1045,16 @@ index c666192fc..4b37df2e8 100644
 +  int i = 0;
 +  char *delimiter = ";";
 +
-+  char *setting = strtok(data->set.str[STRING_HTTP2_SETTINGS], delimiter);
++  // Use chrome's settings as default
++  char *http2_settings = "1:65536;2:0;4:6291456;6:262144";
++  if(data->set.str[STRING_HTTP2_SETTINGS]) {
++    http2_settings = data->set.str[STRING_HTTP2_SETTINGS];
++  }
++
++  char *setting = strtok(http2_settings, delimiter);
  
 -  iv[1].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
 -  iv[1].value = H2_STREAM_WINDOW_SIZE;
- 
--  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
--  iv[2].value = data->multi->push_cb != NULL;
 +  // loop through the string to extract all other tokens
 +  while(setting != NULL) {
 +    // deal with each setting
@@ -1090,7 +1093,9 @@ index c666192fc..4b37df2e8 100644
 +    }
 +    setting = strtok(NULL, delimiter);
 +   }
-+
+ 
+-  iv[2].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+-  iv[2].value = data->multi->push_cb != NULL;
 +  // curl-impersonate:
 +  // Up until Chrome 98, there was a randomly chosen setting number in the
 +  // HTTP2 SETTINGS frame. This might be something similar to TLS GREASE.
@@ -1103,7 +1108,7 @@ index c666192fc..4b37df2e8 100644
  }
  
  static size_t populate_binsettings(uint8_t *binsettings,
-@@ -483,8 +535,14 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
+@@ -483,8 +540,20 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
      }
    }
  
@@ -1113,14 +1118,20 @@ index c666192fc..4b37df2e8 100644
 +  // Directly changing the initial window update using users' settings.
 +  int current_window_size = nghttp2_session_get_local_window_size(ctx->h2);
 +
++  // Use chrome's value as default
++  int window_update = 15663105;
++  if(data->set.http2_window_update) {
++    window_update = data->set.http2_window_update;
++  }
++
 +  rc = nghttp2_session_set_local_window_size(
 +      ctx->h2, NGHTTP2_FLAG_NONE, 0,
-+      current_window_size + data->set.http2_window_update);
++      current_window_size + window_update);
 +
    if(rc) {
      failf(data, "nghttp2_session_set_local_window_size() failed: %s(%d)",
            nghttp2_strerror(rc), rc);
-@@ -1616,11 +1674,17 @@ out:
+@@ -1616,11 +1685,17 @@ out:
    return rv;
  }
  
@@ -1139,7 +1150,7 @@ index c666192fc..4b37df2e8 100644
  }
  
  static int sweight_in_effect(const struct Curl_easy *data)
-@@ -1642,9 +1706,11 @@ static void h2_pri_spec(struct Curl_easy *data,
+@@ -1642,9 +1717,11 @@ static void h2_pri_spec(struct Curl_easy *data,
    struct Curl_data_priority *prio = &data->set.priority;
    struct stream_ctx *depstream = H2_STREAM_CTX(prio->parent);
    int32_t depstream_id = depstream? depstream->id:0;
@@ -1152,7 +1163,7 @@ index c666192fc..4b37df2e8 100644
    data->state.priority = *prio;
  }
  
-@@ -1661,20 +1727,25 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
+@@ -1661,20 +1738,25 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
    struct stream_ctx *stream = H2_STREAM_CTX(data);
    int rv = 0;
  
