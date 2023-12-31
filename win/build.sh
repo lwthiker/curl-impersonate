@@ -37,9 +37,9 @@ export OPENSSL_PATH=$PWD/boringssl
 export OPENSSL_LIBPATH=$PWD/boringssl/lib
 export OPENSSL_LIBS='-lssl -lcrypto'
 
-export HTTP2=1
-export WEBSOCKETS=1
-export ECH=1
+export USE_HTTP2=1
+export USE_WEBSOCKETS=1
+export USE_ECH=1
 
 export D_FORTIFY_SOURCE=0
 
