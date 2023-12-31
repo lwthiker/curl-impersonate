@@ -154,7 +154,7 @@
 - - minicurl
   - CURL_IMPERSONATE: safari17_0
   - libcurl-impersonate-chrome
-  - safari_17.2_macOS
+  - safari_17.0_macOS
 - - minicurl
   - CURL_IMPERSONATE: safari17_2_ios
   - libcurl-impersonate-chrome
