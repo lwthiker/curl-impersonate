@@ -108,7 +108,7 @@ See [INSTALL.md](INSTALL.md).
 
 ### Docker images
 
-> [!WARN]
+> [!WARNING]
 > New docker images added in this fork are work in progress.
 
 Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
@@ -194,5 +194,12 @@ This repository contains the build process for `curl-impersonate`. The actual pa
 You may also need the [forked and patched](https://github.com/yifeikong/boringssl) BoringSSL.
 
 ## Sponsors
+
+Original sponsor info:
+> Sponsors help keep this project open and maintained. If you wish to become a sponsor, please contact me directly at: lwt at lwthiker dot com.
+
+> <a href="https://serpapi.com/">
+>   <img src="https://i.imgur.com/CBOSxrm.png" alt="Logo"  width="165px" height="65px">
+> </a>
 
 No one has sponsored this fork.
