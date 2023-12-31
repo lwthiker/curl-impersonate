@@ -3,7 +3,8 @@ name: Docker images
 on:
   push:
     branches:
-      - skip_for_now
+      - main
+      - feature/*
   pull_request:
     branches:
       - main
