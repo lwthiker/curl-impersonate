@@ -37,9 +37,6 @@ export OPENSSL_PATH=$PWD/boringssl
 export OPENSSL_LIBPATH=$PWD/boringssl/lib
 export OPENSSL_LIBS='-lssl -lcrypto'
 
-export CFLAGS="-DUSE_HTTP2=1 -DUSE_WEBSOCKETS=1 -DUSE_ECH=1"
-
-CURL_VERSION=curl-8_1_1
 
 curl -L https://github.com/curl/curl/archive/${CURL_VERSION}.zip -o curl.zip
 unzip -q -o curl.zip
@@ -62,8 +59,8 @@ sed -i 's/-DUSE_NGHTTP2/-DUSE_NGHTTP2 -DNGHTTP2_STATICLIB/g' src/Makefile.mk
 sed -i 's/-lidn2/-lidn2 -lunistring -liconv/g' lib/Makefile.mk
 sed -i 's/-lidn2/-lidn2 -lunistring -liconv/g' src/Makefile.mk
 
-mingw32-make -f Makefile.dist mingw32-clean CFLAGS=-Wno-unused-variable
-mingw32-make -f Makefile.dist mingw32 -j CFLAGS=-Wno-unused-variable CFG=-ssl-zlib-nghttp2-idn2-brotli-zstd-ipv6
+mingw32-make -f Makefile.dist mingw32-clean
+mingw32-make -f Makefile.dist mingw32 -j CFLAGS="-DUSE_HTTP2=1 -DUSE_WEBSOCKETS=1 -DUSE_ECH=1 -Wno-unused-variable" CFG=-ssl-zlib-nghttp2-idn2-brotli-zstd-ipv6
 
 mkdir -p ../dist
 mv lib/libcurl* ../dist/
