@@ -1,23 +1,40 @@
 browser:
-  mode: regular
   name: safari
-  os: macos11.6.4
-  version: 15.3
-name: safari_15.3_macos11.6.4
+  os: macOS
+  version: 17.0
 signature:
   http2:
     frames:
+    - frame_type: SETTINGS
+      settings:
+      - key: 2
+        value: 0
+      - key: 4
+        value: 4194304
+      - key: 3
+        value: 100
+      stream_id: 0
+    - frame_type: WINDOW_UPDATE
+      stream_id: 0
+      window_size_increment: 10485760
+    - frame_type: SETTINGS
+      settings: []
+      stream_id: 0
     - frame_type: HEADERS
       headers:
-      - 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15'
       - 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-      - 'accept-language: en-us'
+      - 'sec-fetch-site: none'
       - 'accept-encoding: gzip, deflate, br'
+      - 'sec-fetch-mode: navigate'
+      - 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
+      - 'accept-language: en-US,en;q=0.9'
+      - 'sec-fetch-dest: document'
       pseudo_headers:
       - :method
       - :scheme
       - :path
       - :authority
+      stream_id: 1
   tls_client_hello:
     ciphersuites:
     - GREASE
@@ -30,18 +47,12 @@ signature:
     - 49200
     - 49199
     - 52392
-    - 49188
-    - 49187
     - 49162
     - 49161
-    - 49192
-    - 49191
     - 49172
     - 49171
     - 157
     - 156
-    - 61
-    - 60
     - 53
     - 47
     - 49160
@@ -111,6 +122,10 @@ signature:
       - TLS_VERSION_1_1
       - TLS_VERSION_1_0
       type: supported_versions
+    - algorithms:
+      - 1
+      length: 3
+      type: compress_certificate
     - data: !!binary |
         AA==
       length: 1
@@ -119,3 +134,12 @@ signature:
     handshake_version: TLS_VERSION_1_2
     record_version: TLS_VERSION_1_0
     session_id_length: 32
+third_party:
+  akamai_hash: 959a7e813b79b909a1a0b00a38e8bba3
+  akamai_text: 2:0;4:4194304;3:100|10485760|0|m,s,p,a
+  ja3_hash: 773906b0efdefa24a7f2b8eb6985bf37
+  ja3_text: 771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49162-49161-49172-49171-157-156-53-47-49160-49170-10,0-23-65281-10-11-16-5-13-18-51-45-43-27-21,29-23-24-25,0
+  ja3n_hash: 44f7ed5185d22c92b96da72dbe68d307
+  ja3n_text: 771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49162-49161-49172-49171-157-156-53-47-49160-49170-10,0-5-10-11-13-16-18-21-23-27-43-45-51-65281,29-23-24-25,0
+  user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15
+    (KHTML, like Gecko) Version/17.0 Safari/605.1.15
