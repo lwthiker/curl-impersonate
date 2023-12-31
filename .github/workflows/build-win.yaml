@@ -77,4 +77,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           prerelease: true
-          files: curl-impersonate-chrome.tar.gz
+          files: libcurl-impersonate-${{ github.ref_name }}.x86_64-win32.tar.gz
