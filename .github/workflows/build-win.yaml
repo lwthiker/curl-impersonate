@@ -1,0 +1,80 @@
+name: Build for windows
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  NSS_VERSION: nss-3.77
+  BORING_SSL_COMMIT: d24a38200fef19150eef00cad35b138936c08767
+
+jobs:
+  build-windows:
+    name: Build windows binaries
+    runs-on: windows-2019
+    steps:
+      - name: configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.3
+        with:
+          minimum-size: 16GB
+          maximum-size: 16GB
+          disk-root: "C:"
+
+      - name: Install python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - uses: msys2/setup-msys2@v2
+        name: Install msys
+        with:
+          update: true
+          install: >-
+            git
+            patch
+            unzip
+            mingw-w64-x86_64-brotli
+            mingw-w64-x86_64-libidn2
+            mingw-w64-x86_64-zstd
+            mingw-w64-x86_64-nghttp2
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-nasm
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-go
+
+      - name: Copy and patch
+        shell: msys2 {0}
+        run: ./win/build.sh
+
+      # - name: Setup tmate session for debugging
+      #   uses: mxschmitt/action-tmate@v3
+      #
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Generate lib files
+        run: ./win/dll2lib.bat 64 build\dist\libcurl.dll
+
+      - name: Build tarball
+        shell: msys2 {0}
+        run: tar cvzf libcurl-impersonate-${{ github.ref_name }}.x86_64-win32.tar.gz -C ./build/dist .
+
+      - name: Upload release files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          prerelease: true
+          files: curl-impersonate-chrome.tar.gz
