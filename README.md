@@ -1,6 +1,9 @@
 # curl-impersonate ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari")
-[![Build and test](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-make.yml/badge.svg)](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-make.yml)
-[![Docker images](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-docker.yml/badge.svg)](https://github.com/lwthiker/curl-impersonate/actions/workflows/build-and-test-docker.yml)
+[![Build and test](https://github.com/yifeikong/curl-impersonate/actions/workflows/build-and-test-make.yml/badge.svg)](https://github.com/yifeikong/curl-impersonate/actions/workflows/build-and-test-make.yml)
+[![Docker images](https://github.com/yifekong/curl-impersonate/actions/workflows/build-and-test-docker.yml/badge.svg)](https://github.com/yifeikong/curl-impersonate/actions/workflows/build-and-test-docker.yml)
+
+> [!NOTE]
+> This is a maintained fork of [curl-impersonate](https://github.com/lwthiker/curl-impersonate). Chrome's fingerprints has changed a lot since the last update of upstream, use this fork if your impersonation is not working.
 
 A special build of [curl](https://github.com/curl/curl) that can impersonate the four major browsers: Chrome, Edge, Safari & Firefox. curl-impersonate is able to perform TLS and HTTP handshakes that are identical to that of a real browser.
 
@@ -39,8 +42,8 @@ The following browsers can be impersonated.
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 107 | 107.0.5304.107 | Windows 10 | `chrome107` | [curl_chrome107](chrome/curl_chrome107) |
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 110 | 110.0.5481.177 | Windows 10 | `chrome110` | [curl_chrome110](chrome/curl_chrome110) |
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 116 | 116.0.5845.180 | Windows 10 | `chrome116` | [curl_chrome116](chrome/curl_chrome116) |
-| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 119 | 119.0.0.0 | macOS Sonoma | `chrome119` | [curl_chrome119](chrome/curl_chrome119) |
-| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 120 | 119.0.0.0 | macOS Sonoma | `chrome120` | [curl_chrome120](chrome/curl_chrome120) |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 119 | 119.0.6045.199 | macOS Sonoma | `chrome119` | [curl_chrome119](chrome/curl_chrome119) |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 120 | 120.0.6099.109 | macOS Sonoma | `chrome120` | [curl_chrome120](chrome/curl_chrome120) |
 | ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome_24x24.png "Chrome") | 99 | 99.0.4844.73 | Android 12 | `chrome99_android` | [curl_chrome99_android](chrome/curl_chrome99_android) |
 | ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") | 99 | 99.0.1150.30 | Windows 10 | `edge99` | [curl_edge99](chrome/curl_edge99) |
 | ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge_24x24.png "Edge") | 101 | 101.0.1210.47 | Windows 10 | `edge101` | [curl_edge101](chrome/curl_edge101) |
@@ -53,6 +56,15 @@ The following browsers can be impersonated.
 | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox_24x24.png "Firefox") | 117 | 117.0.1 | Windows 10 | `ff117` | [curl_ff117](firefox/curl_ff117) |
 | ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 15.3 | 16612.4.9.1.8 | MacOS Big Sur | `safari15_3` | [curl_safari15_3](chrome/curl_safari15_3) |
 | ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 15.5 | 17613.2.7.1.8 | MacOS Monterey | `safari15_5` | [curl_safari15_5](chrome/curl_safari15_5) |
+| ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 17.0 | unclear | MacOS Sonoma | `safari17_0` | [curl_safari17_0](chrome/curl_safari17_0) |
+| ![Safari](https://github.com/alrra/browser-logos/blob/main/src/safari/safari_24x24.png "Safari") | 17.2 | unclear | iOS 17.2 | `safari17_2_ios` | [curl_safari17_2_ios](chrome/curl_safari17_2_ios) |
+
+<small>
+Notes:
+
+1. Chromium-based browsers all share the same fingerprints, except for the `User-Agent` header and `sec-ch-ua-platform` header. They will not be updated unless this assumption changed. Use your own header if you need to impersonate `Edge`, `Chrome Android` etc.
+2. The original Safari fingerprints in the upstream fork are [not correct](https://github.com/lwthiker/curl-impersonate/issues/215).
+</small>
 
 This list is also available in the [browsers.json](browsers.json) file.
 
@@ -76,7 +88,7 @@ More documentation is available in the [docs/](docs/README.md) directory.
 There are two versions of `curl-impersonate` for technical reasons. The **chrome** version is used to impersonate Chrome, Edge and Safari. The **firefox** version is used to impersonate Firefox.
 
 ### Pre-compiled binaries
-Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/lwthiker/curl-impersonate/releases) page. Before you use them you need to install nss (Firefox's TLS library) and CA certificates:
+Pre-compiled binaries for Linux and macOS (Intel) are available at the [GitHub releases](https://github.com/yifeikong/curl-impersonate/releases) page. Before you use them you need to install nss (Firefox's TLS library) and CA certificates:
 * Ubuntu - `sudo apt install libnss3 nss-plugin-pem ca-certificates`
 * Red Hat/Fedora/CentOS - `yum install nss nss-pem ca-certificates`
 * Archlinux - `pacman -S nss ca-certificates`
@@ -95,6 +107,10 @@ Also make sure to read [Notes on Dependencies](#notes-on-dependencies).
 See [INSTALL.md](INSTALL.md).
 
 ### Docker images
+
+> [!WARN]
+> New docker images added in this fork are work in progress.
+
 Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled and ready to use are available on [Docker Hub](https://hub.docker.com/r/lwthiker/curl-impersonate). The images contain the binary and all the wrapper scripts. Use like the following:
 ```bash
 # Firefox version, Alpine Linux
@@ -126,7 +142,9 @@ Calling the above function sets the following libcurl options:
 * `CURLOPT_HTTP_VERSION`
 * `CURLOPT_SSLVERSION`, `CURLOPT_SSL_CIPHER_LIST`, `CURLOPT_SSL_EC_CURVES`, `CURLOPT_SSL_ENABLE_NPN`, `CURLOPT_SSL_ENABLE_ALPN`
 * `CURLOPT_HTTPBASEHEADER`, if `default_headers` is non-zero (this is a non-standard HTTP option created for this project).
-* `CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER`, `CURLOPT_HTTP2_NO_SERVER_PUSH` (non-standard HTTP/2 options created for this project).
+* `CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER`, sets http2 pseudo header order, for exmaple: `masp` (non-standard HTTP/2 options created for this project).
+* `CURLOPT_HTTP2_SETTINGS` sets the settings frame values, for example `1:65536;3:1000;4:6291456;6:262144` (non-standard HTTP/2 options created for this project).
+* `CURLOPT_HTTP2_WINDOW_UPDATE` sets intial window update value for http2, for example `15663105` (non-standard HTTP/2 options created for this project).
 * `CURLOPT_SSL_ENABLE_ALPS`, `CURLOPT_SSL_SIG_HASH_ALGS`, `CURLOPT_SSL_CERT_COMPRESSION`, `CURLOPT_SSL_ENABLE_TICKET` (non-standard TLS options created for this project).
 * `CURLOPT_SSL_PERMUTE_EXTENSIONS` (non-standard TLS options created for this project).
 Note that if you call `curl_easy_setopt()` later with one of the above it will override the options set by `curl_easy_impersonate()`.
@@ -169,13 +187,12 @@ Other files of interest:
 * [tests/signatures](tests/signatures) - YAML database of known browser signatures that can be impersonated.
 
 ## Contributing
-If you'd like to help, please check out the [open issues](https://github.com/lwthiker/curl-impersonate/issues). You can open a pull request with your changes.
+If you'd like to help, please check out the [open issues in the origional repo](https://github.com/lwthiker/curl-impersonate/issues) and [open issues here](https://github.com/yifeikong/curl-impersonate/issues). You can open a pull request with your changes. Note that some of the upstream issues have been fixed.
 
-This repository contains the build process for `curl-impersonate`. The actual patches to `curl` are maintained in a [separate repository](https://github.com/lwthiker/curl) forked from the upstream curl. The changes are maintained in the [impersonate-firefox](https://github.com/lwthiker/curl/tree/impersonate-firefox)  and [impersonate-chrome](https://github.com/lwthiker/curl/tree/impersonate-chrome) branches.
+This repository contains the build process for `curl-impersonate`. The actual patches to `curl` are maintained in a [separate repository](https://github.com/yifeikong/curl) forked from lwthiker's fork of the upstream curl. The changes are maintained in the [impersonate-firefox](https://github.com/yifeikong/curl/tree/impersonate-firefox) and [impersonate-chrome](https://github.com/yifeikong/curl/tree/impersonate-chrome) branches.
+
+You may also need the [forked and patched](https://github.com/yifeikong/boringssl) BoringSSL.
 
 ## Sponsors
-Sponsors help keep this project open and maintained. If you wish to become a sponsor, please contact me directly at: lwt at lwthiker dot com.
 
-<a href="https://serpapi.com/">
-  <img src="https://i.imgur.com/CBOSxrm.png" alt="Logo"  width="165px" height="65px">
-</a>
+No one has sponsored this fork.
