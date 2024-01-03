@@ -9,7 +9,7 @@ REM Requires 'dumpbin' and 'lib' in PATH - run from VS developer prompt.
 REM
 REM Script inspired by http://stackoverflow.com/questions/9946322/how-to-generate-an-import-library-lib-file-from-a-dll
 SETLOCAL
-if "%1"=="32" (set machine=x86) else (set machine=x64)
+if "%1"=="i686" (set machine=x86) else (set machine=x64)
 set dll_file=%2
 set dll_file_no_ext=%dll_file:~0,-4%
 set exports_file=%dll_file_no_ext%-exports.txt

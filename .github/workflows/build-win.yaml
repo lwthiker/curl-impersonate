@@ -21,6 +21,11 @@ jobs:
   build-windows:
     name: Build windows binaries
     runs-on: windows-2019
+    strategy:
+      matrix:
+        include:
+          - { sys: mingw64, env: x86_64 }
+          - { sys: mingw32, env: i686 }
     steps:
       - name: configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.3
@@ -41,20 +46,21 @@ jobs:
         name: Install msys
         with:
           update: true
+          msystem: ${{ matrix.sys }}
           install: >-
             git
             patch
             unzip
-            mingw-w64-x86_64-brotli
-            mingw-w64-x86_64-libidn2
-            mingw-w64-x86_64-zstd
-            mingw-w64-x86_64-nghttp2
-            mingw-w64-x86_64-zlib
-            mingw-w64-x86_64-make
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-nasm
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-go
+            mingw-w64-${{ matrix.env }}-brotli
+            mingw-w64-${{ matrix.env }}-libidn2
+            mingw-w64-${{ matrix.env }}-zstd
+            mingw-w64-${{ matrix.env }}-nghttp2
+            mingw-w64-${{ matrix.env }}-zlib
+            mingw-w64-${{ matrix.env }}-make
+            mingw-w64-${{ matrix.env }}-cmake
+            mingw-w64-${{ matrix.env }}-nasm
+            mingw-w64-${{ matrix.env }}-gcc
+            mingw-w64-${{ matrix.env }}-go
 
       - name: Copy and patch
         shell: msys2 {0}
@@ -66,15 +72,15 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Generate lib files
-        run: ./win/dll2lib.bat 64 build\dist\libcurl.dll
+        run: ./win/dll2lib.bat ${{ matrix.env }} build\dist\libcurl.dll
 
       - name: Build tarball
         shell: msys2 {0}
-        run: tar cvzf libcurl-impersonate-${{ github.ref_name }}.x86_64-win32.tar.gz -C ./build/dist .
+        run: tar cvzf libcurl-impersonate-${{ github.head_ref || github.ref_name }}.${{ matrix.env }}-win32.tar.gz -C ./build/dist .
 
       - name: Upload release files
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           prerelease: true
-          files: libcurl-impersonate-${{ github.ref_name }}.x86_64-win32.tar.gz
+          files: libcurl-impersonate-${{ github.head_ref || github.ref_name }}.${{ matrix.env }}-win32.tar.gz
