@@ -25,7 +25,7 @@ jobs:
         id: meta_chrome_alpine
         uses: docker/metadata-action@v3
         with:
-          images: lwthiker/curl-impersonate
+          images: yifeikong/curl-impersonate
           tags: |
             type=semver,pattern={{version}},suffix=-chrome-alpine
             type=semver,pattern={{version}},suffix=-chrome
@@ -45,7 +45,7 @@ jobs:
         id: meta_ff_alpine
         uses: docker/metadata-action@v3
         with:
-          images: lwthiker/curl-impersonate
+          images: yifeikong/curl-impersonate
           tags: |
             type=semver,pattern={{version}},suffix=-ff-alpine
             type=semver,pattern={{version}},suffix=-ff
@@ -65,7 +65,7 @@ jobs:
         id: meta_chrome_debian
         uses: docker/metadata-action@v3
         with:
-          images: lwthiker/curl-impersonate
+          images: yifeikong/curl-impersonate
           tags: |
             type=semver,pattern={{version}},suffix=-chrome-slim-bullseye
             type=semver,pattern={{major}}.{{minor}},suffix=-chrome-slim-bullseye
@@ -83,7 +83,7 @@ jobs:
         id: meta_ff_debian
         uses: docker/metadata-action@v3
         with:
-          images: lwthiker/curl-impersonate
+          images: yifeikong/curl-impersonate
           tags: |
             type=semver,pattern={{version}},suffix=-ff-slim-bullseye
             type=semver,pattern={{major}}.{{minor}},suffix=-ff-slim-bullseye
