@@ -75,7 +75,6 @@ RUN cd ${CURL_VERSION} && \
                 --enable-static \
                 --disable-shared \
                 --enable-websockets \
-                --enable-ech \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --without-zstd \
@@ -104,7 +103,6 @@ RUN rm -Rf /build/install
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
-                --enable-ech \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --without-zstd \
