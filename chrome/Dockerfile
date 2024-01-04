@@ -17,7 +17,7 @@ RUN apt-get update && \
 
 # The following are needed because we are going to change some autoconf scripts,
 # both for libnghttp2 and curl.
-RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool
+RUN apt-get install -y autoconf automake autotools-dev pkg-config libtool git
 
 # Dependencies for downloading and building nghttp2
 RUN apt-get install -y bzip2
@@ -92,11 +92,11 @@ RUN cd ${CURL_VERSION} && \
                 --enable-static \
                 --disable-shared \
                 --enable-websockets \
+                --enable-ech \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
-                --with-openssl=/build/boringssl/build \
                 --without-zstd \
-                --enable-ech \
+                --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
                 USE_CURL_SSLKEYLOGFILE=true && \
@@ -121,11 +121,11 @@ RUN rm -Rf /build/install
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
+                --enable-ech \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
-                --with-openssl=/build/boringssl/build \
                 --without-zstd \
-                --enable-ech \
+                --with-openssl=/build/boringssl/build \
                 LIBS="-pthread" \
                 CFLAGS="-I/build/boringssl/build" \
                 USE_CURL_SSLKEYLOGFILE=true && \
