@@ -1452,7 +1452,7 @@ index 2916c3613..f07fa30ac 100644
 +      esac
 +
 +      case $host_cpu in
-+        arm)
++        arm|armv7l)
 +          addlib="$addlib -larmv8_c_lib -lgcm-aes-arm32-neon_c_lib"
 +          ;;
 +        aarch64)

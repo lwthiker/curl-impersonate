@@ -160,7 +160,7 @@ async def nghttpd():
         # Otherwise fail.
         started = await asyncio.wait_for(_wait_nghttpd(proc), timeout=3)
         if not started:
-            raise Exception("nghttpd failed to start on time")
+            raise Exception("nghttpd failed to start")
     except asyncio.TimeoutError:
         raise Exception("nghttpd failed to start on time")
 

@@ -7,6 +7,7 @@ SHELL := bash
 .DELETE_ON_ERROR:
 # MAKEFLAGS += --warn-undefined-variables
 # MAKEFLAGS += --no-builtin-rules
+SUBJOBS := 4
 
 BROTLI_VERSION := 1.0.9
  # In case this is changed, update build-and-test-make.yml as well
@@ -67,7 +68,7 @@ help: ## Show this help message
 firefox-build: $(CURL_VERSION)/.firefox ## Build the Firefox version of curl-impersonate
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
-	$(MAKE) MAKEFLAGS=
+	$(MAKE) MAKEFLAGS=-j$(SUBJOBS)
 .PHONY: firefox-build
 
 firefox-checkbuild: ## Run basic checks on the built binary
@@ -116,7 +117,7 @@ firefox-clean: ## Clean build artifacts of the Firefox version. Use after re-run
 chrome-build: $(CURL_VERSION)/.chrome ## Build the Chrome version of curl-impersonate
 	cd $(CURL_VERSION)
 	# Don't pass this Makefile's MAKEFLAGS
-	$(MAKE) MAKEFLAGS=
+	$(MAKE) MAKEFLAGS=-j$(SUBJOBS)
 .PHONY: chrome-build
 
 chrome-checkbuild: ## Run basic checks on the built binary
@@ -201,7 +202,7 @@ $(brotli_static_libs): brotli-$(BROTLI_VERSION).tar.gz
 	        -DCMAKE_SYSTEM_PROCESSOR=$(host_cpu) \
 	        ..
 
-	@cmake@ --build . --config Release --target install
+	@cmake@ --build . --config Release --target install --parallel $(SUBJOBS)
 
 
 $(NSS_VERSION).tar.gz:
@@ -213,7 +214,7 @@ $(nss_static_libs): $(NSS_VERSION).tar.gz
 ifeq ($(host),$(build))
 	# Native build, use NSS' build script.
 	cd $(NSS_VERSION)/nss
-	./build.sh -o --disable-tests --static --python=python3
+	./build.sh -o --disable-tests --static --python=python3 -j $(SUBJOBS)
 else
 	# We are cross compiling.
 	# Cross compiling NSS is not supported by its build script and is poorly
@@ -294,7 +295,7 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 			-DCMAKE_SYSTEM_PROCESSOR=$(host_cpu) \
 			-GNinja \
 			..
-	@ninja@
+	@ninja@ -j$(SUBJOBS)
 	# Fix the directory structure so that curl can compile against it.
 	# See https://everything.curl.dev/source/build/tls/boringssl
 	mkdir -p lib
@@ -323,7 +324,7 @@ $(nghttp2_static_libs): $(NGHTTP2_VERSION).tar.bz2
 	}
 
 	./configure $$config_flags
-	$(MAKE) MAKEFLAGS=
+	$(MAKE) MAKEFLAGS=-j$(SUBJOBS)
 	$(MAKE) install MAKEFLAGS=
 
 $(CURL_VERSION).tar.xz:

@@ -75,6 +75,7 @@ jobs:
         run: ./win/dll2lib.bat ${{ matrix.env }} build\dist\libcurl.dll
 
       - name: Build tarball
+        if: startsWith(github.ref, 'refs/tags/')
         shell: msys2 {0}
         run: tar cvzf libcurl-impersonate-${{ github.head_ref || github.ref_name }}.${{ matrix.env }}-win32.tar.gz -C ./build/dist .
 

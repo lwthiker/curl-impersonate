@@ -14,45 +14,162 @@ permissions:
   contents: write
 
 env:
-  NSS_VERSION: nss-3.77
+  NSS_VERSION: nss-3.92
   BORING_SSL_COMMIT: d24a38200fef19150eef00cad35b138936c08767
 
 jobs:
-  build-and-test:
-    name: Build curl-impersonate and run the tests
-    runs-on: ${{ matrix.os }}
+  build-and-test-linux:
+    name: (Linux ${{ matrix.arch }}) Build curl-impersonate and run the tests
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-12]
         arch: [x86_64]
         include:
-          - os: ubuntu-20.04
-            arch: x86_64
+          - arch: x86_64
+            go_arch: amd64
+            docker_arch: linux/amd64
             host: x86_64-linux-gnu
             capture_interface: eth0
-            make: make
-          - os: ubuntu-20.04
-            arch: aarch64
+            image: quay.io/pypa/manylinux2014_x86_64:latest
+          - arch: aarch64
+            go_arch: arm64
+            docker_arch: linux/arm/v8
             host: aarch64-linux-gnu
             capture_interface: eth0
-            make: make
-          - os: ubuntu-20.04
-            arch: arm
-            host: arm-linux-gnueabihf
+            image: quay.io/pypa/manylinux2014_aarch64:latest
+          - arch: arm
+            go_arch: armv6l
+            docker_arch: linux/arm/v7
+            host: arm-linux-gnu
             capture_interface: eth0
-            make: make
-          - os: macos-12
-            arch: x86_64
-            host: x86_64-macos
-            capture_interface: en0
-            make: gmake
+            image: ghcr.io/bjia56/armv7l-wheel-builder:main
     steps:
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
 
-      - name: Install Ubuntu dependencies
-        if: matrix.os == 'ubuntu-20.04'
+      - name: Install dependencies
+        run: |
+          python_bin_dir=$(docker run ${{ matrix.image }} python3.10 -c 'import sys; import os; print(os.path.dirname(os.path.realpath(sys.executable)))')
+          echo "runner_uid=$(id -u)" >> $GITHUB_ENV
+          echo "runner_gid=$(id -g)" >> $GITHUB_ENV
+          echo "runner_home=$HOME" >> $GITHUB_ENV
+          docker build -t curl-impersonate-builder -f - . <<EOF
+            FROM ${{ matrix.image }}
+            ENV PATH=/usr/local/go/bin:/opt/rh/devtoolset-10/root/usr/bin:$python_bin_dir:\$PATH
+            ENV HOME=$HOME
+            ENV CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
+            ENV CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
+            ENV LD=/opt/rh/devtoolset-10/root/usr/bin/ld
+            RUN yum install -y libcurl-devel
+            RUN python3.10 -m pip install ninja cmake gyp-next --extra-index-url https://bjia56.github.io/armv7l-wheels/
+            RUN curl -o /tmp/go.tar.gz -L https://go.dev/dl/go1.19.10.linux-${{ matrix.go_arch }}.tar.gz && \
+                tar -C /usr/local -xzf /tmp/go.tar.gz
+            RUN rm -f /usr/local/bin/python3 && \
+                rm -f /usr/local/bin/python && \
+                ln -s /usr/local/bin/python3.10 /usr/local/bin/python3 && \
+                ln -s /usr/local/bin/python3.10 /usr/local/bin/python
+          EOF
+
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Run configure script
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            mkdir ${{ runner.temp }}/install
+            ./configure --prefix=${{ runner.temp }}/install \
+                        --with-ca-path=/etc/ssl/certs \
+                        --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+                        --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
+
+      # Cache the build of BoringSSL, which is the longest part of the build
+      # We must cache the .zip as well, otherwise the Makefile will
+      # rebuild BoringSSL. This whole thing is a bit hacky, but necessary to
+      # reduce the insanely long build times.
+      - name: Cache BoringSSL source
+        uses: actions/cache@v3
+        with:
+          path: boringssl.zip
+          key: ${{ runner.os }}-${{ matrix.arch }}-boring-source-${{ env.BORING_SSL_COMMIT }}
+
+      - name: Cache BoringSSL build
+        id: cache-boringssl
+        uses: actions/cache@v3
+        with:
+          path: boringssl/build
+          key: ${{ runner.os }}-${{ matrix.arch }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+
+      # Trick the Makefile into skipping the BoringSSL build step
+      # if it was found in the cache. See Makefile.in
+      - name: Post BoringSSL cache restore
+        if: ${{ steps.cache-boringssl.outputs.cache-hit != false }}
+        run: |
+          touch boringssl.zip
+          touch boringssl/.patched
+          find boringssl/build -type f | xargs touch
+
+      - name: Build the Chrome version of curl-impersonate
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            make chrome-build
+            make chrome-checkbuild
+            make chrome-install
+
+      # Cache the build of NSS, which is the longest part of the build
+      # We must cache the .tar.gz as well, otherwise the Makefile will
+      # rebuild NSS.
+      - name: Cache NSS source
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}.tar.gz
+          key: ${{ runner.os }}-${{ matrix.arch }}-nss-source-${{ env.NSS_VERSION }}
+
+      - name: Cache NSS build
+        id: cache-nss
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.NSS_VERSION }}/dist
+          key: ${{ runner.os }}-${{ matrix.arch }}-nss-build-${{ env.NSS_VERSION }}
+
+      # Trick the Makefile into skipping the NSS build step
+      # if it was found in the cache.
+      - name: Post NSS cache restore
+        if: ${{ steps.cache-nss.outputs.cache-hit != false }}
+        run: |
+          touch ${{ env.NSS_VERSION }}.tar.gz
+          find ${{ env.NSS_VERSION }}/dist -type f | xargs touch
+
+      - name: Build the Firefox version of curl-impersonate
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            make firefox-build
+            make firefox-checkbuild
+            make firefox-install
+
+      - name: Install test dependencies
+        if: matrix.arch == 'x86_64'
         run: |
           sudo apt-get update
           sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
@@ -63,13 +180,122 @@ jobs:
           # More dependencies for the tests
           sudo apt-get install tcpdump nghttp2-server libnss3
 
-      - name: Install Ubuntu cross-compile dependencies (${{ matrix.arch }})
-        if: matrix.os == 'ubuntu-20.04' && matrix.arch != 'x86_64'
+      - name: Prepare the tests
+        if: matrix.arch == 'x86_64'
         run: |
-          sudo apt-get install gcc-${{ matrix.host }} g++-${{ matrix.host }}
+          # Compile 'minicurl' which is used by the tests
+          gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
+
+      - uses: actions/setup-python@v4
+        if: matrix.arch == 'x86_64'
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies for the tests script
+        if: matrix.arch == 'x86_64'
+        run: |
+          pip3 install -r tests/requirements.txt
+
+      # For now we can only run the tests when native
+      # tests run the curl-impersonate binary locally.
+      - name: Run the tests
+        if: matrix.arch == 'x86_64'
+        run: |
+          cd tests
+          # sudo is needed for capturing packets
+          python_bin=$(which python3)
+          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp }}/install --capture-interface ${{ matrix.capture_interface }}
+
+       # Upload pre-compiled binaries to GitHub releases page.
+      - name: Create tar release files for libcurl-impersonate
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+            cd ${{ runner.temp }}/install/lib
+            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz libcurl-impersonate*
+            echo "release_file_lib=${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Clean build
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            make chrome-clean
+            make firefox-clean
+            rm -Rf ${{ runner.temp }}/install
+            mkdir ${{ runner.temp }}/install
+
+       # Recompile curl-impersonate statically when doing a release.
+      - name: Reconfigure statically
+        if: startsWith(github.ref, 'refs/tags/') && matrix.arch == 'x86_64'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            ./configure --prefix=${{ runner.temp }}/install --enable-static
+
+      - name: Rebuild statically
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: addnab/docker-run-action@v3
+        with:
+          image: curl-impersonate-builder
+          options: >
+            -v ${{ env.runner_home }}:${{ env.runner_home }}
+            --workdir ${{ github.workspace }}
+            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
+          run: |
+            set -e
+            make chrome-build
+            make chrome-checkbuild
+            make chrome-install-strip
+            make firefox-build
+            make firefox-checkbuild
+            make firefox-install-strip
+
+      - name: Create tar release files for curl-impersonate
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd ${{ runner.temp }}/install/bin
+          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
+          echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Upload release files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+              ${{ env.release_file_lib }}
+              ${{ env.release_file_bin }}
+
+  build-and-test-macos:
+    name: (MacOS ${{ matrix.arch }}) Build curl-impersonate and run the tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-12]
+        arch: [x86_64]
+        include:
+          - os: macos-12
+            arch: x86_64
+            host: x86_64-macos
+            capture_interface: en0
+            make: gmake
+    steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
       - name: Install macOS dependencies
-        if: matrix.os == 'macos-12'
         run: |
           brew install pkg-config make cmake ninja autoconf automake libtool
           # Chrome version dependencies
@@ -79,9 +305,6 @@ jobs:
           brew install curl
           # More dependencies for the tests
           brew install tcpdump nghttp2 nss
-
-      - name: Install common dependencies
-        run: |
           # Firefox version dependencies
           pip3 install gyp-next
 
@@ -92,7 +315,6 @@ jobs:
         run: |
           pip3 install -r tests/requirements.txt
 
-      # When cross compiling we need to build zlib first.
       - name: Build zlib
         run: |
           curl -LO https://zlib.net/zlib-1.3.tar.gz
@@ -109,20 +331,6 @@ jobs:
         run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install
-
-      # When cross compiling a more complicated configuration is needed, since
-      # curl's configure script can't figure out where some files and libraries
-      # are located. The locations used here are the ones used by Ubuntu.
-      - name: Run configure script (cross compiling)
-        if: matrix.arch != 'x86_64'
-        run: |
-          mkdir ${{ runner.temp }}/install
-          ./configure --prefix=${{ runner.temp }}/install \
-                      --host=${{ matrix.host }} \
-                      --with-zlib=${{ runner.temp }}/zlib \
-                      --with-ca-path=/etc/ssl/certs \
-                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
-                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
 
       # Cache the build of BoringSSL, which is the longest part of the build
       # We must cache the .zip as well, otherwise the Makefile will
