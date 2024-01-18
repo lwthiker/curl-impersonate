@@ -63,7 +63,8 @@ jobs:
             ENV LD=/opt/rh/devtoolset-10/root/usr/bin/ld
             RUN yum install -y libcurl-devel
             RUN python3.10 -m pip install ninja cmake gyp-next --extra-index-url https://bjia56.github.io/armv7l-wheels/
-            RUN curl -o /tmp/go.tar.gz -L https://go.dev/dl/go1.19.10.linux-${{ matrix.go_arch }}.tar.gz && \
+            RUN rm -rf /usr/local/go && \
+                curl -o /tmp/go.tar.gz -L https://go.dev/dl/go1.19.10.linux-${{ matrix.go_arch }}.tar.gz && \
                 tar -C /usr/local -xzf /tmp/go.tar.gz
             RUN rm -f /usr/local/bin/python3 && \
                 rm -f /usr/local/bin/python && \
