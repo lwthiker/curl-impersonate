@@ -60,7 +60,7 @@ jobs:
             ENV HOME=$HOME
             ENV CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
             ENV CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
-            ENV LD=/opt/rh/devtoolset-10/root/usr/bin/ld
+            ENV LD=/usr/bin/ld
             RUN yum install -y libcurl-devel
             RUN python3.10 -m pip install ninja cmake gyp-next --extra-index-url https://bjia56.github.io/armv7l-wheels/
             RUN rm -rf /usr/local/go && \
