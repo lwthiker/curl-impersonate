@@ -332,7 +332,6 @@ jobs:
           rm -f ${{ runner.temp }}/zlib/lib/libz.so
 
       - name: Run configure script
-        if: matrix.arch == 'x86_64'
         run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install
@@ -400,7 +399,6 @@ jobs:
           ${{ matrix.make }} firefox-install
 
       - name: Prepare the tests
-        if: matrix.arch == 'x86_64'
         run: |
           # Compile 'minicurl' which is used by the tests
           gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
@@ -408,7 +406,6 @@ jobs:
       # For now we can only run the tests when not cross compiling, since the
       # tests run the curl-impersonate binary locally.
       - name: Run the tests
-        if: matrix.arch == 'x86_64'
         run: |
           cd tests
           # sudo is needed for capturing packets
@@ -433,20 +430,9 @@ jobs:
 
        # Recompile curl-impersonate statically when doing a release.
       - name: Reconfigure statically
-        if: startsWith(github.ref, 'refs/tags/') && matrix.arch == 'x86_64'
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           ./configure --prefix=${{ runner.temp }}/install --enable-static
-
-      - name: Reconfigure statically (cross compiling)
-        if: startsWith(github.ref, 'refs/tags/') && matrix.arch != 'x86_64'
-        run: |
-          ./configure --prefix=${{ runner.temp }}/install \
-                      --enable-static \
-                      --host=${{ matrix.host }} \
-                      --with-zlib=${{ runner.temp }}/zlib \
-                      --with-ca-path=/etc/ssl/certs \
-                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
-                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
 
       - name: Rebuild statically
         if: startsWith(github.ref, 'refs/tags/')
