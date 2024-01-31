@@ -259,14 +259,16 @@ jobs:
       - name: Install macOS dependencies
         run: |
           brew install pkg-config make cmake ninja autoconf automake libtool
-          # Chrome version dependencies
-          brew install go
           # Needed to compile 'minicurl'
           brew install curl
           # More dependencies for the tests
           brew install tcpdump nghttp2
-          # Firefox version dependencies
-          pip3 install gyp-next
+
+      - name: Install go as macOS dependencies
+        if: matrix.arch != 'x86_64'
+        run: |
+          # Chrome version dependencies
+          brew install go
 
       - name: Check out the repo
         uses: actions/checkout@v2
