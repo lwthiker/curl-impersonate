@@ -1,7 +1,5 @@
-ARG FIREFOX_IMAGE=curl-impersonate-ff
 ARG CHROME_IMAGE=curl-impersonate-chrome
 
-FROM ${FIREFOX_IMAGE} as ff
 FROM ${CHROME_IMAGE} as chrome
 
 FROM python:3.11-slim-bookworm
@@ -9,7 +7,7 @@ FROM python:3.11-slim-bookworm
 WORKDIR /tests
 
 RUN apt-get update && \
-    apt-get install -y tcpdump libbrotli1 libnss3 gcc libcurl4-openssl-dev nghttp2-server git
+    apt-get install -y tcpdump libbrotli1 gcc libcurl4-openssl-dev nghttp2-server git
 
 COPY requirements.txt requirements.txt
 
@@ -17,7 +15,6 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Copy the built binaries from both containers
-COPY --from=ff /usr/local/ /usr/local/
 COPY --from=chrome /usr/local/ /usr/local/
 
 # Needed to update the loader's cache

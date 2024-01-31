@@ -6,7 +6,6 @@
 #
 
 {{#debian}}
-# Python is needed for building libnss.
 # Use it as a common base.
 FROM python:3.11-slim-bookworm as builder
 {{/debian}}
@@ -44,23 +43,6 @@ RUN apt-get install -y bzip2
 RUN apt-get install -y xz-utils
 {{/debian}}
 
-{{#firefox}}
-# Dependencies for building libnss
-# See https://firefox-source-docs.mozilla.org/security/nss/build.html#mozilla-projects-nss-building
-    {{#debian}}
-RUN apt-get install -y mercurial python3-pip
-    {{/debian}}
-    {{#alpine}}
-RUN apk add mercurial py3-pip clang-analyzer
-    {{/alpine}}
-
-    {{#debian}}
-# curl tries to load the CA certificates for libnss.
-# It loads them from /usr/lib/x86_64-linux-gnu/nss/libnssckbi.so,
-# which is supplied by libnss3 on Debian/Ubuntu
-RUN apt-get install -y libnss3
-    {{/debian}}
-{{/firefox}}
 {{#chrome}}
 # Dependencies for downloading and building BoringSSL
     {{#debian}}
@@ -80,20 +62,6 @@ RUN cd brotli-${BROTLI_VERSION} && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./installed .. && \
     cmake --build . --config Release --target install
 
-{{#firefox}}
-# Needed for building libnss
-RUN pip install gyp-next
-
-ARG NSS_VERSION=nss-3.92
-# This tarball is already bundled with nspr, a dependency of libnss.
-ARG NSS_URL=https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_92_RTM/src/nss-3.92-with-nspr-4.35.tar.gz
-
-# Download and compile nss.
-RUN curl -o ${NSS_VERSION}.tar.gz ${NSS_URL}
-RUN tar xf ${NSS_VERSION}.tar.gz && \
-    cd ${NSS_VERSION}/nss && \
-    ./build.sh -o --disable-tests --static --python=python3
-{{/firefox}}
 {{#chrome}}
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
@@ -144,7 +112,7 @@ RUN cd ${CURL_VERSION} && \
     for p in $(ls curl-*.patch); do patch -p1 < $p; done && \
     autoreconf -fi
 
-# Compile curl with nghttp2, libbrotli and nss (firefox) or boringssl (chrome).
+# Compile curl with nghttp2, libbrotli and boringssl (chrome).
 # Enable keylogfile for debugging of TLS traffic.
 RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
@@ -154,11 +122,6 @@ RUN cd ${CURL_VERSION} && \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --without-zstd \
-{{#firefox}}
-                --with-nss=/build/${NSS_VERSION}/dist/Release \
-                --with-nss-deprecated \
-                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
-{{/firefox}}
 {{#chrome}}
                 --enable-ech \
                 --with-openssl=/build/boringssl/build \
@@ -169,10 +132,6 @@ RUN cd ${CURL_VERSION} && \
     make && make install
 
 RUN mkdir out && \
-{{#firefox}}
-    cp /build/install/bin/curl-impersonate-ff out/ && \
-    ln -s curl-impersonate-ff out/curl-impersonate && \
-{{/firefox}}
 {{#chrome}}
     cp /build/install/bin/curl-impersonate-chrome out/ && \
     ln -s curl-impersonate-chrome out/curl-impersonate && \
@@ -183,7 +142,7 @@ RUN mkdir out && \
 RUN ./out/curl-impersonate -V | grep -q zlib && \
     ./out/curl-impersonate -V | grep -q brotli && \
     ./out/curl-impersonate -V | grep -q nghttp2 && \
-    ./out/curl-impersonate -V | grep -q -e NSS -e BoringSSL
+    ./out/curl-impersonate -V | grep -q -e BoringSSL
 
 # Verify that the resulting 'curl' is really statically compiled
 RUN ! (ldd ./out/curl-impersonate | grep -q -e libcurl -e nghttp2 -e brotli -e ssl -e crypto)
@@ -196,11 +155,6 @@ RUN cd ${CURL_VERSION} && \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --without-zstd \
-{{#firefox}}
-                --with-nss=/build/${NSS_VERSION}/dist/Release \
-                --with-nss-deprecated \
-                CFLAGS="-I/build/${NSS_VERSION}/dist/public/nss -I/build/${NSS_VERSION}/dist/Release/include/nspr" \
-{{/firefox}}
 {{#chrome}}
                 --enable-ech \
                 --with-openssl=/build/boringssl/build \
@@ -213,11 +167,6 @@ RUN cd ${CURL_VERSION} && \
 # Copy libcurl-impersonate and symbolic links
 RUN cp -d /build/install/lib/libcurl-impersonate* /build/out
 
-{{#firefox}}
-RUN ver=$(readlink -f ${CURL_VERSION}/lib/.libs/libcurl-impersonate-ff.so | sed 's/.*so\.//') && \
-    major=$(echo -n $ver | cut -d'.' -f1) && \
-    ln -s "libcurl-impersonate-ff.so.$ver" "out/libcurl-impersonate.so.$ver" && \
-{{/firefox}}
 {{#chrome}}
 RUN ver=$(readlink -f ${CURL_VERSION}/lib/.libs/libcurl-impersonate-chrome.so | sed 's/.*so\.//') && \
     major=$(echo -n $ver | cut -d'.' -f1) && \
@@ -231,9 +180,6 @@ RUN ver=$(readlink -f ${CURL_VERSION}/lib/.libs/libcurl-impersonate-chrome.so | 
 RUN ! (ldd ./out/curl-impersonate | grep -q -e nghttp2 -e brotli -e ssl -e crypto)
 
 # Wrapper scripts
-{{#firefox}}
-COPY curl_ff* out/
-{{/firefox}}
 {{#chrome}}
 COPY curl_chrome* curl_edge* curl_safari* out/
 {{/chrome}}
@@ -247,22 +193,10 @@ RUN chmod +x out/curl_*
 # only.
 {{#alpine}}
 FROM alpine:3.18
-{{#firefox}}
-# curl tries to load the CA certificates for libnss.
-# It loads them from /usr/lib/libnssckbi.so,
-# which is supplied by 'nss' on alpine.
-RUN apk add --no-cache nss
-{{/firefox}}
 {{/alpine}}
 {{#debian}}
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates \
-{{#firefox}}
-# curl tries to load the CA certificates for libnss.
-# It loads them from /usr/lib/libnssckbi.so and /usr/lib/libnsspem.so,
-# which are supplied by 'libnss3' and 'nss-plugin-pem' on debian.
-    libnss3 nss-plugin-pem \
-{{/firefox}}
     && rm -rf /var/lib/apt/lists/*
 {{/debian}}
 # Copy curl-impersonate from the builder image
