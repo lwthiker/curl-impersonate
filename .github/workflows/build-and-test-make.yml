@@ -14,7 +14,6 @@ permissions:
   contents: write
 
 env:
-  NSS_VERSION: nss-3.92
   BORING_SSL_COMMIT: d24a38200fef19150eef00cad35b138936c08767
 
 jobs:
@@ -88,8 +87,7 @@ jobs:
             mkdir ${{ runner.temp }}/install
             ./configure --prefix=${{ runner.temp }}/install \
                         --with-ca-path=/etc/ssl/certs \
-                        --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
-                        --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
+                        --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
 
       # Cache the build of BoringSSL, which is the longest part of the build
       # We must cache the .zip as well, otherwise the Makefile will
@@ -131,44 +129,6 @@ jobs:
             make chrome-checkbuild
             make chrome-install
 
-      # Cache the build of NSS, which is the longest part of the build
-      # We must cache the .tar.gz as well, otherwise the Makefile will
-      # rebuild NSS.
-      - name: Cache NSS source
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.NSS_VERSION }}.tar.gz
-          key: ${{ runner.os }}-${{ matrix.arch }}-nss-source-${{ env.NSS_VERSION }}
-
-      - name: Cache NSS build
-        id: cache-nss
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.NSS_VERSION }}/dist
-          key: ${{ runner.os }}-${{ matrix.arch }}-nss-build-${{ env.NSS_VERSION }}
-
-      # Trick the Makefile into skipping the NSS build step
-      # if it was found in the cache.
-      - name: Post NSS cache restore
-        if: ${{ steps.cache-nss.outputs.cache-hit != false }}
-        run: |
-          touch ${{ env.NSS_VERSION }}.tar.gz
-          find ${{ env.NSS_VERSION }}/dist -type f | xargs touch
-
-      - name: Build the Firefox version of curl-impersonate
-        uses: addnab/docker-run-action@v3
-        with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            make firefox-build
-            make firefox-checkbuild
-            make firefox-install
-
       - name: Install test dependencies
         if: matrix.arch == 'x86_64'
         run: |
@@ -179,7 +139,7 @@ jobs:
           # Needed to compile 'minicurl'
           sudo apt-get install libcurl4-openssl-dev
           # More dependencies for the tests
-          sudo apt-get install tcpdump nghttp2-server libnss3
+          sudo apt-get install tcpdump nghttp2-server
 
       - name: Prepare the tests
         if: matrix.arch == 'x86_64'
@@ -227,7 +187,6 @@ jobs:
           run: |
             set -e
             make chrome-clean
-            make firefox-clean
             rm -Rf ${{ runner.temp }}/install
             mkdir ${{ runner.temp }}/install
 
@@ -259,15 +218,12 @@ jobs:
             make chrome-build
             make chrome-checkbuild
             make chrome-install-strip
-            make firefox-build
-            make firefox-checkbuild
-            make firefox-install-strip
 
       - name: Create tar release files for curl-impersonate
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd ${{ runner.temp }}/install/bin
-          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
+          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-chrome curl_*
           echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload release files
@@ -308,7 +264,7 @@ jobs:
           # Needed to compile 'minicurl'
           brew install curl
           # More dependencies for the tests
-          brew install tcpdump nghttp2 nss
+          brew install tcpdump nghttp2
           # Firefox version dependencies
           pip3 install gyp-next
 
@@ -367,36 +323,6 @@ jobs:
           ${{ matrix.make }} chrome-checkbuild
           ${{ matrix.make }} chrome-install
 
-      # Cache the build of NSS, which is the longest part of the build
-      # We must cache the .tar.gz as well, otherwise the Makefile will
-      # rebuild NSS.
-      - name: Cache NSS source
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.NSS_VERSION }}.tar.gz
-          key: ${{ runner.os }}-${{ matrix.arch }}-nss-source-${{ env.NSS_VERSION }}
-
-      - name: Cache NSS build
-        id: cache-nss
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.NSS_VERSION }}/dist
-          key: ${{ runner.os }}-${{ matrix.arch }}-nss-build-${{ env.NSS_VERSION }}
-
-      # Trick the Makefile into skipping the NSS build step
-      # if it was found in the cache.
-      - name: Post NSS cache restore
-        if: ${{ steps.cache-nss.outputs.cache-hit != false }}
-        run: |
-          touch ${{ env.NSS_VERSION }}.tar.gz
-          find ${{ env.NSS_VERSION }}/dist -type f | xargs touch
-
-      - name: Build the Firefox version of curl-impersonate
-        run: |
-          ${{ matrix.make }} firefox-build
-          ${{ matrix.make }} firefox-checkbuild
-          ${{ matrix.make }} firefox-install
-
       - name: Prepare the tests
         run: |
           # Compile 'minicurl' which is used by the tests
@@ -423,7 +349,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           ${{ matrix.make }} chrome-clean
-          ${{ matrix.make }} firefox-clean
           rm -Rf ${{ runner.temp }}/install
           mkdir ${{ runner.temp }}/install
 
@@ -439,15 +364,12 @@ jobs:
           ${{ matrix.make }} chrome-build
           ${{ matrix.make }} chrome-checkbuild
           ${{ matrix.make }} chrome-install-strip
-          ${{ matrix.make }} firefox-build
-          ${{ matrix.make }} firefox-checkbuild
-          ${{ matrix.make }} firefox-install-strip
 
       - name: Create tar release files for curl-impersonate
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd ${{ runner.temp }}/install/bin
-          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-ff curl-impersonate-chrome curl_*
+          tar -c -z -f ${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz curl-impersonate-chrome curl_*
           echo "release_file_bin=${{ runner.temp }}/curl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload release files

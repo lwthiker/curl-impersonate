@@ -38,7 +38,6 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            /tmp/.buildx-cache-ff
             /tmp/.buildx-cache-ch
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
@@ -53,15 +52,6 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache-ch
           cache-to: type=local,dest=/tmp/.buildx-cache-ch-new,mode=max
 
-      - name: Build the Firefox version of curl-impersonate
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          context: firefox/
-          tags: localhost:5000/curl-impersonate/ff
-          cache-from: type=local,src=/tmp/.buildx-cache-ff
-          cache-to: type=local,dest=/tmp/.buildx-cache-ff-new,mode=max
-
       - name: Build the tests container
         uses: docker/build-push-action@v2
         with:
@@ -69,7 +59,6 @@ jobs:
           context: tests/
           tags: curl-impersonate-tests:latest
           build-args: |
-            FIREFOX_IMAGE=localhost:5000/curl-impersonate/ff
             CHROME_IMAGE=localhost:5000/curl-impersonate/chrome
 
       - name: Run the tests
@@ -80,7 +69,5 @@ jobs:
       # https://github.com/moby/buildkit/issues/1896
       - name: Move cache
         run: |
-          rm -rf /tmp/.buildx-cache-ff
-          mv /tmp/.buildx-cache-ff-new /tmp/.buildx-cache-ff
           rm -rf /tmp/.buildx-cache-ch
           mv /tmp/.buildx-cache-ch-new /tmp/.buildx-cache-ch
