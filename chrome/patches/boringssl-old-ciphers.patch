@@ -207,34 +207,3 @@ index 57116cd6c..fa1652832 100644
    }
  
    // Check for invalid algorithms, and filter out |SSL_SIGN_RSA_PKCS1_MD5_SHA1|.
-diff --git a/crypto/fipsmodule/rand/urandom_test.cc b/crypto/fipsmodule/rand/urandom_test.cc
-index 08e4183..d486c01 100644
---- a/crypto/fipsmodule/rand/urandom_test.cc
-+++ b/crypto/fipsmodule/rand/urandom_test.cc
-@@ -38,10 +38,26 @@
- #include "fork_detect.h"
- #include "getrandom_fillin.h"
- 
-+#if !defined(NT_ARM_SYSTEM_CALL)
-+// https://elixir.bootlin.com/linux/v6.6.8/source/include/uapi/linux/elf.h#L433
-+#define NT_ARM_SYSTEM_CALL	0x404	/* ARM system call number */
-+#endif
-+
- #if !defined(PTRACE_O_EXITKILL)
- #define PTRACE_O_EXITKILL (1 << 20)
- #endif
- 
-+#if defined(OPENSSL_AARCH64) && defined(__linux__)
-+// https://elixir.bootlin.com/glibc/glibc-2.38/source/sysdeps/unix/sysv/linux/aarch64/sys/user.h#L22
-+struct user_regs_struct
-+{
-+  unsigned long long regs[31];
-+  unsigned long long sp;
-+  unsigned long long pc;
-+  unsigned long long pstate;
-+};
-+#endif
-+
- #if defined(OPENSSL_ANDROID)
- static const bool kIsAndroid = true;
- #else

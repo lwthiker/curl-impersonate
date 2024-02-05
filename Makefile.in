@@ -198,6 +198,7 @@ $(brotli_static_libs): brotli-$(BROTLI_VERSION).tar.gz
 	        -DCMAKE_INSTALL_LIBDIR=lib \
 	        -DCMAKE_CXX_COMPILER=$(CXX) \
 	        -DCMAKE_C_COMPILER=$(CC) \
+			-DCMAKE_C_FLAGS="$(CFLAGS)" \
 	        -DCMAKE_SYSTEM_NAME=$$system_name \
 	        -DCMAKE_SYSTEM_PROCESSOR=$(host_cpu) \
 	        ..
@@ -288,7 +289,7 @@ $(boringssl_static_libs): boringssl.zip boringssl/.patched
 	# prevent clang from failing on them.
 	@cmake@ -DCMAKE_BUILD_TYPE=Release \
 			-DCMAKE_POSITION_INDEPENDENT_CODE=on \
-			-DCMAKE_C_FLAGS="-Wno-unknown-warning-option -Wno-stringop-overflow -Wno-array-bounds" \
+			-DCMAKE_C_FLAGS="$(CFLAGS) -Wno-unknown-warning-option -Wno-stringop-overflow -Wno-array-bounds" \
 			-DCMAKE_CXX_COMPILER=$(CXX) \
 			-DCMAKE_C_COMPILER=$(CC) \
 			-DCMAKE_SYSTEM_NAME=$$system_name \
@@ -388,7 +389,7 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 
 	echo "Configuring curl with: $$config_flags"
 
-	./configure $$config_flags CFLAGS="$$add_cflags"
+	./configure $$config_flags CFLAGS="$(CFLAGS) $$add_cflags"
 	# Remove possible leftovers from a previous compilation
 	$(MAKE) clean MAKEFLAGS=
 	touch .firefox

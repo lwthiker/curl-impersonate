@@ -20,74 +20,72 @@ jobs:
   build-and-test-linux:
     name: (Linux ${{ matrix.arch }}) Build curl-impersonate and run the tests
     runs-on: ubuntu-latest
+    env:
+      CC: ${{ github.workspace }}/zigshim/cc
+      CXX: ${{ github.workspace }}/zigshim/cxx
+      AR: ${{ github.workspace }}/zigshim/ar
+      ZIG_TARGET: ${{ matrix.target }}
+      CFLAGS: ${{ matrix.cflags }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
         include:
           - arch: x86_64
-            go_arch: amd64
-            docker_arch: linux/amd64
+            target: x86_64-linux-gnu.2.17
             host: x86_64-linux-gnu
             capture_interface: eth0
-            image: quay.io/pypa/manylinux2014_x86_64:latest
+            cflags:
           - arch: aarch64
-            go_arch: arm64
-            docker_arch: linux/arm/v8
+            target: aarch64-linux-gnu.2.17
             host: aarch64-linux-gnu
             capture_interface: eth0
-            image: quay.io/pypa/manylinux2014_aarch64:latest
+            cflags:
           - arch: arm
-            go_arch: armv6l
-            docker_arch: linux/arm/v7
-            host: arm-linux-gnu
+            target: arm-linux-gnueabihf.2.17
+            host: arm-linux-gnueabihf
             capture_interface: eth0
-            image: ghcr.io/bjia56/armv7l-wheel-builder:main
+            cflags: "-mfpu=vfp -mfloat-abi=hard -mcpu=arm1176jzf_s"
     steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Install dependencies
-        run: |
-          python_bin_dir=$(docker run ${{ matrix.image }} python3.10 -c 'import sys; import os; print(os.path.dirname(os.path.realpath(sys.executable)))')
-          echo "runner_uid=$(id -u)" >> $GITHUB_ENV
-          echo "runner_gid=$(id -g)" >> $GITHUB_ENV
-          echo "runner_home=$HOME" >> $GITHUB_ENV
-          docker build -t curl-impersonate-builder -f - . <<EOF
-            FROM ${{ matrix.image }}
-            ENV PATH=/usr/local/go/bin:/opt/rh/devtoolset-10/root/usr/bin:$python_bin_dir:\$PATH
-            ENV HOME=$HOME
-            ENV CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
-            ENV CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
-            ENV LD=/usr/bin/ld
-            RUN yum install -y libcurl-devel
-            RUN python3.10 -m pip install ninja cmake gyp-next --extra-index-url https://bjia56.github.io/armv7l-wheels/
-            RUN rm -rf /usr/local/go && \
-                curl -o /tmp/go.tar.gz -L https://go.dev/dl/go1.19.10.linux-${{ matrix.go_arch }}.tar.gz && \
-                tar -C /usr/local -xzf /tmp/go.tar.gz
-            RUN rm -f /usr/local/bin/python3 && \
-                rm -f /usr/local/bin/python && \
-                ln -s /usr/local/bin/python3.10 /usr/local/bin/python3 && \
-                ln -s /usr/local/bin/python3.10 /usr/local/bin/python
-          EOF
-
       - name: Check out the repo
         uses: actions/checkout@v2
 
-      - name: Run configure script
-        uses: addnab/docker-run-action@v3
+      - name: Set up zig
+        uses: goto-bus-stop/setup-zig@v2
         with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            mkdir ${{ runner.temp }}/install
-            ./configure --prefix=${{ runner.temp }}/install \
-                        --with-ca-path=/etc/ssl/certs \
-                        --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+          version: 0.11.0
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
+          sudo apt-get install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+          # Chrome version dependencies
+          sudo apt-get install golang-go
+          # Needed to compile 'minicurl'
+          sudo apt-get install libcurl4-openssl-dev
+          # More dependencies for the tests
+          sudo apt-get install tcpdump nghttp2-server libnss3
+
+      - name: Build zlib
+        run: |
+          curl -LO https://zlib.net/fossils/zlib-1.3.tar.gz
+          tar xf zlib-1.3.tar.gz
+          cd zlib-1.3
+          CHOST=${{ matrix.host }} ./configure --prefix=${{ runner.temp }}/zlib
+          make
+          make install
+          # Make sure curl will link with libz.so.1 and not libz.so
+          rm -f ${{ runner.temp }}/zlib/lib/libz.so
+
+      - name: Run configure script
+        run: |
+          mkdir ${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install \
+                      --host=${{ matrix.host }} \
+                      --with-zlib=${{ runner.temp }}/zlib \
+                      --with-ca-path=/etc/ssl/certs \
+                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
 
       # Cache the build of BoringSSL, which is the longest part of the build
       # We must cache the .zip as well, otherwise the Makefile will
@@ -116,30 +114,10 @@ jobs:
           find boringssl/build -type f | xargs touch
 
       - name: Build the Chrome version of curl-impersonate
-        uses: addnab/docker-run-action@v3
-        with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            make chrome-build
-            make chrome-checkbuild
-            make chrome-install
-
-      - name: Install test dependencies
-        if: matrix.arch == 'x86_64'
         run: |
-          sudo apt-get update
-          sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
-          # Chrome version dependencies
-          sudo apt-get install golang-go
-          # Needed to compile 'minicurl'
-          sudo apt-get install libcurl4-openssl-dev
-          # More dependencies for the tests
-          sudo apt-get install tcpdump nghttp2-server
+          make chrome-build
+          make chrome-checkbuild
+          make chrome-install
 
       - name: Prepare the tests
         if: matrix.arch == 'x86_64'
@@ -185,45 +163,29 @@ jobs:
           path: ${{ runner.temp }}/libcurl-impersonate*.tar.gz
 
       - name: Clean build
-        uses: addnab/docker-run-action@v3
-        with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            make chrome-clean
-            rm -Rf ${{ runner.temp }}/install
-            mkdir ${{ runner.temp }}/install
+        run: |
+          set -e
+          make chrome-clean
+          rm -Rf ${{ runner.temp }}/install
+          mkdir ${{ runner.temp }}/install
 
        # Recompile curl-impersonate statically when doing a release.
       - name: Reconfigure statically
-        uses: addnab/docker-run-action@v3
-        with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            ./configure --prefix=${{ runner.temp }}/install --enable-static
+        run: |
+          set -e
+          ./configure --prefix=${{ runner.temp }}/install --enable-static \
+                      --host=${{ matrix.host }} \
+                      --with-zlib=${{ runner.temp }}/zlib \
+                      --with-ca-path=/etc/ssl/certs \
+                      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+                      --with-libnssckbi=/usr/lib/${{ matrix.host }}/nss
 
       - name: Rebuild statically
-        uses: addnab/docker-run-action@v3
-        with:
-          image: curl-impersonate-builder
-          options: >
-            -v ${{ env.runner_home }}:${{ env.runner_home }}
-            --workdir ${{ github.workspace }}
-            --user ${{ env.runner_uid }}:${{ env.runner_gid }}
-          run: |
-            set -e
-            make chrome-build
-            make chrome-checkbuild
-            make chrome-install-strip
+        run: |
+          set -e
+          make chrome-build
+          make chrome-checkbuild
+          make chrome-install-strip
 
       - name: Create tar release files for curl-impersonate
         run: |
