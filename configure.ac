@@ -1,4 +1,4 @@
-AC_INIT([curl-impersonate], [0.5.4], [lwt@lwthiker.com])
+AC_INIT([curl-impersonate], [0.6.0], [lwt@lwthiker.com])
 
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
