@@ -103,7 +103,8 @@ RUN mkdir out && \
 RUN ./out/curl-impersonate -V | grep -q zlib && \
     ./out/curl-impersonate -V | grep -q brotli && \
     ./out/curl-impersonate -V | grep -q nghttp2 && \
-    ./out/curl-impersonate -V | grep -q -e NSS -e BoringSSL
+    ./out/curl-impersonate -V | grep -q -e NSS -e BoringSSL && \
+    ./out/curl-impersonate -V | grep -q -e wss
 
 # Verify that the resulting 'curl' is really statically compiled
 RUN ! (ldd ./out/curl-impersonate | grep -q -e libcurl -e nghttp2 -e brotli -e ssl -e crypto)
@@ -113,6 +114,7 @@ RUN rm -Rf /build/install
 # Re-compile libcurl dynamically
 RUN cd ${CURL_VERSION} && \
     ./configure --prefix=/build/install \
+                --enable-websockets \
                 --with-nghttp2=/build/${NGHTTP2_VERSION}/installed \
                 --with-brotli=/build/brotli-${BROTLI_VERSION}/build/installed \
                 --with-nss=/build/${NSS_VERSION}/dist/Release \
@@ -148,7 +150,8 @@ RUN apt-get update && apt-get install -y ca-certificates \
     libnss3 nss-plugin-pem \
     && rm -rf /var/lib/apt/lists/*
 # Copy curl-impersonate from the builder image
-COPY --from=builder /build/install /usr/local
+COPY --from=builder /build/out/curl-impersonate* /usr/local/bin
+COPY --from=builder /build/out/libcurl-impersonate* /usr/local/lib
 # Update the loader's cache
 RUN ldconfig
 # Copy to /build/out as well for backward compatibility with previous versions.
