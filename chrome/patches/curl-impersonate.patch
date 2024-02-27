@@ -2543,6 +2543,21 @@ index f24cb6924..30b4fdb0a 100644
  endif
  
  # if unit tests are enabled, build a static library to link them with
+diff --git a/src/tool_cfgable.c b/src/tool_cfgable.c
+index ec5698ba2..7ca57f0d4 100644
+--- a/src/tool_cfgable.c
++++ b/src/tool_cfgable.c
+@@ -172,6 +172,10 @@ static void free_config_fields(struct OperationConfig *config)
+   Curl_safefree(config->aws_sigv4);
+   Curl_safefree(config->proto_str);
+   Curl_safefree(config->proto_redir_str);
++
++  Curl_safefree(config->ssl_sig_hash_algs);
++  Curl_safefree(config->ssl_cert_compression);
++  Curl_safefree(config->http2_pseudo_headers_order);
+ }
+ 
+ void config_free(struct OperationConfig *config)
 diff --git a/src/tool_cfgable.h b/src/tool_cfgable.h
 index 9a15659bc..7bf73bd3b 100644
 --- a/src/tool_cfgable.h
