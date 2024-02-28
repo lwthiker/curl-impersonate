@@ -368,6 +368,7 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	  config_flags+=" --with-nss=$(nss_install_dir) --with-nss-deprecated"; \
 	  config_flags+=" --without-zstd"; \
 	  config_flags+=" --enable-websockets"; \
+	  config_flags+=" --enable-ipv6"; \
 	  config_flags+=" USE_CURL_SSLKEYLOGFILE=true"; \
 	  if test "$(static_build)" = "yes"; then \
 	    config_flags+=" --enable-static --disable-shared"; \
@@ -411,6 +412,7 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 	  config_flags="$$config_flags --without-zstd"; \
 	  config_flags="$$config_flags --enable-websockets"; \
 	  config_flags="$$config_flags --enable-ech"; \
+	  config_flags="$$config_flags --enable-ipv6"; \
 	  config_flags="$$config_flags USE_CURL_SSLKEYLOGFILE=true"; \
 	  if test "$(static_build)" = "yes"; then \
 	    config_flags="$$config_flags --enable-static --disable-shared";
