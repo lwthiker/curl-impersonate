@@ -153,11 +153,17 @@ jobs:
        # Upload pre-compiled binaries to GitHub releases page and Github actions archives.
       - name: Create tar release files for libcurl-impersonate
         run: |
+          cp ${{ runner.temp }}/zlib/lib/lib*.a ${{ runner.temp }}/install/lib
+          cp nghttp2*/installed/lib/lib*.a ${{ runner.temp }}/install/lib
+          cp brotli*/out/installed/lib/lib*.a ${{ runner.temp }}/install/lib
+          cp boringssl/build/lib/lib*.a ${{ runner.temp }}/install/lib
+
           cd ${{ runner.temp }}/install/lib
+          ls -lah .
           if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
-            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz libcurl-impersonate*
+            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz lib*
           else
-            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate.${{ matrix.host }}.tar.gz libcurl-impersonate*
+            tar -c -z -f ${{ runner.temp }}/libcurl-impersonate.${{ matrix.host }}.tar.gz lib*
           fi
           echo "release_file_lib=${{ runner.temp }}/libcurl-impersonate-${{ github.ref_name }}.${{ matrix.host }}.tar.gz" >> $GITHUB_ENV
 
