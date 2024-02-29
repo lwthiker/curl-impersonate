@@ -54,7 +54,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install build-essential pkg-config cmake ninja-build curl autoconf automake libtool
           # Chrome version dependencies
-          sudo apt-get install golang-go
+          sudo snap install go --classic
           # Needed to compile 'minicurl'
           sudo apt-get install libcurl4-openssl-dev
           # More dependencies for the tests
