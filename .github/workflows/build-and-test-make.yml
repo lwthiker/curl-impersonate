@@ -24,32 +24,27 @@ jobs:
       CC: ${{ github.workspace }}/zigshim/cc
       CXX: ${{ github.workspace }}/zigshim/cxx
       AR: ${{ github.workspace }}/zigshim/ar
-      ZIG_TARGET: ${{ matrix.target }}
-      CFLAGS: ${{ matrix.cflags }}
+      ZIG_FLAGS: ${{ matrix.zigflags }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: x86_64
-            target: x86_64-linux-gnu.2.17
             host: x86_64-linux-gnu
             capture_interface: eth0
-            cflags:
+            zigflags: -target x86_64-linux-gnu.2.17
           - arch: i386
-            target: x86-linux-gnu.2.17
             host: i386-linux-gnu
             capture_interface: eth0
-            cflags:
+            zigflags: -target x86-linux-gnu.2.17
           - arch: aarch64
-            target: aarch64-linux-gnu.2.17
             host: aarch64-linux-gnu
             capture_interface: eth0
-            cflags:
+            zigflags: -target aarch64-linux-gnu.2.17
           - arch: arm
-            target: arm-linux-gnueabihf.2.17
             host: arm-linux-gnueabihf
             capture_interface: eth0
-            cflags: "-mfpu=vfp -mfloat-abi=hard -mcpu=arm1176jzf_s"
+            zigflags: -target arm-linux-gnueabihf.2.17 -mcpu=arm1176jzf_s
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -246,7 +241,7 @@ jobs:
 
       - name: Install macOS dependencies
         run: |
-          brew install pkg-config make cmake ninja autoconf automake libtool
+          brew install pkg-config make cmake ninja autoconf automake libtool gpatch
           # Chrome version dependencies, install only not installed.
           which go || brew install go
           # Needed to compile 'minicurl'

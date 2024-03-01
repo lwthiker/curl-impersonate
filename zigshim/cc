@@ -1,2 +1,2 @@
 #!/bin/bash
-zig cc -target $ZIG_TARGET "$@"
+zig cc $ZIG_FLAGS "$@"
