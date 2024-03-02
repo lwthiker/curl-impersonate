@@ -57,6 +57,9 @@ CC = @CC@
 CXX = @CXX@
 STRIP = @STRIP@
 
+# Additional flags to be passed down to curl's configure script during build.
+CURL_CONFIG_FLAGS = @CURL_CONFIG_FLAGS@
+
 # Auto-generate Makefile help.
 # Borrowed from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 help: ## Show this help message
@@ -360,7 +363,8 @@ $(CURL_VERSION)/.firefox: $(firefox_libs) $(CURL_VERSION).tar.xz $(CURL_VERSION)
 	# If the user provided the --host flag to our configure script
 	# (for cross compilation), then pass it on to curl.
 	{ \
-	  config_flags="--prefix=@prefix@"; \
+	  config_flags="$(CURL_CONFIG_FLAGS)"; \
+	  config_flags+=" --prefix=@prefix@"; \
 	  config_flags+=" --with-nghttp2=$(nghttp2_install_dir)"; \
 	  config_flags+=" --with-brotli=$(brotli_install_dir)"; \
 	  config_flags+=" --with-nss=$(nss_install_dir) --with-nss-deprecated"; \
@@ -401,7 +405,8 @@ $(CURL_VERSION)/.chrome: $(chrome_libs)	$(CURL_VERSION).tar.xz $(CURL_VERSION)/.
 	# If the user provided the --host flag to our configure script
 	# (for cross compilation), then pass it on to curl.
 	{ \
-	  config_flags="--prefix=@prefix@"; \
+	  config_flags="$(CURL_CONFIG_FLAGS)"; \
+	  config_flags="$$config_flags --prefix=@prefix@"; \
 	  config_flags="$$config_flags --with-nghttp2=$(nghttp2_install_dir)"; \
 	  config_flags="$$config_flags --with-brotli=$(brotli_install_dir)"; \
 	  config_flags="$$config_flags --with-openssl=$(boringssl_install_dir)"; \

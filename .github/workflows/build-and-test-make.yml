@@ -105,7 +105,8 @@ jobs:
         if: matrix.arch == 'x86_64'
         run: |
           mkdir ${{ runner.temp }}/install
-          ./configure --prefix=${{ runner.temp }}/install
+          ./configure --prefix=${{ runner.temp }}/install \
+            CURL_CONFIG_FLAGS="--disable-rtsp --without-libidn2 --without-zstd"
 
       # When cross compiling a more complicated configuration is needed, since
       # curl's configure script can't figure out where some files and libraries

@@ -134,6 +134,15 @@ cd ../ && rm -Rf build
 
 To compile curl-impersonate statically with libcurl-impersonate, pass `--enable-static` to the `configure` script.
 
+### Configuring curl's build
+
+You might want to configure the underlying curl build to your needs.
+To do that, use the `CURL_CONFIG_FLAGS` variable. These flags will be passed down to curl's `configure` script:
+
+```sh
+../configure CURL_CONFIG_FLAGS="--disable-rtsp"
+```
+
 ### A note about the Firefox version
 
 The Firefox version compiles a static version of nss, Firefox's TLS library.
