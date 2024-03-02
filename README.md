@@ -113,6 +113,12 @@ AUR packages are available to Archlinux users:
 * Pre-compiled package: [curl-impersonate-bin](https://aur.archlinux.org/packages/curl-impersonate-bin), [libcurl-impersonate-bin](https://aur.archlinux.org/packages/libcurl-impersonate-bin).
 * Build from source code: [curl-impersonate-chrome](https://aur.archlinux.org/packages/curl-impersonate-chrome), [curl-impersonate-firefox](https://aur.archlinux.org/packages/curl-impersonate-firefox).
 
+Unofficial Homebrew receipts for Mac (Chrome only) are available [here](https://github.com/shakacode/homebrew-brew/blob/main/Formula/curl-impersonate.rb):
+```
+brew tap shakacode/brew
+brew install curl-impersonate
+```
+
 ## Advanced usage
 ### libcurl-impersonate
 `libcurl-impersonate.so` is libcurl compiled with the same changes as the command line `curl-impersonate`.
