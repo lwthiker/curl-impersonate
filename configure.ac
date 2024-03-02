@@ -67,6 +67,8 @@ AC_ARG_WITH([libnssckbi],
     [AC_SUBST([with_libnssckbi], ["$withval"])],
     [AC_SUBST([with_libnssckbi], [""])])
 
+AC_ARG_VAR([CURL_CONFIG_FLAGS], ["configuration flags to be passed down to curls 'configure'"])
+
 # BoringSSL requires cmake 3.5+, which is sometimes available under
 # "cmake3" instead of "cmake"
 AC_CHECK_PROGS([cmake], [cmake3 cmake])
