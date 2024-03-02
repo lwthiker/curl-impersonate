@@ -39,7 +39,7 @@ RUN cd brotli-${BROTLI_VERSION} && \
 
 # BoringSSL doesn't have versions. Choose a commit that is used in a stable
 # Chromium version.
-ARG BORING_SSL_COMMIT=3a667d10e94186fd503966f5638e134fe9fb4080
+ARG BORING_SSL_COMMIT=1b7fdbd9101dedc3e0aa3fcf4ff74eacddb34ecc
 RUN curl -L https://github.com/google/boringssl/archive/${BORING_SSL_COMMIT}.zip -o boringssl.zip && \
     unzip boringssl && \
     mv boringssl-${BORING_SSL_COMMIT} boringssl
