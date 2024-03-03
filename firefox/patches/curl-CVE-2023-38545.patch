@@ -1,0 +1,17 @@
+diff -u1 -Nar curl-8.1.1/lib/socks.c curl-8.1.1-patched/lib/socks.c
+--- curl-8.1.1/lib/socks.c	2023-05-22 19:15:11.000000000 +0300
++++ curl-8.1.1-patched/lib/socks.c	2024-03-03 13:32:42.814284316 +0200
+@@ -590,5 +590,5 @@
+     if(!socks5_resolve_local && hostname_len > 255) {
+-      infof(data, "SOCKS5: server resolving disabled for hostnames of "
+-            "length > 255 [actual len=%zu]", hostname_len);
+-      socks5_resolve_local = TRUE;
++      failf(data, "SOCKS5: the destination hostname is too long to be "
++            "resolved remotely by the proxy.");
++      return CURLPX_LONG_HOSTNAME;
+     }
+@@ -906,3 +906,3 @@
+         socksreq[len++] = 3;
+-        socksreq[len++] = (char) hostname_len; /* one byte address length */
++        socksreq[len++] = (unsigned char) hostname_len; /* one byte length */
+         memcpy(&socksreq[len], sx->hostname, hostname_len); /* w/o NULL */
