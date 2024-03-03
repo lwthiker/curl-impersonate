@@ -73,10 +73,9 @@ jobs:
       - name: Install macOS dependencies
         if: startsWith(matrix.os, 'macos')
         run: |
-          brew update
           brew install pkg-config make cmake ninja autoconf automake libtool
           # Chrome version dependencies
-          brew install go
+          brew install --force --overwrite go
           # Needed to compile 'minicurl'
           brew install curl
           # More dependencies for the tests
