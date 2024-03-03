@@ -43,6 +43,11 @@ jobs:
             host: x86_64-macos
             capture_interface: en0
             make: gmake
+          - os: macos-14
+            arch: aarch64
+            host: aarch64-macos
+            capture_interface: en0
+            make: gmake
     steps:
       - uses: actions/setup-python@v4
         with:
@@ -66,12 +71,11 @@ jobs:
           sudo apt-get install gcc-${{ matrix.host }} g++-${{ matrix.host }}
 
       - name: Install macOS dependencies
-        if: matrix.os == 'macos-12'
+        if: startsWith(matrix.os, 'macos')
         run: |
           brew install pkg-config make cmake ninja autoconf automake libtool
           # Chrome version dependencies
-          # (Go is already installed)
-          # brew install go
+          brew install --force --overwrite go
           # Needed to compile 'minicurl'
           brew install curl
           # More dependencies for the tests
@@ -102,7 +106,7 @@ jobs:
           rm -f ${{ runner.temp }}/zlib/lib/libz.so
 
       - name: Run configure script
-        if: matrix.arch == 'x86_64'
+        if: matrix.arch == 'x86_64' || startsWith(matrix.os, 'macos')
         run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install \
@@ -112,7 +116,7 @@ jobs:
       # curl's configure script can't figure out where some files and libraries
       # are located. The locations used here are the ones used by Ubuntu.
       - name: Run configure script (cross compiling)
-        if: matrix.arch != 'x86_64'
+        if: matrix.os == 'ubuntu-20.04' && matrix.arch != 'x86_64'
         run: |
           mkdir ${{ runner.temp }}/install
           ./configure --prefix=${{ runner.temp }}/install \
@@ -185,7 +189,7 @@ jobs:
           ${{ matrix.make }} firefox-install
 
       - name: Prepare the tests
-        if: matrix.arch == 'x86_64'
+        if: matrix.arch == 'x86_64' || startsWith(matrix.os, 'macos')
         run: |
           # Compile 'minicurl' which is used by the tests
           gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
@@ -193,7 +197,7 @@ jobs:
       # For now we can only run the tests when not cross compiling, since the
       # tests run the curl-impersonate binary locally.
       - name: Run the tests
-        if: matrix.arch == 'x86_64'
+        if: matrix.arch == 'x86_64' || startsWith(matrix.os, 'macos')
         run: |
           cd tests
           # sudo is needed for capturing packets
@@ -218,12 +222,12 @@ jobs:
 
        # Recompile curl-impersonate statically when doing a release.
       - name: Reconfigure statically
-        if: startsWith(github.ref, 'refs/tags/') && matrix.arch == 'x86_64'
+        if: startsWith(github.ref, 'refs/tags/') && (matrix.arch == 'x86_64' || startsWith(matrix.os, 'macos'))
         run: |
           ./configure --prefix=${{ runner.temp }}/install --enable-static
 
       - name: Reconfigure statically (cross compiling)
-        if: startsWith(github.ref, 'refs/tags/') && matrix.arch != 'x86_64'
+        if: startsWith(github.ref, 'refs/tags/') && (matrix.os == 'ubuntu-20.04' && matrix.arch != 'x86_64')
         run: |
           ./configure --prefix=${{ runner.temp }}/install \
                       --enable-static \
