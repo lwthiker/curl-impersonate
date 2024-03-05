@@ -20,7 +20,7 @@ env:
 
 jobs:
   build-and-test-linux:
-    name: (Linux ${{ matrix.arch }}) Build curl-impersonate and run the tests
+    name: (${{ matrix.host }}) Build curl-impersonate and run the tests
     runs-on: ubuntu-latest
     env:
       CC: ${{ github.workspace }}/zigshim/cc
@@ -130,25 +130,25 @@ jobs:
           make chrome-install
 
       - name: Prepare the tests
-        if: matrix.arch == 'x86_64'
+        if: matrix.host == 'x86_64-linux-gnu'
         run: |
           # Compile 'minicurl' which is used by the tests
           gcc -Wall -Werror -o ${{ runner.temp }}/install/bin/minicurl tests/minicurl.c `curl-config --libs`
 
       - uses: actions/setup-python@v4
-        if: matrix.arch == 'x86_64'
+        if: matrix.host == 'x86_64-linux-gnu'
         with:
           python-version: '3.10'
 
       - name: Install dependencies for the tests script
-        if: matrix.arch == 'x86_64'
+        if: matrix.host == 'x86_64-linux-gnu'
         run: |
           pip3 install -r tests/requirements.txt
 
       # For now we can only run the tests when native
       # tests run the curl-impersonate binary locally.
       - name: Run the tests
-        if: matrix.arch == 'x86_64'
+        if: matrix.host == 'x86_64-linux-gnu'
         run: |
           cd tests
           # sudo is needed for capturing packets
@@ -201,7 +201,11 @@ jobs:
           set -e
           make chrome-build
           make chrome-checkbuild
-          make chrome-install-strip
+          if [[ "${{ endsWith(matrix.host, 'musl') }}" == "true" ]]; then
+            make chrome-install
+          else
+            make chrome-install-strip
+          fi
 
       - name: Create tar release files for curl-impersonate
         run: |
