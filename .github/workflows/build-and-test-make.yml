@@ -102,17 +102,17 @@ jobs:
       # rebuild BoringSSL. This whole thing is a bit hacky, but necessary to
       # reduce the insanely long build times.
       - name: Cache BoringSSL source
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: boringssl.zip
-          key: ${{ runner.os }}-${{ matrix.arch }}-boring-source-${{ env.BORING_SSL_COMMIT }}
+          key: ${{ runner.os }}-${{ matrix.host }}-boring-source-${{ env.BORING_SSL_COMMIT }}
 
       - name: Cache BoringSSL build
         id: cache-boringssl
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: boringssl/build
-          key: ${{ runner.os }}-${{ matrix.arch }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
+          key: ${{ runner.os }}-${{ matrix.host }}-boring-build-${{ env.BORING_SSL_COMMIT }}-${{ hashFiles('chrome/patches/boringssl*.patch') }}
 
       # Trick the Makefile into skipping the BoringSSL build step
       # if it was found in the cache. See Makefile.in
