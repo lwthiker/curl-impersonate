@@ -43,7 +43,7 @@ jobs:
             host: x86_64-macos
             capture_interface: en0
             make: gmake
-          - os: macos-14
+          - os: macos-latest
             arch: aarch64
             host: aarch64-macos
             capture_interface: en0
