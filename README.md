@@ -115,8 +115,7 @@ AUR packages are available to Archlinux users:
 
 Unofficial Homebrew receipts for Mac (Chrome only) are available [here](https://github.com/shakacode/homebrew-brew/blob/main/Formula/curl-impersonate.rb):
 ```
-brew tap shakacode/brew
-brew install curl-impersonate
+brew install shakacode/brew/curl-impersonate
 ```
 
 ## Advanced usage
