@@ -58,7 +58,7 @@ This list is also available in the [browsers.json](browsers.json) file.
 
 For each supported browser there is a wrapper script that launches `curl-impersonate` with all the needed headers and flags. For example:
 ```
-curl_chrome116 https://www.wikipedia.org
+curl_chrome116 https://www.example.net
 ```
 You can add command line flags and they will be passed on to curl. However, some flags change curl's TLS signature which may cause it to be detected.
 
@@ -88,7 +88,7 @@ The pre-compiled binaries contain libcurl-impersonate and a statically compiled 
 
 The pre-compiled Linux binaries are built for Ubuntu systems. On other distributions if you have errors with certificate verification you may have to tell curl where to find the CA certificates. For example:
 ```
-curl_chrome116 https://www.wikipedia.org --cacert /etc/ssl/certs/ca-bundle.crt
+curl_chrome116 https://www.example.net --cacert /etc/ssl/certs/ca-bundle.crt
 ```
 
 Also make sure to read [Notes on Dependencies](#notes-on-dependencies).
@@ -101,11 +101,11 @@ Docker images based on Alpine Linux and Debian with `curl-impersonate` compiled 
 ```bash
 # Firefox version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.6-ff
-docker run --rm lwthiker/curl-impersonate:0.6-ff curl_ff109 https://www.wikipedia.org
+docker run --rm lwthiker/curl-impersonate:0.6-ff curl_ff109 https://www.example.net
 
 # Chrome version, Alpine Linux
 docker pull lwthiker/curl-impersonate:0.6-chrome
-docker run --rm lwthiker/curl-impersonate:0.6-chrome curl_chrome110 https://www.wikipedia.org
+docker run --rm lwthiker/curl-impersonate:0.6-chrome curl_chrome110 https://www.example.net
 ```
 
 ### Distro packages
