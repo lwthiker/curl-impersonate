@@ -11,7 +11,7 @@ When you use an HTTP client with a TLS website, it first performs a TLS handshak
 
 If the server uses HTTP/2, then in addition to the TLS handshake there is also an HTTP/2 handshake where various settings are exchanged. The settings that most HTTP clients and libraries use differ as well from those of any real browsers.
 
-For these reasons, some web services use the TLS and HTTP handshakes to fingerprint which client is accessing them, and then present different content for different clients. These methods are known as [TLS fingerprinting](https://lwthiker.com/networks/2022/06/17/tls-fingerprinting.html) and [HTTP/2 fingerprinting](https://lwthiker.com/networks/2022/06/17/http2-fingerprinting.html) respectively. Their widespread use has led to the web becoming less open, less private and much more restrictive towards specific web clients
+For these reasons, some web services use the TLS and HTTP handshakes to fingerprint which client is accessing them, and then present different content for different clients. These methods are known as [TLS fingerprinting](https://lwthiker.com/networks/2022/06/17/tls-fingerprinting.html) and [HTTP/2 fingerprinting](https://lwthiker.com/networks/2022/06/17/http2-fingerprinting.html) respectively. Their widespread use has led to the web becoming less open, less private and much more restrictive towards specific web clients.
 
 With the modified curl in this repository, the TLS and HTTP handshakes look *exactly* like those of a real browser.
 
