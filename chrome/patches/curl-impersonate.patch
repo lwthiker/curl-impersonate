@@ -22,6 +22,15 @@ diff --git a/configure.ac b/configure.ac
 index 75a882b12..71fd3290a 100644
 --- a/configure.ac
 +++ b/configure.ac
+@@ -193,7 +193,7 @@ dnl something different but only have that affect the execution of the results
+ dnl of the compile, not change the libraries for the compiler itself.
+ dnl
+ compilersh="run-compiler"
+-echo "CC=$CC" > $compilersh
++echo "CC=\"$CC\"" > $compilersh
+ echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $compilersh
+ echo 'exec $CC $@' >> $compilersh
+ 
 @@ -1493,7 +1493,8 @@ if test X"$OPT_BROTLI" != Xno; then
  
    dnl if given with a prefix, we set -L and -I based on that
