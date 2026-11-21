@@ -126,7 +126,7 @@ jobs:
             host: armv7a-linux-androideabi
             host_label: armv7-linux-android
             make: make
-          - os: macos-14
+          - os: macos-26
             platform: ios
             arch: arm64
             host: arm64-apple-ios
@@ -134,7 +134,7 @@ jobs:
             ios_sdk: iphoneos
             ios_min_version: "13.0"
             make: gmake
-          - os: macos-14
+          - os: macos-26
             platform: ios
             arch: arm64
             host: arm64-apple-ios
@@ -142,7 +142,7 @@ jobs:
             ios_sdk: iphonesimulator
             ios_min_version: "13.0"
             make: gmake
-          - os: macos-15-intel
+          - os: macos-26-intel
             platform: ios
             arch: x86_64
             host: x86_64-apple-ios
@@ -150,13 +150,13 @@ jobs:
             ios_sdk: iphonesimulator
             ios_min_version: "13.0"
             make: gmake
-          - os: macos-15-intel
+          - os: macos-26-intel
             platform: macos
             arch: x86_64
             host: x86_64-macos
             host_label: x86_64-macos
             make: gmake
-          - os: macos-14
+          - os: macos-26
             platform: macos
             arch: arm64
             host: arm64-macos
@@ -574,7 +574,7 @@ jobs:
 
   ios-xcframework:
     name: (iOS) Create XCFramework
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build
     steps:
       - name: Download device slice
