@@ -470,7 +470,12 @@ if(USE_LIBIDN2)
 endif()
 
 # curl
-set(_curl_use_pkgconfig_flag -DCURL_USE_PKGCONFIG=OFF)
+# FindOpenSSL queries pkg-config independently of CURL_USE_PKGCONFIG. All curl
+# dependencies are staged explicitly, so do not import host OpenSSL metadata.
+set(_curl_use_pkgconfig_flag
+  -DCURL_USE_PKGCONFIG=OFF
+  -DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON
+)
 set(_curl_clean_env)
 if(NOT WIN32)
   list(APPEND _curl_clean_env
@@ -647,6 +652,8 @@ ExternalProject_Add(curl
     ${CMAKE_COMMAND} -E env
       ${_curl_clean_env}
     ${CMAKE_COMMAND}
+      # Remove host OpenSSL metadata cached by earlier configurations.
+      -U_OPENSSL_*
       -DCMAKE_BUILD_TYPE=Release
       ${_shadow_avoid_cmake_args}
       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
