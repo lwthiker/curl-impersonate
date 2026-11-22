@@ -78,4 +78,7 @@ jobs:
           cd tests
           # sudo is needed for capturing packets
           python_bin=$(which python3)
-          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp }}/install --capture-interface eth0
+          capture_interface=$(ip -o route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')
+          test -n "$capture_interface"
+          echo "Capturing traffic on $capture_interface"
+          sudo $python_bin -m pytest . --log-cli-level DEBUG --install-dir ${{ runner.temp }}/install --capture-interface "$capture_interface"

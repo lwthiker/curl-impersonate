@@ -470,11 +470,12 @@ if(USE_LIBIDN2)
 endif()
 
 # curl
-# FindOpenSSL queries pkg-config independently of CURL_USE_PKGCONFIG. All curl
-# dependencies are staged explicitly, so do not import host OpenSSL metadata.
+# FindOpenSSL queries pkg-config independently of CURL_USE_PKGCONFIG. Keep the
+# module available for older CMake versions, but restrict it to staged metadata.
 set(_curl_use_pkgconfig_flag
   -DCURL_USE_PKGCONFIG=OFF
-  -DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON
+  -DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=OFF
+  -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=OFF
 )
 set(_curl_clean_env)
 if(NOT WIN32)
@@ -484,6 +485,7 @@ if(NOT WIN32)
     "CPLUS_INCLUDE_PATH="
     "LIBRARY_PATH="
     "PKG_CONFIG_PATH="
+    "PKG_CONFIG_LIBDIR=${DEPS_INSTALL_DIR}/lib/pkgconfig"
   )
 endif()
 
