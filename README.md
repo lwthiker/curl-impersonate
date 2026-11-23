@@ -246,3 +246,9 @@ If you’re looking for a meeting recording API, consider checking out [Recall.a
 <a href="https://www.thordata.com/?ls=github&lk=curl_cffi" target="_blank"><img src="https://raw.githubusercontent.com/lexiforest/curl_cffi/main/assets/thordata.png" alt="Thordata" height="126" width="240"></a>
 
 Thordata: A reliable and cost-effective proxy service provider. One-click collection of public network data, providing enterprises and developers with stable, efficient, and compliant global proxy IP services. Register for a free trial of [residential proxies](https://www.thordata.com/products/residential-proxies/?ls=github&lk=curl_cffi) and receive 2000 free SERP API calls.
+
+### Cloro
+
+<a href="https://cloro.dev/?utm_source=referral&utm_medium=curl_cffi" target="_blank"><img src="https://raw.githubusercontent.com/lexiforest/curl_cffi/main/assets/cloro.png" height="55" width="149"></a>
+
+<a href="https://cloro.dev/?utm_source=referral&utm_medium=curl_cffi">cloro</a>: SERP and AI search API for Google, Bing, ChatGPT, Gemini, Google AI Mode, Google AI Overviews and Bing AI Mode.
