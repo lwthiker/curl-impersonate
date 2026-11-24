@@ -8325,7 +8325,7 @@ index ec796e87ba..0199bbb106 100644
    DEBUGASSERT(i <= VERSION_PARTS);
  
 diff --git a/lib/vquic/cf-ngtcp2-cmn.c b/lib/vquic/cf-ngtcp2-cmn.c
-index 12a4d2b06b..5755012dfd 100644
+index 12a4d2b06b..62d14da10f 100644
 --- a/lib/vquic/cf-ngtcp2-cmn.c
 +++ b/lib/vquic/cf-ngtcp2-cmn.c
 @@ -62,6 +62,8 @@
@@ -8366,7 +8366,7 @@ index 12a4d2b06b..5755012dfd 100644
      Curl_u32_ptrset_clear(&ctx->streams);
      Curl_ssl_peer_cleanup(&ctx->ssl_peer);
      curlx_safefree(ctx->tunnel_inbuf);
-@@ -226,12 +231,733 @@ static void qlog_callback(void *user_data, uint32_t flags,
+@@ -226,12 +231,740 @@ static void qlog_callback(void *user_data, uint32_t flags,
    }
  }
  
@@ -9040,7 +9040,14 @@ index 12a4d2b06b..5755012dfd 100644
 +      unsigned char *bytes;
 +      size_t j;
 +
-+      if((hex_len == 0) || (hex_len % 2 != 0)) {
++      /* An empty hex value is a zero-length transport parameter. */
++      if(!hex_len) {
++        result = quic_raw_append_param_bytes(raw, id, NULL, 0);
++        if(result)
++          goto out;
++        continue;
++      }
++      if(hex_len % 2 != 0) {
 +        failf(data, "QUIC transport param %" PRIu64
 +              " has invalid hex value", (uint64_t)id);
 +        result = CURLE_BAD_FUNCTION_ARGUMENT;
@@ -9103,7 +9110,7 @@ index 12a4d2b06b..5755012dfd 100644
  
    ngtcp2_settings_default(s);
    ngtcp2_transport_params_default(t);
-@@ -247,6 +973,18 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
+@@ -247,6 +980,18 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
    s->max_window = H3_CONN_WINDOW_SIZE_MAX;
    s->max_stream_window = 0; /* disable ngtcp2 auto-tuning of window */
    s->no_pmtud = FALSE;
@@ -9122,7 +9129,7 @@ index 12a4d2b06b..5755012dfd 100644
  #ifdef NGTCP2_SETTINGS_V3
    /* try ten times the ngtcp2 defaults here for problems with Caddy */
    s->glitch_ratelim_burst = 1000 * 10;
-@@ -262,6 +1000,10 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
+@@ -262,6 +1007,10 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
    if(ctx->qlogfd != -1) {
      s->qlog_write = qlog_callback;
    }
@@ -9133,7 +9140,7 @@ index 12a4d2b06b..5755012dfd 100644
  }
  
  #if defined(_MSC_VER) && defined(_DLL)
-@@ -992,31 +1734,60 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
+@@ -992,31 +1741,60 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
    int rc;
    int rv;
    CURLcode result;
@@ -9204,7 +9211,7 @@ index 12a4d2b06b..5755012dfd 100644
      /* No direct socket - must be tunneled QUIC (CONNECT-UDP through proxy) */
      ctx->q.sockfd = CURL_SOCKET_BAD;
    }
-@@ -1035,6 +1806,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
+@@ -1035,6 +1813,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
      ngtcp2_addr_init(&ctx->connected_path.remote,
                       &sockaddr->curl_sa_addr, (socklen_t)sockaddr->addrlen);
    }
@@ -9212,7 +9219,7 @@ index 12a4d2b06b..5755012dfd 100644
    else {
      /* Tunneled QUIC (e.g. CONNECT-UDP): get remote address
         from the connected filter below */
-@@ -1080,7 +1852,20 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
+@@ -1080,7 +1859,20 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
    ctx->conn_ref.get_conn = get_conn;
    ctx->conn_ref.user_data = cf;
  
@@ -9234,7 +9241,7 @@ index 12a4d2b06b..5755012dfd 100644
                                 &ctx->ssl_peer, &ALPN_SPEC_H3,
                                 cf_ngtcp2_tls_ctx_setup, &ctx->tls,
                                 &ctx->conn_ref,
-@@ -1227,7 +2012,7 @@ out:
+@@ -1227,7 +2019,7 @@ out:
        /* Direct UDP socket - get IP info for error reporting */
        struct ip_quadruple ip;
  
@@ -9243,7 +9250,7 @@ index 12a4d2b06b..5755012dfd 100644
          infof(data, "QUIC connect to %s port %u failed: %s",
                ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
      }
-@@ -1859,14 +2644,34 @@ CURLcode Curl_cf_ngtcp2_cmn_set_expiry(struct Curl_cfilter *cf,
+@@ -1859,14 +2651,34 @@ CURLcode Curl_cf_ngtcp2_cmn_set_expiry(struct Curl_cfilter *cf,
    return CURLE_OK;
  }
  
@@ -9282,7 +9289,7 @@ index 12a4d2b06b..5755012dfd 100644
     *
     * Some servers use this as a keep-alive timer at a rather low
     * value. We are doing HTTP/3 here and waiting for the response
-@@ -1876,10 +2681,10 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
+@@ -1876,10 +2688,10 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
    if(!ctx->qconn)
      return;
  
@@ -9296,7 +9303,7 @@ index 12a4d2b06b..5755012dfd 100644
    }
    else if(!Curl_u32_ptrset_count(&ctx->streams)) {
      ngtcp2_conn_set_keep_alive_timeout(ctx->qconn, UINT64_MAX);
-@@ -1887,11 +2692,11 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
+@@ -1887,11 +2699,11 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
    }
    else {
      ngtcp2_duration keep_ns;
@@ -9311,7 +9318,7 @@ index 12a4d2b06b..5755012dfd 100644
                  (keep_ns / NGTCP2_MILLISECONDS));
    }
  }
-@@ -1984,7 +2789,10 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
+@@ -1984,7 +2796,10 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
  {
    struct cf_ngtcp2_ctx *ctx = cf->ctx;
    bool alive = FALSE;
@@ -9323,7 +9330,7 @@ index 12a4d2b06b..5755012dfd 100644
    struct cf_call_data save;
  
    CF_DATA_SAVE(save, cf, data);
-@@ -1992,18 +2800,19 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
+@@ -1992,18 +2807,19 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
    if(!ctx->qconn || ctx->shutdown_started)
      goto out;
  
@@ -9354,7 +9361,7 @@ index 12a4d2b06b..5755012dfd 100644
    }
  
    if(!cf->next || !cf->next->cft->is_alive(cf->next, data, input_pending))
-@@ -2020,6 +2829,11 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
+@@ -2020,6 +2836,11 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
      CURL_TRC_CF(data, cf, "is_alive, progress ingress -> %d", (int)result);
      alive = result ? FALSE : TRUE;
    }
