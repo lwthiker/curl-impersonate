@@ -505,6 +505,21 @@ index 0000000000..c1429c6c01
 +
 +CURLE_OK (0) means everything was OK, non-zero means an error occurred, see
 +libcurl-errors(3).
+diff --git a/docs/libcurl/opts/CURLOPT_COOKIEFILE.md b/docs/libcurl/opts/CURLOPT_COOKIEFILE.md
+index ccccba5fe3..d386411ef4 100644
+--- a/docs/libcurl/opts/CURLOPT_COOKIEFILE.md
++++ b/docs/libcurl/opts/CURLOPT_COOKIEFILE.md
+@@ -35,6 +35,10 @@ headers (Set-Cookie style) dumped to a file.
+ It also enables the cookie engine, making libcurl parse and send cookies on
+ subsequent requests with this handle.
+ 
++The cookie engine sends matching cookies with longer paths first.
++For equal-length paths, it sends older cookies first.
++For cookies loaded into an empty engine, file order supplies the creation order.
++
+ By passing the empty string ("") to this option, you enable the cookie engine
+ without reading any initial cookies. If you tell libcurl the filename is "-"
+ (a single minus sign), libcurl instead reads from stdin.
 diff --git a/docs/libcurl/opts/CURLOPT_SSL_OPTIONS.md b/docs/libcurl/opts/CURLOPT_SSL_OPTIONS.md
 index ccbb4895ef..af5ceff942 100644
 --- a/docs/libcurl/opts/CURLOPT_SSL_OPTIONS.md
@@ -1546,7 +1561,7 @@ index 68f7f88e9d..8ec209881e 100644
    if(ctx->addr.family == AF_INET6) {
  #ifdef USE_WINSOCK
 diff --git a/lib/cookie.c b/lib/cookie.c
-index cea93d6142..e3f5db5a94 100644
+index cea93d6142..d92c8c7e03 100644
 --- a/lib/cookie.c
 +++ b/lib/cookie.c
 @@ -44,6 +44,9 @@
@@ -1572,7 +1587,56 @@ index cea93d6142..e3f5db5a94 100644
    if(flags & COOKIE_HTTPHEADER)
      data->req.setcookies++;
  
-@@ -1507,6 +1516,39 @@ static char *get_netscape_format(const struct Cookie *co)
+@@ -1238,43 +1247,18 @@ CURLcode Curl_cookie_loadfiles(struct Curl_easy *data,
+   return result;
+ }
+ 
+-/*
+- * cookie_sort
+- *
+- * Helper function to sort cookies such that the longest path gets before the
+- * shorter path. Path, domain and name lengths are considered in that order,
+- * with the creationtime as the tiebreaker. The creationtime is guaranteed to
+- * be unique per cookie, so we know we will get an ordering at that point.
+- */
++/* Send cookies with longer paths first, then older cookies first. */
+ static int cookie_sort(const void *p1, const void *p2)
+ {
+   const struct Cookie *c1 = *(const struct Cookie * const *)p1;
+   const struct Cookie *c2 = *(const struct Cookie * const *)p2;
+-  size_t l1, l2;
+-
+-  /* 1 - compare cookie path lengths */
+-  l1 = c1->path ? strlen(c1->path) : 0;
+-  l2 = c2->path ? strlen(c2->path) : 0;
+-
+-  if(l1 != l2)
+-    return (l2 > l1) ? 1 : -1; /* avoid size_t <=> int conversions */
+-
+-  /* 2 - compare cookie domain lengths */
+-  l1 = c1->domain ? strlen(c1->domain) : 0;
+-  l2 = c2->domain ? strlen(c2->domain) : 0;
+-
+-  if(l1 != l2)
+-    return (l2 > l1) ? 1 : -1; /* avoid size_t <=> int conversions */
+-
+-  /* 3 - compare cookie name lengths */
+-  l1 = c1->name ? strlen(c1->name) : 0;
+-  l2 = c2->name ? strlen(c2->name) : 0;
++  size_t l1 = c1->path ? strlen(c1->path) : 0;
++  size_t l2 = c2->path ? strlen(c2->path) : 0;
+ 
+   if(l1 != l2)
+     return (l2 > l1) ? 1 : -1;
+-
+-  /* 4 - compare cookie creation time */
+-  return (c2->creationtime > c1->creationtime) ? 1 : -1;
++  return (c1->creationtime > c2->creationtime) -
++         (c1->creationtime < c2->creationtime);
+ }
+ 
+ /*
+@@ -1507,6 +1491,39 @@ static char *get_netscape_format(const struct Cookie *co)
      co->value ? co->value : "");
  }
  
