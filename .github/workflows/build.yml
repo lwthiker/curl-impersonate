@@ -97,6 +97,13 @@ jobs:
             make: make
           - os: ubuntu-latest
             platform: linux
+            arch: riscv64
+            host: riscv64-linux-musl
+            host_label: riscv64-linux-musl
+            zigflags: -target riscv64-linux-musl -fPIC
+            make: make
+          - os: ubuntu-latest
+            platform: linux
             arch: loongarch64
             host: loongarch64-linux-gnu
             host_label: loongarch64-linux-gnu
